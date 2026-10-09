@@ -23,5 +23,6 @@ Decisiones de diseño ya tomadas. Para cambiar una, se crea un ADR nuevo que la 
 | [0017](0017-carga-config-jiti.md) | Carga del archivo de configuración con jiti | Aceptada |
 | [0018](0018-formato-archivos-run.md) | Formato NDJSON de los archivos de run y límites de tamaño | Aceptada |
 | [0019](0019-idioma-mensajes-cli-reglas.md) | Mensajes del CLI, de las reglas y de los reportes en inglés | Aceptada |
+| [0020](0020-idioma-documentacion-publica.md) | Documentación pública en inglés | Aceptada |
 
 Plantilla: [0000-template.md](0000-template.md)
