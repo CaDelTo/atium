@@ -1,0 +1,9 @@
+packages:
+  - "packages/*"
+  - "packages/*/*"
+  - "examples/*"
+
+# Dependency install scripts are blocked unless explicitly allowed here
+# (docs/engineering/06-security.md).
+allowBuilds: {}
+strictDepBuilds: true
