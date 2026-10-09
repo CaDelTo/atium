@@ -5,5 +5,8 @@ packages:
 
 # Dependency install scripts are blocked unless explicitly allowed here
 # (docs/engineering/06-security.md).
-allowBuilds: {}
+allowBuilds:
+  # The postinstall only verifies the binary that the optional @esbuild/*
+  # package already provides.
+  esbuild: false
 strictDepBuilds: true

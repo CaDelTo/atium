@@ -63,7 +63,7 @@ export function resolveInside(root: string, relative: string): string {
 - Se agregan solo si están en [17-tech-stack.md](../design/17-tech-stack.md) o se justifican en el PR.
 - Antes de agregar una: mantenimiento activo, licencia compatible, tamaño, dependencias transitivas.
 - Lockfile versionado.
-- Scripts de instalación de dependencias deshabilitados salvo una lista explícita (`allowBuilds` de pnpm en `pnpm-workspace.yaml`, con `strictDepBuilds: true`; reemplaza a `onlyBuiltDependencies` desde pnpm 11).
+- Scripts de instalación de dependencias deshabilitados salvo una lista explícita (`allowBuilds` de pnpm en `pnpm-workspace.yaml`, con `strictDepBuilds: true`; reemplaza a `onlyBuiltDependencies` desde pnpm 11). Las dependencias cuyo script no hace falta se listan con `false` (por ejemplo `esbuild`, cuyo binario llega por un paquete opcional).
 - Renovate con espera mínima de 14 días antes de proponer una versión nueva.
 - `pnpm audit` en CI.
 
