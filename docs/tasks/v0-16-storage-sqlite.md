@@ -8,7 +8,7 @@
 ## Contexto
 
 - Diseño: docs/design/15-storage.md §23.6
-- Estándares: 05-performance.md (SQLite), 06-security.md (`onlyBuiltDependencies`)
+- Estándares: 05-performance.md (SQLite), 06-security.md (`allowBuilds`)
 
 ## Hacer
 
@@ -17,7 +17,7 @@
 - Migraciones con Drizzle; se aplican al abrir la base.
 - Modo WAL, inserciones en una transacción, sentencias preparadas.
 - Base en `.atium/atium.db`.
-- Agregar better-sqlite3 a `onlyBuiltDependencies`.
+- Agregar `better-sqlite3: true` a `allowBuilds` en `pnpm-workspace.yaml`.
 
 ## Criterios de aceptación
 

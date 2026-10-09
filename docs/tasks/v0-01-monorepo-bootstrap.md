@@ -19,7 +19,7 @@
 - `tsconfig.base.json` exactamente como en 01-typescript.md.
 - `.nvmrc` (22), `.editorconfig`, `.gitignore` (node_modules, dist, coverage, reports, .turbo, .atium, .claude/settings.local.json).
 - Changesets inicializado (`.changeset/config.json`). No se publica nada mientras el nombre sea provisional (ADR-0016).
-- `onlyBuiltDependencies` de pnpm configurado como lista vacía (06-security.md).
+- `allowBuilds` de pnpm configurado como mapa vacío, con `strictDepBuilds: true` (06-security.md). pnpm 11 reemplazó `onlyBuiltDependencies` por `allowBuilds`.
 - `README.md` raíz mínimo: qué es, estado (pre-alpha, V0), enlaces a docs/.
 
 ## Criterios de aceptación
@@ -27,7 +27,7 @@
 - `pnpm install` funciona en un clon limpio.
 - `pnpm turbo run build` termina sin error aunque todavía no haya paquetes.
 - No hay archivo `LICENSE` (decisión abierta).
-- `pnpm verify` todavía no existe (se crea en v0-03); deben pasar los comandos que ya existen
+- `pnpm verify` todavía no existe (se crea en v0-03); deben pasar los comandos que ya existen.
 - `/review` sin hallazgos bloqueantes (los agentes omiten las herramientas que aún no están instaladas)
 
 ## Fuera de alcance

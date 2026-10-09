@@ -8,12 +8,12 @@
 ## Contexto
 
 - Diseño: docs/design/16-repository-structure.md §24
-- ADRs: 0001, 0002
+- ADRs: 0001, 0002, 0016
 - Estándares: 01-typescript.md (imports y exports), 07-public-api.md (paquetes correctos), 09-documentation.md
 
 ## Hacer
 
-- `packages/core/package.json`: nombre `@atium/core`, `type: module`, `exports` con `.` y `./testing` (import, require, types), `engines`, `files`.
+- `packages/core/package.json`: nombre `@atium/core`, `"private": true` mientras el nombre sea provisional (ADR-0016), `type: module`, `exports` con `.` y `./testing` (import, require, types), `engines`, `files`.
 - tsup con salida ESM + CJS y declaraciones de tipos.
 - `tsconfig.json` que extiende `tsconfig.base.json`.
 - `src/index.ts` como única entrada pública; `src/testing/index.ts` para `./testing`.
