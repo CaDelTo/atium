@@ -17,6 +17,8 @@ Cambiar cualquiera de estos elementos afecta a usuarios:
 
 Todo lo que no está en esta lista es interno y puede cambiar sin aviso.
 
+Excepción: el subpath `@atium/core/testing` (builders y fakes) es interno aunque esté en `exports`. Solo lo usan los tests de los paquetes de Atium y puede cambiar sin aviso ni changeset.
+
 ## Versionado
 
 - Semver estricto en cada paquete.

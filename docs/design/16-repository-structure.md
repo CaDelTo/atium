@@ -20,7 +20,8 @@ atium/
 │   │       ├── redact/          redacción de datos sensibles
 │   │       ├── scoring/
 │   │       ├── storage/         interfaz, layout, compactación
-│   │       └── plugins/         carga de plugins
+│   │       ├── plugins/         carga de plugins
+│   │       └── testing/         builders y fakes (`@atium/core/testing`)
 │   │
 │   ├── cli/                     @atium/cli (bin: atium)
 │   ├── eslint-plugin/           @atium/eslint-plugin
