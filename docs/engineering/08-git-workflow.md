@@ -7,8 +7,8 @@
 | Código, identificadores y comentarios | Inglés |
 | Mensajes de commit, títulos y descripciones de PR | Inglés |
 | Documentos de diseño y ADRs | Español |
-| Documentación pública para usuarios | Pendiente (decisión abierta) |
-| Mensajes del CLI y de las reglas | Pendiente (decisión abierta) |
+| Documentación pública para usuarios, incluidas las páginas de cada regla | Pendiente (decisión abierta) |
+| Mensajes del CLI y de las reglas, reportes y comentarios en PR | Inglés ([ADR-0019](../adr/0019-idioma-mensajes-cli-reglas.md)) |
 
 ## Commits
 

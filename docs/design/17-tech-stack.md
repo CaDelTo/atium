@@ -12,7 +12,7 @@
 | Versionado y publicación | Changesets | Versiones independientes por paquete |
 | Tests | Vitest; `RuleTester` de ESLint | Rápido, compatible con TS |
 | Validación | Zod (con exportación a JSON Schema) | Config y modelo con tipos derivados y esquema publicable |
-| Carga de config | c12 o jiti | Soporta `atium.config.ts` |
+| Carga de config | jiti ([ADR-0017](../adr/0017-carga-config-jiti.md)) | Soporta `atium.config.ts`; precedencia y validación propias |
 | CLI | Commander | Los plugins van en la config; no hace falta oclif |
 | Terminal | picocolors, cli-table3; respeta `NO_COLOR` | Ligeros |
 | Logs de depuración | debug (`DEBUG=atium:*`) | Estándar en Node |

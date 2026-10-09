@@ -123,7 +123,7 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Nombre definitivo del proyecto
 - Backend de storage remoto recomendado por defecto (S3 o rama git)
 - Licencia (MIT o Apache-2.0)
-- Idioma de los mensajes del CLI, de las reglas y de la documentación pública
+- Idioma de la documentación pública, incluidas las páginas de cada regla
 - Versiones mínimas definitivas de Playwright, Cypress y herramientas BDD
 
 # Estructura (objetivo)

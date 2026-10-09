@@ -24,5 +24,5 @@ Decisiones pendientes:
 - Nombre del proyecto
 - Backend remoto recomendado por defecto (S3 o rama git)
 - Licencia (MIT o Apache-2.0)
-- Idioma: mensajes del CLI y reglas en inglés (estándar del ecosistema) con documentación en inglés y español, o ambos idiomas en el CLI
+- Idioma de la documentación pública, incluidas las páginas de cada regla. Los mensajes del CLI y de las reglas, los reportes y los comentarios en PR van en inglés ([ADR-0019](../adr/0019-idioma-mensajes-cli-reglas.md)).
 - Versiones mínimas definitivas de Playwright, Cypress y herramientas BDD

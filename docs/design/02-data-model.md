@@ -49,29 +49,31 @@ interface Run {
     nodeVersion: string;
     framework: { name: "playwright" | "cypress" | "junit" | "ctrf"; version?: string };
   };
-  frameworkConfig?: { retries?: number; workers?: number; projects?: string[] };
+  frameworkConfig?: { retries?: number; workers?: number; projects?: string[] };   // projects: máx. 100 de 256 B
   startedAt: string;
   finishedAt: string;
   results: TestResult[];
 }
 
 interface TestCase {
-  testId: string;                     // ver 9.3
+  testId: string;                     // ver 9.3; se calcula antes de cualquier recorte
   project?: string;                   // proyecto de Playwright / browser
   file: string;                       // POSIX, relativo a la raíz del repo
-  titlePath: string[];                // describe › describe › test
-  tags: string[];                     // @smoke, @slow, etc.
+  titlePath: string[];                // describe › describe › test; máx. 20 niveles
+  tags: string[];                     // @smoke, @slow, etc.; máx. 50
   location?: { line: number; column: number };
 }
 
 interface TestResult {
   test: TestCase;
   outcome: "passed" | "failed" | "flaky" | "skipped";   // flaky = falló y luego pasó en este run
-  attempts: Attempt[];
+  attempts: Attempt[];                // máx. 20: el primero y los 19 últimos
+  attemptsDropped?: number;           // intentos descartados por el tope
   workerIndex?: number;
   sequenceInWorker?: number;          // orden de ejecución dentro del worker
   quarantined: boolean;
   bdd?: BddContext;
+  detailTruncated?: true;             // el escritor recortó detalle para no superar el límite de línea
 }
 
 interface Attempt {
@@ -81,12 +83,13 @@ interface Attempt {
   durationMs: number;
   error?: ErrorOccurrence;
   network?: NetworkSummary;
-  console?: { errors: number; warnings: number; samples: string[] };   // muestras redactadas
-  pageErrors?: string[];              // excepciones JS no capturadas
-  artifacts?: {
+  console?: { errors: number; warnings: number; samples: string[] };   // muestras redactadas sin ANSI; máx. 5 de 1 KiB
+  pageErrors?: string[];              // excepciones JS no capturadas, sin ANSI; máx. 20 de 2 KiB
+  pageErrorsDropped?: number;         // pageErrors descartados por el tope
+  artifacts?: {                       // rutas a archivos, nunca su contenido
     trace?: string;
     screenshots?: string[];
-    ariaSnapshot?: string;
+    ariaSnapshot?: string;            // archivo aparte, como trace y screenshots
     video?: string;
   };
 }
@@ -95,15 +98,15 @@ interface ErrorOccurrence {
   fingerprint: string;                // sección 13
   family: string;                     // agrupación gruesa: tipo + ubicación
   type: string;                       // TimeoutError, AssertionError, ...
-  message: string;                    // redactado, máx. 2 KB
-  stack?: string;                     // redactado, máx. 8 KB
+  message: string;                    // redactado, texto plano sin ANSI, máx. 2 KB
+  stack?: string;                     // redactado, texto plano sin ANSI, máx. 8 KB
   locator?: string;                   // si el error involucra un locator
-  matcher?: { name: string; expected?: string; actual?: string };
+  matcher?: { name: string; expected?: string; actual?: string };   // expected y actual: máx. 2 KiB
   failedAtMs: number;                 // offset desde el inicio del intento
 }
 
 interface NetworkSummary {
-  endpoints: Array<{
+  endpoints: Array<{                  // máx. 200
     method: string;
     urlTemplate: string;              // sección 12.4
     count: number;
@@ -111,7 +114,9 @@ interface NetworkSummary {
     failures: number;
     p95Ms: number;
   }>;
-  calls?: NetworkCall[];              // solo en intentos fallidos o modo de captura completa
+  endpointsDropped?: number;          // endpoints descartados por el tope
+  calls?: NetworkCall[];              // solo en intentos fallidos o modo de captura completa; máx. 200
+  callsDropped?: number;              // llamadas descartadas por el tope
 }
 
 interface NetworkCall {
@@ -128,9 +133,18 @@ interface NetworkCall {
 interface BddContext {
   feature: string;
   scenario: string;
-  steps: Array<{ keyword: string; text: string; status: string; durationMs: number; definition?: string }>;
+  steps: Array<{ keyword: string; text: string; status: string; durationMs: number; definition?: string }>;   // máx. 200; text 512 B, definition 256 B
+  stepsDropped?: number;              // pasos descartados por el tope
 }
 ```
+
+Los topes de listas y textos, los conteos `*Dropped` y `detailTruncated` están definidos en [ADR-0018](../adr/0018-formato-archivos-run.md):
+
+- Los topes de texto se miden en bytes UTF-8 del valor ya escapado para JSON. Cualquier string sin tope propio tiene un máximo de 2 KiB.
+- Al escribir se eliminan los códigos ANSI de `message`, `stack`, las muestras de consola y `pageErrors`.
+- Al aplicar un tope se conservan los elementos más cercanos al fallo. Las llamadas de red que seguían pendientes en el momento del fallo se conservan siempre.
+- Los conteos `*Dropped` son enteros positivos y se omiten cuando valen 0.
+- Si después de los topes la línea de un `TestResult` supera 768 KiB, el escritor recorta detalle en el orden del ADR y marca `detailTruncated: true`. Con los topes actuales, el resultado siempre queda por debajo.
 
 ### 9.3 Identidad de un test (`testId`)
 
@@ -138,6 +152,7 @@ interface BddContext {
 testId = sha1(project | file | titlePath.join(" › ")).slice(0, 16)
 ```
 
+- Se calcula sobre los valores originales de `project`, `file` y `titlePath`, antes de los topes de [ADR-0018](../adr/0018-formato-archivos-run.md), para que la identidad del test no cambie al truncar.
 - **Tests parametrizados:** cada variante tiene su propio título y por tanto su propio `testId`.
 - **Renombres:** cuando en un mismo commit desaparece un `testId` y aparece otro, se vinculan si se cumple alguna de estas condiciones:
   - Git detecta el archivo como renombrado (`git diff -M`) y el `titlePath` es igual.
@@ -153,7 +168,7 @@ testId = sha1(project | file | titlePath.join(" › ")).slice(0, 16)
 
 ### 9.5 Versionado del esquema
 
-- Cada archivo de run incluye `schemaVersion`.
+- Cada archivo de run incluye `schemaVersion` en su encabezado (línea 1). Formato y límites de tamaño: [ADR-0018](../adr/0018-formato-archivos-run.md).
 - Los lectores soportan la versión actual y la anterior.
 - La base SQLite local usa migraciones de Drizzle.
 

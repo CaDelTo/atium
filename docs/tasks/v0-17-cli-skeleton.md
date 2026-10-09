@@ -8,7 +8,7 @@
 ## Contexto
 
 - Diseño: docs/design/18-cli-config.md §26.1, §26.2
-- ADRs: 0012
+- ADRs: 0012, 0019
 - Estándares: 03-errors-logging.md (Salida del CLI), 05-performance.md (Arranque del CLI)
 
 ## Hacer
@@ -17,12 +17,9 @@
 - Opciones globales: `--config`, `--format`, `--output`, `--ci`, `--strict`, `--quiet`, `--verbose`.
 - Códigos de salida de §26.2 centralizados; fail-open para errores internos sin `--strict`.
 - stdout solo para resultados; logs a stderr.
+- Mensajes en inglés (ADR-0019), centralizados en `src/messages.ts`.
 - Imports diferidos de dependencias pesadas dentro de cada comando.
 - `atium init`: genera `atium.config.ts` mínimo y detecta Playwright o Cypress en las dependencias del proyecto.
-
-## Decisiones abiertas en esta tarea
-
-Decisión pendiente: idioma de los mensajes del CLI. Hasta que se decida, usa inglés y centraliza los textos en `src/messages.ts` para poder cambiarlos sin tocar la lógica.
 
 ## Criterios de aceptación
 
