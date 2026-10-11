@@ -14,9 +14,9 @@ function describeShape(shape: Shape): string {
   }
 }
 
-function unsafeCast<T>(value: unknown): T {
+function unsafeShape(value: unknown): Shape {
   // Simulates data that bypassed validation and does not match its declared type.
-  return value as T;
+  return value as Shape;
 }
 
 describe("assertNever", () => {
@@ -26,7 +26,7 @@ describe("assertNever", () => {
   });
 
   it("throws with the unexpected value serialized in the message", () => {
-    const unexpected = unsafeCast<Shape>({ kind: "triangle" });
+    const unexpected = unsafeShape({ kind: "triangle" });
 
     expect(() => describeShape(unexpected)).toThrow(
       new Error('Unexpected value: {"kind":"triangle"}'),

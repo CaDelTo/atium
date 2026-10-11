@@ -6,10 +6,36 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test -- --coverage",
+    "deps:check": "turbo run build && depcruise packages --config .dependency-cruiser.cjs",
+    "unused": "knip",
+    "dupes": "jscpd packages",
+    "pkg:check": "turbo run pkg:check",
+    "bench": "turbo run bench",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm deps:check && pnpm unused && pnpm dupes && pnpm test"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",
-    "turbo": "2.11.4"
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@eslint/js": "9.39.5",
+    "dependency-cruiser": "18.4.0",
+    "eslint": "9.39.5",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-sonarjs": "4.2.1",
+    "jscpd": "5.3.2",
+    "knip": "6.38.0",
+    "lefthook": "2.1.14",
+    "prettier": "3.9.9",
+    "turbo": "2.11.4",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vitest": "5.0.2"
   }
 }

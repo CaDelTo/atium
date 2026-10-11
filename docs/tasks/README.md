@@ -46,7 +46,7 @@ Criterio de la fase: docs/design/22-roadmap.md §30.
 |---|---|---|---|
 | [v0-01-monorepo-bootstrap](v0-01-monorepo-bootstrap.md) | Bootstrap del monorepo | ninguna | Hecha |
 | [v0-02-core-skeleton](v0-02-core-skeleton.md) | Esqueleto del paquete core | v0-01 | Hecha |
-| [v0-03-quality-tooling](v0-03-quality-tooling.md) | Herramientas de calidad y `pnpm verify` | v0-02 | Pendiente |
+| [v0-03-quality-tooling](v0-03-quality-tooling.md) | Herramientas de calidad y `pnpm verify` | v0-02 | Hecha |
 | [v0-04-ci-pipeline](v0-04-ci-pipeline.md) | Pipeline de CI y plantillas del repositorio | v0-03 | Pendiente |
 | [v0-05-errors-result-failopen](v0-05-errors-result-failopen.md) | Errores, `Result` y `failOpen` | v0-02 | Pendiente |
 | [v0-06-model-schemas](v0-06-model-schemas.md) | Esquemas Zod del modelo de datos | v0-05 | Pendiente |

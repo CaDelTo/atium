@@ -52,7 +52,7 @@ Herramientas que hacen cumplir los estándares de [`docs/engineering/`](../engin
 | Código duplicado | jscpd | Umbral de duplicación en `pnpm verify` |
 | Code smells | eslint-plugin-sonarjs | Complejidad cognitiva, funciones y ramas duplicadas |
 | Paquetes publicables | publint, @arethetypeswrong/cli | Exports, tipos y ESM/CJS correctos |
-| Commits | commitlint | Conventional Commits |
+| Commits | commitlint + `@commitlint/config-conventional` | Conventional Commits |
 | Hooks de Git | lefthook | Rápido, sin dependencias de Node en el hook |
 | Property-based testing | fast-check | Normalizadores, fingerprints y fórmulas |
 | Cobertura | @vitest/coverage-v8 | Umbrales por paquete |

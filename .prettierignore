@@ -1,0 +1,11 @@
+dist
+coverage
+fixtures
+reports
+pnpm-lock.yaml
+
+# Hand-formatted: Prettier realigns tables and rewrites code samples in docs.
+**/*.md
+
+# Claude Code configuration (hooks are not editable by the agent).
+.claude

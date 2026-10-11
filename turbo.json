@@ -13,6 +13,14 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
+    },
+    "pkg:check": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "bench": {
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }
