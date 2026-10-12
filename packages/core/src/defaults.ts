@@ -61,3 +61,26 @@ export const MODEL_TEXT_CAPS_BYTES = {
  * Source: 06-security.md, "Rutas de archivos".
  */
 export const ERROR_PATH_PREVIEW_BYTES = 200;
+
+/**
+ * Text that replaces every redacted value.
+ *
+ * Source: 20-security-privacy.md §28.1.
+ */
+export const REDACTED_MARKER = "[REDACTED]";
+
+/**
+ * Redaction applied when the config omits the `redact` section or one of its
+ * lists. A list given in the config replaces its default; it does not extend
+ * it.
+ *
+ * Source: 20-security-privacy.md §28.1 and 18-cli-config.md.
+ */
+export const REDACT_DEFAULTS = {
+  /** Header names, compared case-insensitively. */
+  headers: ["authorization", "cookie", "set-cookie", "x-api-key"],
+  /** Body field names, compared case-insensitively at any depth. */
+  bodyFields: ["password", "token", "cardNumber"],
+  /** Every built-in pattern (`REDACT_PATTERN_IDS`). */
+  patterns: ["jwt", "bearer", "aws-key", "gcp-key", "azure-key"],
+} as const;

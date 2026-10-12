@@ -91,7 +91,7 @@ export default defineConfig({
   redact: {
     headers: ["authorization", "cookie", "set-cookie", "x-api-key"],
     bodyFields: ["password", "token", "cardNumber"],
-    patterns: ["jwt", "bearer", "aws-key"],
+    patterns: ["jwt", "bearer", "aws-key", "gcp-key", "azure-key"],
   },
 
   llm: { enabled: false },

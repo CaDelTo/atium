@@ -10,7 +10,8 @@ interface with `LogLevel` and `LogContext`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
 `TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
 `NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
-`Fingerprint`, and `truncateUtf8`. Configuration, CI detection, the analysis
+`Fingerprint`, and `truncateUtf8`. `createRedactor` removes secrets from text,
+headers and request bodies. Configuration, CI detection, the analysis
 pipeline, findings, fingerprinting and storage interfaces are planned.
 
 ## Installation
@@ -140,6 +141,24 @@ trailing dot). The check is lexical, so it does not follow symlinks:
 import { resolveInside } from "@atium/core";
 
 const trace = resolveInside(repoRoot, attachment.path);
+```
+
+Secrets are redacted before anything is persisted or logged. `createRedactor`
+takes the `redact` section of the config (validated with `RedactConfigSchema`,
+which fills in the defaults) and replaces each secret with `[REDACTED]`. The
+built-in patterns, listed in `REDACT_PATTERN_IDS`, are `jwt`, `bearer`,
+`aws-key`, `gcp-key` and `azure-key`; they run in linear time, so they are safe
+on untrusted text. Redact before truncating, since half a secret may no longer
+match:
+
+```ts
+import { createRedactor, RedactConfigSchema, truncateUtf8 } from "@atium/core";
+
+const { redact, redactHeaders, redactFields } = createRedactor(RedactConfigSchema.parse({}));
+
+const message = truncateUtf8(redact(rawMessage), 2048);
+redactHeaders({ Authorization: "Basic dXNlcjpwYXNz" }); // { Authorization: "[REDACTED]" }
+redactFields({ user: { password: "p", name: "Ana" } }); // password becomes "[REDACTED]"
 ```
 
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
