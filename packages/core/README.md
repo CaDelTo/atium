@@ -27,6 +27,9 @@ For the Git and CI context of a run it provides `detectRunContext` with
 `DetectRunContextOptions`, `RunContext` and `EnvVars` (the type of
 `process.env`, also used by `ConfigEnv`), and the `GitClient`
 interface with `createGitClient` and `CreateGitClientOptions`.
+For run files it provides `writeRunFile` with `WriteRunFileOptions`,
+`runFilePath`, `readRunFile`, and `readRunFileEntries` with `RunFileEntry`
+and `RunHeader`.
 The analysis pipeline, error fingerprinting and storage interfaces are
 planned.
 
@@ -288,6 +291,28 @@ const { git, ci } = await detectRunContext({
   git: createGitClient({ cwd: process.cwd() }),
   logger,
 });
+```
+
+`writeRunFile` writes a run to `.atium/runs/<runId>.ndjson.gz` under the
+repository root, in the format of ADR-0018: gzip with the header (the run
+without `results`) on line 1 and one `TestResult` per line. It removes ANSI
+codes and applies the list and text caps first, and trims the detail of a
+result whose line would exceed 768 KiB, marking it `detailTruncated`. The
+write is atomic (a temporary file and `rename`), and an existing file is
+never replaced (`STORAGE_CONFLICT`). Texts must be redacted before.
+`readRunFile` reads a whole run back; `readRunFileEntries` streams the header
+and then each result. Both validate every line and reject a file over the
+size limits with `MODEL_INVALID` and the line number:
+
+```ts
+import { readRunFileEntries, writeRunFile } from "@atium/core";
+
+const file = await writeRunFile(run, { rootDir: repoRoot, logger });
+for await (const entry of readRunFileEntries(file)) {
+  if (entry.kind === "result") {
+    console.log(entry.result.test.testId, entry.result.outcome);
+  }
+}
 ```
 
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing

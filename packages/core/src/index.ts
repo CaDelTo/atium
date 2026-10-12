@@ -63,3 +63,8 @@ export { err, ok } from "./result.js";
 export type { Result } from "./result.js";
 export { createStderrLogger } from "./stderr-logger.js";
 export type { LogStream, StderrLoggerOptions } from "./stderr-logger.js";
+export type { RunHeader } from "./storage/run-file-format.js";
+export { readRunFile, readRunFileEntries } from "./storage/run-file-reader.js";
+export type { RunFileEntry } from "./storage/run-file-reader.js";
+export { runFilePath, writeRunFile } from "./storage/run-file-writer.js";
+export type { WriteRunFileOptions } from "./storage/run-file-writer.js";

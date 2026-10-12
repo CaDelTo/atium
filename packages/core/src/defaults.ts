@@ -180,3 +180,62 @@ export const LLM_DEFAULTS = Object.freeze({ enabled: false } as const);
  * Source: 02-data-model.md §10.1 and engineering/06-security.md, "Entradas".
  */
 export const GITHUB_EVENT_MAX_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Limits of the run file reader, in bytes of decompressed data. They are a
+ * safety net against untrusted files, such as a gzip bomb: each is checked
+ * while streaming, before the line is parsed. A line's size does not count
+ * its `\n`; the total counts every decompressed byte.
+ *
+ * Source: ADR-0018, "Límites del lector".
+ */
+export const RUN_FILE_READ_LIMITS = Object.freeze({
+  /** Line 1, the run header. */
+  headerBytes: 64 * 1024,
+  /** Each `TestResult` line. */
+  resultLineBytes: 1024 * 1024,
+  /** The whole decompressed file. */
+  totalBytes: 256 * 1024 * 1024,
+} as const);
+
+/**
+ * Largest `TestResult` line the writer produces, in UTF-8 bytes: 768 KiB, a
+ * 25 % margin under {@link RUN_FILE_READ_LIMITS}. A longer line has its detail
+ * trimmed in the order of ADR-0018 and is marked `detailTruncated`.
+ *
+ * Source: ADR-0018, "Garantía final del escritor".
+ */
+export const RUN_FILE_LINE_TARGET_BYTES = 768 * 1024;
+
+/**
+ * BDD steps kept before and after the reference step when the writer trims the
+ * steps of a line that is too long.
+ *
+ * Source: ADR-0018, "Garantía final del escritor", step 4.
+ */
+export const BDD_TRUNCATION_WINDOW_STEPS = 10;
+
+/**
+ * Directory of the local run files, relative to the repository root. Each run
+ * is written to `<RUNS_DIRECTORY>/<runId>.ndjson.gz`.
+ *
+ * Source: 04-collector.md and 15-storage.md §23.2.1.
+ */
+export const RUNS_DIRECTORY = ".atium/runs";
+
+/**
+ * Lowest HTTP status that marks an endpoint as failing when the endpoints of
+ * an attempt are capped: endpoints with failures are kept first.
+ *
+ * Source: ADR-0018, "Topes de listas", "Endpoints".
+ */
+export const ENDPOINT_FAILURE_MIN_STATUS = 400;
+
+/**
+ * Zod issues listed in a `MODEL_INVALID` message, such as the one for an
+ * invalid run file line; the rest are counted. A 1 MiB line can have
+ * thousands of issues.
+ *
+ * Source: 15-storage.md §23.2.1.
+ */
+export const ZOD_ISSUES_SHOWN = 5;
