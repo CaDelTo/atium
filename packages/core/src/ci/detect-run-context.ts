@@ -11,6 +11,7 @@ import { readGitHubPullRequest } from "./github-event.js";
 import type { GitHubPullRequest } from "./github-event.js";
 import type { CiDetection } from "./providers.js";
 import { detectKnownProvider, unknownCiDetection } from "./providers.js";
+import { describeIssues } from "../zod-issues.js";
 
 /** The `git` and `ci` sections of a {@link Run}. */
 export interface RunContext {
@@ -139,9 +140,7 @@ function validated<T extends z.ZodType>(schema: T, value: Record<string, unknown
   );
   const parsed = schema.safeParse(defined);
   if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
+    const issues = describeIssues(parsed.error.issues);
     throw new AtiumError(
       "MODEL_INVALID",
       `The commit, branch or CI run read from the environment cannot be stored in the run (${issues}).`,
