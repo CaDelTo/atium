@@ -88,6 +88,8 @@ sha1(ruleId | file | titlePath del test que lo contiene | código del nodo norma
 
 El índice de ocurrencia distingue dos hallazgos idénticos dentro del mismo test.
 
+Las partes se combinan con `fingerprintOf` (sección 22.3): se codifican con `JSON.stringify`, no se unen con un `|` literal, y el índice de ocurrencia se pasa como texto (`String(n)`). El `titlePath` se une con `" › "`, como en el `testId` (sección 9.3).
+
 ### 11.6 Salidas
 
 Consola, JSON, **SARIF 2.1.0** (anotaciones inline en PRs de GitHub) y Findings para el resto de la plataforma.

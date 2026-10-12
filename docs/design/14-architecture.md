@@ -81,12 +81,22 @@ interface Finding {
   message: string;
   location?: { file: string; line?: number; column?: number };
   testId?: string;
-  evidence?: Record<string, unknown>;  // datos que justifican el hallazgo
+  evidence?: Record<string, JsonValue>; // datos que justifican el hallazgo; solo valores JSON
   suggestion?: { description: string; diff?: string };
   docsUrl?: string;
   owner?: string;                      // desde CODEOWNERS
 }
 ```
+
+- `fingerprint` = `sha1(partes).slice(0, 16)`, con las partes codificadas con `JSON.stringify` (`fingerprintOf` en `packages/core/src/findings`). Ningún separador es ambiguo: `["a|b"]` y `["a", "b"]` dan fingerprints distintos. En los fingerprints de Finding, la notación `sha1(a | b | c)` (por ejemplo, en la sección 11.5) enumera las partes; el `|` no es un separador literal.
+- Orden de salida (`compareFindings`): `location.file`, `line`, `column`, `ruleId` y `fingerprint` como desempate. Los strings se comparan por unidades de código UTF-16, sin locale. Lo ausente va después de lo presente: los Findings sin `location` van al final, y dentro de un archivo, los que no tienen `line` o `column` van después de los que sí.
+- El esquema Zod (`FindingSchema`) es más estricto que la interfaz, porque los Findings también vienen de plugins de terceros:
+  - `fingerprint` son 16 caracteres hex en minúscula, como los devuelve `fingerprintOf`, y `testId` tiene el formato de la sección 9.3.
+  - `analyzer`, `ruleId`, `message`, `location.file`, `suggestion.description`, `suggestion.diff` y `owner` no pueden estar vacíos. `location.file` es una ruta POSIX relativa a la raíz del repositorio, como `TestCase.file`.
+  - `line` y `column` son enteros ≥ 1.
+  - `evidence` solo admite valores JSON, y `docsUrl`, URLs `http` o `https`, porque los reportes la muestran como enlace.
+  - Rechaza campos desconocidos en `Finding`, `location` y `suggestion`, y un opcional con valor `undefined` explícito: un campo ausente se omite.
+  - Los textos no tienen tope: los de ADR-0018 son de los archivos de run.
 
 ### 22.4 Plugins
 

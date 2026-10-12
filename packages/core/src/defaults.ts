@@ -1,3 +1,5 @@
+import type { FindingSeverity } from "./findings/finding.js";
+
 /**
  * Maximum number of items in each capped list of the data model.
  *
@@ -61,3 +63,14 @@ export const MODEL_TEXT_CAPS_BYTES = {
  * Source: 06-security.md, "Rutas de archivos".
  */
 export const ERROR_PATH_PREVIEW_BYTES = 200;
+
+/**
+ * Weight of a finding in the score of its category, by severity.
+ *
+ * Source: 13-score-baseline-reports.md §21.1.
+ */
+export const SEVERITY_WEIGHTS = {
+  info: 0.25,
+  warning: 1,
+  error: 3,
+} as const satisfies Record<FindingSeverity, number>;

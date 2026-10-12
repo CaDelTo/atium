@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const HEX_16 = /^[0-9a-f]{16}$/;
+/** 16 lowercase hex characters: the format of every truncated sha1 id. */
+export const HEX_16 = /^[0-9a-f]{16}$/;
 
 /** Identifier of a run: a UUID v7, so ids sort by creation time (02-data-model.md §9.2). */
 export const RunIdSchema = z.uuid({ version: "v7" }).brand<"RunId">();

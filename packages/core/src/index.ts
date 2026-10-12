@@ -3,6 +3,24 @@ export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
 export type { FailOpenOptions } from "./fail-open.js";
+export { compareFindings } from "./findings/compare.js";
+export {
+  FINDING_CATEGORIES,
+  FINDING_CONFIDENCES,
+  FINDING_SEVERITIES,
+  FINDING_SOURCES,
+  FindingFingerprintSchema,
+  FindingSchema,
+} from "./findings/finding.js";
+export type {
+  Finding,
+  FindingCategory,
+  FindingConfidence,
+  FindingFingerprint,
+  FindingSeverity,
+  FindingSource,
+} from "./findings/finding.js";
+export { fingerprintOf } from "./findings/fingerprint-of.js";
 export { computeTestId, TITLE_PATH_SEPARATOR } from "./identity.js";
 export type { TestIdentity } from "./identity.js";
 export type { LogContext, Logger, LogLevel } from "./logger.js";
