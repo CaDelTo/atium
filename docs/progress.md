@@ -8,6 +8,63 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-12 — #12 v0-11-logger-clock
+
+- **Hecho:**
+  - Rama `feat/12-logger-clock` (desde `main` en `7b57e6e`). El push lo hizo el usuario. PR #32 abierto con `Closes #12`, sin mergear.
+  - Commit `25d3c48` `docs(adr): propose logger and clock implementations in core`: ADR-0022 en estado **Propuesta** y fila en `docs/adr/README.md`.
+  - Commit `2a4c953` `feat(core): add stderr logger and clock`, en `packages/core/src/`:
+    - `stderr-logger.ts`: `createStderrLogger({ stream, env, redactor, namespace, verbose? })`, exportado con `StderrLoggerOptions` y `LogStream` (`{ write(chunk: string): unknown; isTTY?: boolean }`).
+      - Una línea por entrada: `<namespace> <nivel> <mensaje> <contexto JSON>`.
+      - `error`, `warn` e `info` se escriben siempre. `debug` solo con `verbose` o si `DEBUG` habilita el namespace.
+      - El mensaje pasa por `redactor.redact`. Se escapan los caracteres de control salvo el tab: `\n`, `\r`, ANSI, C1 y U+2028/2029.
+      - Color solo si `stream.isTTY === true` y `NO_COLOR` no está definida o está vacía (`picocolors.createColors`).
+      - Nunca lanza: si el formato falla escribe `<namespace> <nivel> [unformattable log entry]`; si `stream.write` lanza, la entrada se descarta. Es el único `catch` vacío, documentado en 03-errors-logging.
+      - `namespace` es obligatorio, por ejemplo `"atium:cli"`. Es una desviación menor del plan, que lo tenía opcional con default `"atium"`, porque `DEBUG=atium:*` no coincide con `"atium"`.
+    - `serialize-context.ts` (interno):
+      - Los `Error` pasan a `{ name, message, code?, hint?, stack?, cause? }`, con el stack solo cuando debug está activo.
+      - bigint, symbol y function se convierten en strings, y se usa `toJSON` si existe.
+      - Cada objeto se escribe una vez: si reaparece se escribe `"[Repeated]"` y si se contiene a sí mismo `"[Circular]"`. Así el coste es lineal.
+      - Después de convertirlo aplica `redactFields`. Si algo lanza devuelve `"[unserializable context]"`.
+      - `Map`, `Set` y `AggregateError.errors` se pierden; está documentado en el TSDoc.
+    - `debug-namespaces.ts` (interno): `isDebugEnabled(debugEnv, namespace)` con la sintaxis del paquete debug (comas o espacios, `*`, exclusiones `-` que siempre ganan) y sin regex construida desde el entorno.
+    - `clock.ts`: `Clock { now(): number }` y `systemClock` (congelado), exportados desde `@atium/core`.
+    - `testing/fixed-clock.ts`: `fixedClock(ms)`, que lanza `RangeError` si `ms` no es finito, en `@atium/core/testing`.
+    - Dependencia nueva de runtime en core: `picocolors` 1.1.1 exacta.
+    - Docs:
+      - `02-code-design.md`: fila SOLID con la excepción.
+      - `03-errors-logging.md`: implementación, formato, sintaxis de `DEBUG`, excepción del `catch` vacío y viñetas de niveles unidas.
+      - `17-tech-stack.md`: fila de `debug`.
+      - `18-cli-config.md` §26: párrafo de logs, y `ATIUM_LOG_LEVEL` y `--quiet` marcados como aplazados a v0-12/v0-17.
+      - README de core.
+  - Verificado:
+    - `pnpm verify` exit 0 con Node 22: 619 tests y 99.5 % de cobertura en core. Solo queda sin cubrir el `default: assertNever` de `stderr-logger.ts`.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker) sin bloqueantes restantes. Bloqueantes corregidos: copia exponencial de referencias compartidas (opción A, `[Repeated]`, elegida por el usuario) y `catch` vacío no cubierto por la regla escrita. También se corrigieron los importantes y las sugerencias 7, 10 y 11.
+    - CI del PR #32 (run `38220108855`): los 6 jobs `verify` pasan. `audit` falla (ver Problemas).
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan:
+    - La implementación vive en core.
+    - No se usa el paquete `debug`; `DEBUG` se interpreta con código propio.
+    - `picocolors` con `createColors`.
+    - Niveles visibles por defecto: `error`, `warn` e `info`.
+    - Formato de línea y stacks solo con debug.
+    - `fixedClock` en `testing`.
+  - Las de capas y `debug` quedaron en ADR-0022. Se marcó como Aceptada al cerrar la sesión, porque el PR #32 ya estaba mergeado en `main` (`f714562`). Ese cambio está sin commitear en `main`, junto con esta entrada.
+  - El resto está en `03-errors-logging.md` y en el TSDoc.
+  - Hallazgos de `/review` que el usuario decidió no corregir. Solo están en esta entrada y en el TSDoc:
+    - Si el mensaje no es string, se escribe el marcador en lugar de `String(message)`.
+    - `Map`, `Set` y `AggregateError.errors` se pierden.
+    - `fixedClock` lanza `RangeError` y no `AtiumError`.
+- **Problemas:**
+  - `audit` falla en el PR #32 por `shell-quote` (crítico) y `source-map-js`. Sin cambios desde #6: el bump se puede hacer desde el 2026-10-14T14:08Z.
+  - Sigue igual: el Node por defecto del shell es 23.1.0, así que hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
+  - Sigue igual: `CLAUDE.md` dice "El repositorio todavía no tiene código".
+- **Siguiente paso:**
+  1. Hay cambios sin commitear en `main`: esta entrada, el archivo de progreso y ADR-0022 marcado como Aceptada (en el ADR y en `docs/adr/README.md`). El usuario decidió que van en la rama de #13: al crearla con `/task 13`, hacer primero estos commits: `docs(adr): accept ADR-0022` y `docs(repo): add handoff entry for #12`.
+  2. El PR #32 ya está mergeado: `/task 13` (v0-12 configuración, depende de v0-11). Debe resolver `ATIUM_LOG_LEVEL` y conectar `redact` de la config con `createRedactor` para el logger. Ningún otro issue abierto de V0 tiene sus dependencias cerradas antes de #12.
+  3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js` (entrada de #6, ya en `progress-archive.md`). Antes, preguntar al usuario la rama y el issue.
+
 ### 2026-10-12 — #11 v0-10-redaction
 
 - **Hecho:**
@@ -382,22 +439,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - La entrada anterior dice que el commit `adbb0cd` se hizo en `master`; la rama real es `main` y existe `origin/main`.
   - El hook `format.mjs` llama a Prettier, que no está instalado hasta v0-03 (fail-open, no hace nada).
 - **Siguiente paso:** el usuario decide cómo integrar `chore/root-monorepo-bootstrap` en `main` (push y PR o merge local); después, `/task docs/tasks/v0-02-core-skeleton.md`.
-
-### 2026-10-09 — Decisiones abiertas de V0 (ADR-0017, 0018, 0019)
-
-- **Hecho:** commit `adbb0cd` (`docs(adr): decide config loading, run file format, size limits and language`), solo documentación:
-  - ADR-0017 (config con jiti), ADR-0018 (formato NDJSON de los archivos de run, límites del lector, topes del escritor y garantía final) y ADR-0019 (CLI, reglas, reportes y comentarios en PR en inglés), todos en estado Aceptada.
-  - Actualizados `02-data-model.md` (§9.2, §9.3, §9.5), `17-tech-stack.md`, `23-risks-open-decisions.md`, `05-performance.md`, `08-git-workflow.md`, `CLAUDE.md` y las tareas v0-06, v0-12, v0-14 y v0-17. Las tres ya no tienen sección de decisiones abiertas.
-- **En curso:** nada. No hay código; ninguna tarea cambió de estado.
-- **Decisiones:**
-  - Todas están escritas en los ADR 0017–0019. El detalle numérico (topes de listas y textos, regla de qué elementos se conservan, umbral de escritura de 768 KiB, pasos 1–5 de la garantía final y cálculo del peor caso, ≈ 620 KiB por línea y ≈ 54 KiB de encabezado) está en ADR-0018. Esos valores deben ir al `defaults.ts` de core cuando se implementen v0-06 y v0-14.
-  - Los topes de texto se miden en bytes UTF-8 del valor ya escapado para JSON. Esto cambia la semántica de `truncateUtf8` en v0-06.
-  - Decisión operativa sin documentar: el commit se hizo directamente en `master`, que es la única rama local y no tiene remoto.
-- **Problemas:**
-  - **Idioma de la documentación pública** (incluidas las páginas de cada regla): sigue abierto en `CLAUDE.md` y en `23-risks-open-decisions.md`.
-  - **Posible inconsistencia en v0-14:** el criterio "escribir y leer un run construido con builders devuelve el mismo objeto" solo se cumple si los builders (v0-07) generan valores dentro de los topes y sin códigos ANSI. Si no, el escritor los altera. Conviene aclararlo al planificar v0-07 o v0-14.
-  - **`04-collector.md` §12.1** dice que el fixture captura `ariaSnapshot` y lo envía por attachments, pero no dice que se guarde como archivo aparte (ADR-0018). No se actualizó; revisarlo al llegar a la fase del collector.
-  - **Sugerencias sin escribir en ningún lado:**
-    - El subagente `test-writer` tiene Edit y Write sin restricción de rutas; solo su prompt lo limita a archivos de test. Un hook podría hacerlo cumplir.
-    - `explorer` (proyecto) y `Explore` (integrado) se confunden fácilmente al delegar.
-- **Siguiente paso:** `/task docs/tasks/v0-01-monorepo-bootstrap.md`.
