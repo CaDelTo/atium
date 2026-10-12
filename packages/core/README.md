@@ -10,8 +10,9 @@ interface with `LogLevel` and `LogContext`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
 `TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
 `NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
-`Fingerprint`, and `truncateUtf8`. `createRedactor` removes secrets from text,
-headers and request bodies. Configuration, CI detection, the analysis
+`Fingerprint`, and `truncateUtf8`. For redaction it provides `createRedactor`
+with its `Redactor` type, `RedactConfigSchema` with `RedactConfig`, the pattern
+ids `REDACT_PATTERN_IDS` with `RedactPatternId`, and `HeaderValue`. Configuration, CI detection, the analysis
 pipeline, findings, fingerprinting and storage interfaces are planned.
 
 ## Installation
@@ -148,8 +149,10 @@ takes the `redact` section of the config (validated with `RedactConfigSchema`,
 which fills in the defaults) and replaces each secret with `[REDACTED]`. The
 built-in patterns, listed in `REDACT_PATTERN_IDS`, are `jwt`, `bearer`,
 `aws-key`, `gcp-key` and `azure-key`; they run in linear time, so they are safe
-on untrusted text. Redact before truncating, since half a secret may no longer
-match:
+on untrusted text. Sensitive headers and body fields are matched by name
+fragment, ignoring case and separators, so `token` also covers `accessToken`
+and `X-Auth-Token`. `redactFields` walks JSON values only: parse a body first.
+Redact before truncating, since half a secret may no longer match:
 
 ```ts
 import { createRedactor, RedactConfigSchema, truncateUtf8 } from "@atium/core";
@@ -158,7 +161,7 @@ const { redact, redactHeaders, redactFields } = createRedactor(RedactConfigSchem
 
 const message = truncateUtf8(redact(rawMessage), 2048);
 redactHeaders({ Authorization: "Basic dXNlcjpwYXNz" }); // { Authorization: "[REDACTED]" }
-redactFields({ user: { password: "p", name: "Ana" } }); // password becomes "[REDACTED]"
+redactFields({ user: { accessToken: "t", name: "Ana" } }); // accessToken becomes "[REDACTED]"
 ```
 
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing

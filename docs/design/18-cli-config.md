@@ -88,9 +88,13 @@ export default defineConfig({
     respectQuarantine: true,
   },
 
+  // Defaults shown; each list is made of name fragments (20-security-privacy.md §28.1).
   redact: {
-    headers: ["authorization", "cookie", "set-cookie", "x-api-key"],
-    bodyFields: ["password", "token", "cardNumber"],
+    headers: ["authorization", "cookie", "apikey", "token", "secret", "session"],
+    bodyFields: [
+      "password", "passwd", "secret", "token", "apikey",
+      "credential", "privatekey", "sessionid", "cardnumber", "cvv",
+    ],
     patterns: ["jwt", "bearer", "aws-key", "gcp-key", "azure-key"],
   },
 

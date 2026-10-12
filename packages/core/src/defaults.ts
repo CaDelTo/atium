@@ -74,13 +74,34 @@ export const REDACTED_MARKER = "[REDACTED]";
  * lists. A list given in the config replaces its default; it does not extend
  * it.
  *
- * Source: 20-security-privacy.md §28.1 and 18-cli-config.md.
+ * `headers` and `bodyFields` hold name fragments: a name is sensitive when,
+ * lowercased and without separators, it contains any of them, so `token`
+ * covers `accessToken`, `refresh_token` and `X-Auth-Token`.
+ *
+ * Source: 20-security-privacy.md §28.1 and 18-cli-config.md §26.3.
  */
-export const REDACT_DEFAULTS = {
-  /** Header names, compared case-insensitively. */
-  headers: ["authorization", "cookie", "set-cookie", "x-api-key"],
-  /** Body field names, compared case-insensitively at any depth. */
-  bodyFields: ["password", "token", "cardNumber"],
+export const REDACT_DEFAULTS = Object.freeze({
+  /** `authorization` also covers `proxy-authorization`; `cookie`, `set-cookie`. */
+  headers: Object.freeze([
+    "authorization",
+    "cookie",
+    "apikey",
+    "token",
+    "secret",
+    "session",
+  ] as const),
+  bodyFields: Object.freeze([
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "apikey",
+    "credential",
+    "privatekey",
+    "sessionid",
+    "cardnumber",
+    "cvv",
+  ] as const),
   /** Every built-in pattern (`REDACT_PATTERN_IDS`). */
-  patterns: ["jwt", "bearer", "aws-key", "gcp-key", "azure-key"],
-} as const;
+  patterns: Object.freeze(["jwt", "bearer", "aws-key", "gcp-key", "azure-key"] as const),
+});

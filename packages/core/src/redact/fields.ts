@@ -42,12 +42,12 @@ function setOwn(target: Record<string, unknown>, key: string, value: unknown): v
 }
 
 /**
- * Returns a redacted copy of a JSON-like value; the input is not changed.
+ * Redacts a JSON value; the input is not changed.
  *
  * Arrays and plain objects are copied at any depth. The value of a sensitive
  * key is replaced with {@link REDACTED_MARKER}, whatever its type; every other
- * string goes through `redactText`. Other values, including class instances,
- * are kept as they are.
+ * string goes through `redactText`. Other values, including class instances
+ * and the strings inside them, are returned as they are, unredacted.
  *
  * The walk is iterative, so deeply nested input does not overflow the stack.
  * A container reached twice, as in a cycle, is copied once and the copy keeps
@@ -55,7 +55,8 @@ function setOwn(target: Record<string, unknown>, key: string, value: unknown): v
  *
  * @param value - Typically the result of `JSON.parse`.
  * @param redaction - Which keys are sensitive and how to redact strings.
- * @returns The redacted copy.
+ * @returns The redacted copy, or `value` itself if it is not a string, an
+ * array or a plain object.
  */
 export function redactFieldsWith(value: unknown, redaction: FieldRedaction): unknown {
   const copies = new Map<object, Job["target"]>();

@@ -18,30 +18,46 @@ interface RedactPattern {
   readonly keepsPrefix: boolean;
 }
 
+// Characters that end a credential value: whitespace, quotes, angle brackets,
+// `,` and `;` (JSON, headers, connection strings), and `[` and `]`, so that a
+// marker is never part of a value.
+const VALUE = String.raw`[^\s"'<>,;[\]]+`;
+
 // Every regex runs in linear time on untrusted text (06-security.md,
-// "Entradas"): no nested quantifiers, and each match can only start at the
-// beginning of a token, through a negative lookbehind, so a long token is never
-// scanned again from each of its characters. A `\b` would not be enough for
-// tokens that contain `-`, such as `eyJ-eyJ-eyJ…`.
+// "Entradas"): no nested quantifiers, and each match can only start at a token
+// boundary, through a negative lookbehind over the characters of the token's
+// own alphabet. So a long token is never scanned again from each of its
+// characters; a `\b` would not be enough for base64url tokens, which contain
+// `-`, such as `eyJ-eyJ-eyJ…`.
 //
 // None of them accepts `[` or `]` inside a token, so a redacted text is not
 // redacted again: redaction is idempotent.
 const PATTERNS: Readonly<Record<RedactPatternId, RedactPattern>> = {
   // Header and payload are base64url JSON, so they start with `eyJ` (`{"`).
-  // The signature may be empty (`alg: none`).
+  // The signature may be empty (`alg: none`), but its `.` is required.
   jwt: { regex: /(?<![\w-])eyJ[\w-]+\.eyJ[\w-]+\.[\w-]*/g, keepsPrefix: false },
-  // RFC 6750 b64token; the auth scheme is case-insensitive (RFC 9110 §11.1).
-  bearer: { regex: /(?<![\w-])(bearer[ \t]+)[\w.~+/-]+=*/gi, keepsPrefix: true },
-  // AWS access key id: a known prefix and 16 base32 characters.
+  // The auth scheme is case-insensitive (RFC 9110 §11.1). The token runs up to
+  // a delimiter rather than over the RFC 6750 alphabet, so a URL-encoded or
+  // malformed token is not left half redacted.
+  bearer: {
+    regex: new RegExp(String.raw`(?<![\w-])(bearer[ \t]+)${VALUE}`, "gi"),
+    keepsPrefix: true,
+  },
+  // AWS access key id: a known prefix and 16 base32 characters. `_` and `-`
+  // are not part of its alphabet, so `KEY_AKIA…` matches.
   "aws-key": {
     regex: /(?<![A-Za-z0-9])(?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16}(?![A-Za-z0-9])/g,
     keepsPrefix: false,
   },
   // Google Cloud API key: `AIza` and 35 base64url characters.
   "gcp-key": { regex: /(?<![\w-])AIza[\w-]{35}(?![\w-])/g, keepsPrefix: false },
-  // Azure storage and Service Bus connection strings.
+  // Azure storage and Service Bus connection strings. Azure parses their keys
+  // case-insensitively and allows spaces around `=`.
   "azure-key": {
-    regex: /(?<!\w)((?:AccountKey|SharedAccessKey)=)[A-Za-z0-9+/]+={0,2}/g,
+    regex: new RegExp(
+      String.raw`(?<![\w-])((?:AccountKey|SharedAccessKey)[ \t]*=[ \t]*)${VALUE}`,
+      "gi",
+    ),
     keepsPrefix: true,
   },
 };

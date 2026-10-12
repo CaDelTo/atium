@@ -42,6 +42,10 @@ const PATTERN_CASES: Readonly<
       ["BEARER xyz", "BEARER [REDACTED]"],
       ["Bearer\t xyz rest", "Bearer\t [REDACTED] rest"],
       ['{"auth":"Bearer abc"}', '{"auth":"Bearer [REDACTED]"}'],
+      ["Bearer abc%2Fdef next", "Bearer [REDACTED] next"],
+      ["Bearer abc:def", "Bearer [REDACTED]"],
+      ["Bearer abcédef", "Bearer [REDACTED]"],
+      ["bearer a=b;c", "bearer [REDACTED];c"],
     ],
     negative: ["Bearer", "Bearer ", "Bearer\nabc", "Bearer: abc", "forbearer abc", "Bearer [x]"],
   },
@@ -51,6 +55,7 @@ const PATTERN_CASES: Readonly<
       [`aws_access_key_id=${AWS_KEY}`, "aws_access_key_id=[REDACTED]"],
       [`"${AWS_KEY.replace("AKIA", "ASIA")}"`, '"[REDACTED]"'],
       [AWS_KEY.replace("AKIA", "A3TX"), "[REDACTED]"],
+      [`AWS_KEY_${AWS_KEY}`, "AWS_KEY_[REDACTED]"],
     ],
     negative: [
       AWS_KEY.toLowerCase(),
@@ -78,8 +83,12 @@ const PATTERN_CASES: Readonly<
         "DefaultEndpointsProtocol=https;AccountName=acc;AccountKey=[REDACTED];EndpointSuffix=core.windows.net",
       ],
       ["Endpoint=sb://ns/;SharedAccessKey=abc+/=", "Endpoint=sb://ns/;SharedAccessKey=[REDACTED]"],
+      ["AccountKey=ab-cd_e==;x", "AccountKey=[REDACTED];x"],
+      ["SharedAccessKey=abc%2Bdef", "SharedAccessKey=[REDACTED]"],
+      ["accountkey=abc", "accountkey=[REDACTED]"],
+      ["AccountKey = abc", "AccountKey = [REDACTED]"],
     ],
-    negative: ["MyAccountKey=abc", "AccountKey=", "accountkey=abc", "AccountKey =abc"],
+    negative: ["MyAccountKey=abc", "AccountKey=", "AccountKey=;x", "AccountKey:abc"],
   },
 };
 
@@ -119,10 +128,12 @@ describe("createTextRedactor", () => {
     expect(redactAll("The bearer of this message")).toBe("The bearer [REDACTED] this message");
   });
 
-  it("gives the same result on repeated calls", () => {
-    const text = `Bearer abc ${AWS_KEY} ${GCP_KEY}`;
+  it("carries no regex state from one call to the next", () => {
+    // A global regex that kept `lastIndex` after a long text would start the
+    // next search past the secret of a short one.
+    redactAll(`${"x".repeat(100)} Bearer abc ${AWS_KEY} ${GCP_KEY} AccountKey=k`);
 
-    expect(redactAll(text)).toBe(redactAll(text));
+    expect(redactAll(`Bearer abc ${AWS_KEY}`)).toBe("Bearer [REDACTED] [REDACTED]");
   });
 
   it.each([
@@ -160,7 +171,9 @@ describe("redaction properties", () => {
     const fragment = fc.oneof(
       fc.constantFrom(JWT, UNSIGNED_JWT, AWS_KEY, GCP_KEY, `AccountKey=${AZURE_KEY}`),
       fc.constantFrom("Bearer ", "bearer\t", "eyJ", "AKIA", "AIza", "AccountKey=", "A3T"),
+      fc.constantFrom("accountkey = ", "SharedAccessKey=", "KEY_"),
       fc.constantFrom(".", "-", "_", "=", " ", "\n", "[", "]", "[REDACTED]", ";", "/"),
+      fc.constantFrom("%2F", ":", "é", '"', "'", ",", "<", ">"),
       fc.string({ unit: fc.constantFrom(..."aZ09eyJ+/=-_. ".split("")), maxLength: 8 }),
       fc.string({ maxLength: 4 }),
     );
@@ -196,6 +209,8 @@ describe("redaction time", () => {
     ["repeated AWS prefixes", fill("AKIA")],
     ["repeated GCP prefixes", fill("AIza")],
     ["repeated Azure prefixes", fill("AccountKey=")],
+    ["an Azure prefix followed by spaces", fill(" ", "AccountKey =")],
+    ["repeated spaced Azure prefixes", fill("accountkey = ")],
     ["a long word", fill("a")],
     ["many real secrets", fill(`${JWT} Bearer x ${AWS_KEY} ${GCP_KEY} AccountKey=k; `)],
   ])("is linear on 1 MiB of %s", (_label, text) => {
