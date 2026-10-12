@@ -1,6 +1,11 @@
 export { assertNever } from "./assert-never.js";
 export { systemClock } from "./clock.js";
 export type { Clock } from "./clock.js";
+export { loadConfig } from "./config/load-config.js";
+export type { LoadConfigOptions, LoadedConfig } from "./config/load-config.js";
+export type { ConfigEnv, ConfigFlags } from "./config/resolve-config.js";
+export { AtiumConfigSchema, defineConfig, QUARANTINE_MODES } from "./config/schema.js";
+export type { AtiumConfig, AtiumConfigInput, QuarantineMode } from "./config/schema.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
@@ -25,6 +30,7 @@ export type {
 export { fingerprintOf } from "./findings/fingerprint-of.js";
 export { computeTestId, TITLE_PATH_SEPARATOR } from "./identity.js";
 export type { TestIdentity } from "./identity.js";
+export { LOG_LEVELS } from "./logger.js";
 export type { LogContext, Logger, LogLevel } from "./logger.js";
 export { ATTEMPT_STATUSES, AttemptSchema } from "./model/attempt.js";
 export type { Attempt, AttemptStatus } from "./model/attempt.js";

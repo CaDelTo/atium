@@ -1,8 +1,7 @@
 import * as systemPath from "node:path";
 import type { PlatformPath } from "node:path";
-import { ERROR_PATH_PREVIEW_BYTES } from "./defaults.js";
 import { AtiumError } from "./errors.js";
-import { truncateUtf8 } from "./model/text.js";
+import { quoteForMessage } from "./quote.js";
 
 const { posix, win32 } = systemPath;
 
@@ -18,15 +17,6 @@ const WINDOWS_ABSOLUTE = /^(?:[A-Za-z]:[\\/]|\\\\)/;
  * which Windows may strip, or a reserved device name, with any extension.
  */
 const UNSAFE_WINDOWS_SEGMENT = /[. ]$|^(?:CON|PRN|AUX|NUL|COM[0-9¹²³]|LPT[0-9¹²³])(?:\..*)?$/i;
-
-/**
- * Quotes a path that may come from data for an error message: escaped, so it
- * carries no control characters, and capped at {@link ERROR_PATH_PREVIEW_BYTES}.
- */
-function quotePath(value: string): string {
-  const shown = truncateUtf8(value, ERROR_PATH_PREVIEW_BYTES);
-  return `${JSON.stringify(shown)}${shown.length < value.length ? "…" : ""}`;
-}
 
 /**
  * Path from `root` to `target` if `target` is strictly inside `root`.
@@ -75,7 +65,7 @@ export function toPosixRelative(root: string, absolutePath: string): string {
   if (relative === undefined) {
     throw new AtiumError(
       "MODEL_INVALID",
-      `Path ${quotePath(absolutePath)} is not inside the repository root ${quotePath(root)}, so it cannot be stored relative to it.`,
+      `Path ${quoteForMessage(absolutePath)} is not inside the repository root ${quoteForMessage(root)}, so it cannot be stored relative to it.`,
       { hint: "Run Atium from the repository root, so that every test file is inside it." },
     );
   }
@@ -119,7 +109,7 @@ export function resolveInsideWith(api: PlatformPath, root: string, relative: str
   if (reason !== undefined) {
     throw new AtiumError(
       "MODEL_INVALID",
-      `Path ${quotePath(relative)} ${reason}, so it was not used.`,
+      `Path ${quoteForMessage(relative)} ${reason}, so it was not used.`,
       {
         hint: "Paths that come from reports, fixtures or storage must point to a file inside the repository root.",
       },
