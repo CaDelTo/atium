@@ -40,12 +40,12 @@ El estado se consulta en GitHub Issues, no en este archivo. Cada fase tiene un m
 
 | Estado | En GitHub |
 |---|---|
-| Pendiente | Abierto, sin rama ni PR, con todas sus dependencias cerradas o Hechas |
-| En curso | Abierto, con rama o PR |
-| Bloqueada | Abierto, sin rama ni PR, con alguna dependencia abierta |
+| Pendiente | Abierto, sin rama, PR ni worktree, con todas sus dependencias cerradas o Hechas |
+| En curso | Abierto, con rama, PR o worktree `atium-<n>` (creado por `/parallel`) |
+| Bloqueada | Abierto, sin rama, PR ni worktree, con alguna dependencia abierta |
 | Hecha | Cerrado |
 
-La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas. El PR de cada tarea incluye `Closes #<n>`; solo una persona cierra issues y mergea PRs.
+La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas y que no tenga rama, PR ni worktree. Para hacer varias a la vez, `/parallel`. El PR de cada tarea incluye `Closes #<n>`; solo una persona cierra issues y mergea PRs.
 
 ### V0 — Fundaciones
 
