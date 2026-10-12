@@ -118,8 +118,23 @@ The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
 The `@atium/core/testing` entry point holds test builders and fakes for
-Atium's own tests. Today it provides `FakeLogger`, a `Logger` that records
-every call.
+Atium's own tests:
+
+- `aRun`, `aTestResult`, `aTestCase`, `anAttempt` and `anError`: immutable
+  builders of the data model. Every method returns a new builder, and
+  `build()` validates the result with its Zod schema and returns it frozen.
+  Defaults are deterministic: a fixed start time, a run id derived from a seed
+  (`withSeed`) and test ids and fingerprints derived from the content.
+- `FakeLogger`: a `Logger` that records every call.
+
+```ts
+import { aRun, aTestResult } from "@atium/core/testing";
+
+const run = aRun()
+  .onCommit("abc123")
+  .withResult(aTestResult("checkout").failedThenPassed())
+  .build();
+```
 
 ## Configuration
 

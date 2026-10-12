@@ -9,7 +9,9 @@ import type { TestCaseSchema } from "./test-case.js";
 import type { TestResultSchema } from "./test-result.js";
 
 // Valid inputs for the model schema tests: a minimal one with only the
-// required fields and a full one with every optional field set.
+// required fields and a full one with every optional field set. They are
+// written out instead of built with `@atium/core/testing`, on purpose: the
+// builders validate with these schemas, so the schema tests stay independent.
 
 type NetworkEndpointInput = z.input<typeof NetworkSummarySchema>["endpoints"][number];
 type BddStepInput = z.input<typeof BddContextSchema>["steps"][number];

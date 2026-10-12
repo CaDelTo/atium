@@ -57,6 +57,8 @@ const run = aRun()
 
 - Los builders viven en `packages/core/src/testing/` y se exportan desde `@atium/core/testing`.
 - Los valores por defecto de un builder son válidos según el esquema Zod.
+- Los builders son inmutables: cada método devuelve un builder nuevo. `build()` valida con el esquema Zod y devuelve el objeto congelado.
+- Los valores por defecto son deterministas: fecha fija, id del run derivado de una semilla (`withSeed`) e ids de test y fingerprints derivados del contenido. Nunca hay contadores ni estado global.
 
 **Fixtures reales:**
 
