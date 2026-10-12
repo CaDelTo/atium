@@ -74,3 +74,47 @@ export const SEVERITY_WEIGHTS = {
   warning: 1,
   error: 3,
 } as const satisfies Record<FindingSeverity, number>;
+
+/**
+ * Text that replaces every redacted value.
+ *
+ * Source: 20-security-privacy.md §28.1.
+ */
+export const REDACTED_MARKER = "[REDACTED]";
+
+/**
+ * Redaction applied when the config omits the `redact` section or one of its
+ * lists. A list given in the config replaces its default; it does not extend
+ * it.
+ *
+ * `headers` and `bodyFields` hold name fragments: a name is sensitive when,
+ * lowercased and without separators, it contains any of them, so `token`
+ * covers `accessToken`, `refresh_token` and `X-Auth-Token`.
+ *
+ * Source: 20-security-privacy.md §28.1 and 18-cli-config.md §26.3.
+ */
+export const REDACT_DEFAULTS = Object.freeze({
+  /** `authorization` also covers `proxy-authorization`; `cookie`, `set-cookie`. */
+  headers: Object.freeze([
+    "authorization",
+    "cookie",
+    "apikey",
+    "token",
+    "secret",
+    "session",
+  ] as const),
+  bodyFields: Object.freeze([
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "apikey",
+    "credential",
+    "privatekey",
+    "sessionid",
+    "cardnumber",
+    "cvv",
+  ] as const),
+  /** Every built-in pattern (`REDACT_PATTERN_IDS`). */
+  patterns: Object.freeze(["jwt", "bearer", "aws-key", "gcp-key", "azure-key"] as const),
+});

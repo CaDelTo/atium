@@ -12,7 +12,7 @@
 
 ## Hacer
 
-- `createRedactor(config)` que devuelve una función `redact(text)`.
+- `createRedactor(config)` que devuelve una función `redact(text)`. Implementado como un objeto `Redactor` con `redact`, `redactHeaders` y `redactFields`, para cubrir también los objetos (aprobado en el plan de #11).
 - Patrones por defecto: JWT, `Bearer <token>`, claves de nube del diseño.
 - Redacción de headers y campos de cuerpo configurables (`redact.headers`, `redact.bodyFields`) para objetos.
 - Reemplazo con un marcador fijo (`[REDACTED]`).
