@@ -10,10 +10,15 @@ interface with `LogLevel` and `LogContext`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
 `TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
 `NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
-`Fingerprint`, and `truncateUtf8`. For redaction it provides `createRedactor`
-with its `Redactor` type, `RedactConfigSchema` with `RedactConfig`, the pattern
-ids `REDACT_PATTERN_IDS` with `RedactPatternId`, and `HeaderValue`. Configuration, CI detection, the analysis
-pipeline, findings, fingerprinting and storage interfaces are planned.
+`Fingerprint`, and `truncateUtf8`. Every analyzer reports a `Finding`
+(`FindingSchema`, with `FINDING_SEVERITIES`, `FINDING_CATEGORIES`,
+`FINDING_SOURCES` and `FINDING_CONFIDENCES`), identified by a
+`FindingFingerprint` from `fingerprintOf` and ordered with `compareFindings`.
+For redaction it provides `createRedactor` with its `Redactor` type,
+`RedactConfigSchema` with `RedactConfig`, the pattern ids
+`REDACT_PATTERN_IDS` with `RedactPatternId`, and `HeaderValue`.
+Configuration, CI detection, the analysis pipeline, error fingerprinting and
+storage interfaces are planned.
 
 ## Installation
 
@@ -142,6 +147,34 @@ trailing dot). The check is lexical, so it does not follow symlinks:
 import { resolveInside } from "@atium/core";
 
 const trace = resolveInside(repoRoot, attachment.path);
+```
+
+A finding's fingerprint hashes the parts that identify it, without line
+numbers, so the baseline survives edits. Every output sorts findings with
+`compareFindings` (file, line, column, rule, then fingerprint; findings without
+a location last):
+
+```ts
+import { compareFindings, fingerprintOf, FindingSchema, TITLE_PATH_SEPARATOR } from "@atium/core";
+
+const finding = FindingSchema.parse({
+  fingerprint: fingerprintOf([
+    "E2E001",
+    file,
+    titlePath.join(TITLE_PATH_SEPARATOR),
+    normalizedCode,
+    String(occurrence),
+  ]),
+  analyzer: "lint",
+  ruleId: "E2E001",
+  severity: "warning",
+  category: "reliability",
+  source: "rule",
+  confidence: "high",
+  message: "Avoid fixed waits; wait for a condition instead.",
+  location: { file, line: 12, column: 5 },
+});
+const ordered = findings.toSorted(compareFindings);
 ```
 
 Secrets are redacted before anything is persisted or logged. `createRedactor`

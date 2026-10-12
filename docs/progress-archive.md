@@ -1,8 +1,16 @@
-# Progreso: archivo
+# Archivo de progreso
 
-Entradas de `docs/progress.md` que ya no están entre las 10 más recientes. Las más recientes van primero.
+Entradas antiguas de [progress.md](progress.md), de la más reciente a la más antigua.
 
 ## Entradas
+
+### 2026-10-08 — Cambio de codename a atium
+
+- **Hecho:** codename cambiado de `nameless` a `atium` en toda la documentación, la configuración de `.claude/` y las tareas.
+- **En curso:** nada.
+- **Decisiones:** ADR-0016 reemplaza al ADR-0013. Las entradas anteriores de esta bitácora mantienen el nombre viejo.
+- **Problemas:** siguen abiertas las decisiones de V0: c12 o jiti (v0-12), formato interno de los archivos de run (v0-14), idioma de los mensajes del CLI (v0-17).
+- **Siguiente paso:** `/task docs/tasks/v0-01-monorepo-bootstrap.md`.
 
 ### 2026-10-08 — Preparación del repositorio
 
