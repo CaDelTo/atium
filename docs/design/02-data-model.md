@@ -195,3 +195,40 @@ Detalles que afectan la calidad del análisis:
 - **PR en GitHub:** `GITHUB_SHA` es el merge commit con la rama base, no el head del PR. Ese es el árbol que realmente se probó, así que se usa como `commitSha`; el head del PR se guarda en `headSha` para enlaces.
 - **Ejecuciones locales con cambios sin commitear:** se marcan `dirty: true` y se excluyen del análisis de "mismo commit".
 - **Overrides:** cualquier valor se puede forzar con variables `ATIUM_COMMIT_SHA`, `ATIUM_BRANCH`, etc.
+
+### 10.1 Detección (`detectRunContext`)
+
+`detectRunContext({ env, cwd, git, logger })`, en `core/src/ci`, devuelve las secciones `git` y `ci` del `Run`. `git` es la interfaz `GitClient` (`headCommit`, `currentBranch`, `isDirty`); `createGitClient` la implementa con simple-git.
+
+1. **Proveedor:**
+   - Primero, las reglas propias de la tabla para GitHub Actions, GitLab CI, Jenkins, CircleCI y Azure Pipelines. Cada uno se detecta con la misma variable que usa env-ci: `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI` y `BUILD_BUILDURI`.
+   - Si ninguno coincide y `CI` está definida, se usa env-ci, importado de forma diferida, para el resto de proveedores (Travis CI, Buildkite, Bitbucket…). Su `service` pasa a ser el `provider`. En un PR, `prBranch` es la rama y `branch` la base.
+   - Si tampoco, el run es `local`.
+2. **Campos por proveedor:** los de la tabla, más estos:
+   - `runId`: `CI_PIPELINE_ID` en GitLab, `BUILD_TAG` en Jenkins, `CIRCLE_WORKFLOW_ID` en CircleCI y `BUILD_BUILDID` en Azure.
+   - `jobId`: solo en GitLab (`CI_JOB_ID`).
+   - `baseBranch`:
+     - `GITHUB_BASE_REF` en GitHub;
+     - `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` en GitLab;
+     - `CHANGE_TARGET` en Jenkins;
+     - `SYSTEM_PULLREQUEST_TARGETBRANCH` sin `refs/heads/` en Azure.
+   - Rama en PR:
+     - En Jenkins, `CHANGE_BRANCH` va antes que `GIT_BRANCH`, que en un PR vale `PR-<n>`.
+     - En Azure, `SYSTEM_PULLREQUEST_SOURCEBRANCH` sin `refs/heads/` va antes que `BUILD_SOURCEBRANCHNAME`, que en un PR vale `merge`.
+   - CircleCI: el número de PR es el último segmento de la URL de `CIRCLE_PULL_REQUEST`.
+3. **Payload de GitHub:** si existe `GITHUB_EVENT_PATH`, se lee con cualquier nombre de evento. Si trae `pull_request`, de ahí salen `prNumber` (`pull_request.number`) y `headSha` (`pull_request.head.sha`). Antes de parsearlo se mide: si supera `GITHUB_EVENT_MAX_BYTES` (10 MiB, `defaults.ts` de core), no se lee. Un payload demasiado grande, ilegible, que no es JSON o con un `pull_request` inválido se registra como aviso y el run se guarda sin esos dos campos.
+4. **Overrides:** `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH` mandan sobre el proveedor.
+5. **Git:**
+   - Solo se consulta si el commit no viene del entorno; así un job de CI sin Git funciona.
+   - Si la rama tampoco se conoce, sale de `git branch --show-current`. Con HEAD separado se omite.
+   - `dirty` solo se calcula en un run `local`: es `git status --porcelain` no vacío, así que los archivos sin seguimiento cuentan y los ignorados no. En CI y con `ATIUM_COMMIT_SHA` vale `false`.
+6. **Run local:** `ci` es `{ provider: "local" }`, sin `runId`. El uuid de la tabla es el `Run.id`.
+
+Casos límite:
+
+- Una variable vacía cuenta como no definida.
+- Los números (`runAttempt`, `prNumber`) que no son enteros positivos en decimal se omiten.
+- Git ausente, un directorio que no es un repositorio o un repositorio sin commits dan `GIT_UNAVAILABLE`, con un `hint` distinto si falta el binario. Solo pasa cuando hace falta Git.
+- Un valor que no cabe en el `Run`, como una rama por encima del tope de bytes, da `MODEL_INVALID`.
+- En `pull_request_target`, `GITHUB_SHA` es el último commit de la rama base, no un merge commit. Se usa igualmente como `commitSha`; si el workflow hace checkout del head del PR, hay que forzarlo con `ATIUM_COMMIT_SHA`.
+- En Jenkins sin Multibranch, `GIT_BRANCH` puede venir como `origin/main`; se guarda tal cual.

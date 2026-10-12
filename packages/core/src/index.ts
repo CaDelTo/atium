@@ -1,4 +1,8 @@
 export { assertNever } from "./assert-never.js";
+export { detectRunContext } from "./ci/detect-run-context.js";
+export type { DetectRunContextOptions, RunContext } from "./ci/detect-run-context.js";
+export { createGitClient } from "./ci/git-client.js";
+export type { CreateGitClientOptions, GitClient } from "./ci/git-client.js";
 export { systemClock } from "./clock.js";
 export type { Clock } from "./clock.js";
 export { loadConfig } from "./config/load-config.js";
@@ -6,6 +10,7 @@ export type { LoadConfigOptions, LoadedConfig } from "./config/load-config.js";
 export type { ConfigEnv, ConfigFlags } from "./config/resolve-config.js";
 export { AtiumConfigSchema, defineConfig, QUARANTINE_MODES } from "./config/schema.js";
 export type { AtiumConfig, AtiumConfigInput, QuarantineMode } from "./config/schema.js";
+export type { EnvVars } from "./env.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";

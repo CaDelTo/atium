@@ -169,3 +169,14 @@ export const QUARANTINE_DEFAULTS = Object.freeze({ mode: "run-and-ignore" } as c
  * "LLM".
  */
 export const LLM_DEFAULTS = Object.freeze({ enabled: false } as const);
+
+/**
+ * Largest GitHub Actions event payload read, in bytes: 10 MiB. The payload
+ * holds text written by pull request authors and pushes with many commits,
+ * so it is measured before it is parsed; a larger one is skipped with a
+ * warning and the run is saved without the pull request number and head
+ * commit.
+ *
+ * Source: 02-data-model.md §10.1 and engineering/06-security.md, "Entradas".
+ */
+export const GITHUB_EVENT_MAX_BYTES = 10 * 1024 * 1024;

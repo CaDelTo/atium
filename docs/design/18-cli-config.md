@@ -138,4 +138,4 @@ export default defineConfig({
 });
 ```
 
-Variables de entorno principales: `ATIUM_CONFIG`, `ATIUM_STORAGE_*`, `ATIUM_COMMIT_SHA`, `ATIUM_BRANCH`, `ATIUM_CHAOS`, `ATIUM_LOG_LEVEL`, `NO_COLOR`. `ATIUM_LOG_LEVEL` lo resuelve `loadConfig` (v0-12) y lo aplica la opción `level` de `createStderrLogger`. `--quiet` lo traduce el CLI a un nivel (v0-17).
+Variables de entorno principales: `ATIUM_CONFIG`, `ATIUM_STORAGE_*`, `ATIUM_COMMIT_SHA`, `ATIUM_BRANCH`, `ATIUM_CHAOS`, `ATIUM_LOG_LEVEL`, `NO_COLOR`. `ATIUM_LOG_LEVEL` lo resuelve `loadConfig` (v0-12) y lo aplica la opción `level` de `createStderrLogger`. `--quiet` lo traduce el CLI a un nivel (v0-17). `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH` las lee `detectRunContext` (v0-13, [02-data-model.md §10.1](02-data-model.md#101-detección-detectruncontext)) y mandan sobre lo que diga el proveedor de CI.

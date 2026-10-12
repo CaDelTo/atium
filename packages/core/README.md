@@ -23,8 +23,12 @@ For configuration it provides `defineConfig`, `loadConfig` with
 `LoadConfigOptions`, `LoadedConfig`, `ConfigFlags` and `ConfigEnv`, and
 `AtiumConfigSchema` with `AtiumConfig`, `AtiumConfigInput`,
 `QUARANTINE_MODES` and `QuarantineMode`.
-CI detection, the analysis pipeline, error fingerprinting and storage
-interfaces are planned.
+For the Git and CI context of a run it provides `detectRunContext` with
+`DetectRunContextOptions`, `RunContext` and `EnvVars` (the type of
+`process.env`, also used by `ConfigEnv`), and the `GitClient`
+interface with `createGitClient` and `CreateGitClientOptions`.
+The analysis pipeline, error fingerprinting and storage interfaces are
+planned.
 
 ## Installation
 
@@ -266,6 +270,26 @@ const logger = createStderrLogger({
 });
 ```
 
+`detectRunContext` fills the `git` and `ci` sections of a run. It reads
+GitHub Actions, GitLab CI, Jenkins, CircleCI and Azure Pipelines with rules
+of its own, and other CI providers with env-ci; outside CI, the provider is
+`local`. In a GitHub pull request, `commitSha` is the merge commit, and
+`headSha` and `prNumber` come from the event payload. `ATIUM_COMMIT_SHA`
+and `ATIUM_BRANCH` override the provider. Git is only queried when the commit
+is not in the environment, and `dirty` is only checked locally. Without Git,
+it throws `GIT_UNAVAILABLE` with a hint:
+
+```ts
+import { createGitClient, detectRunContext } from "@atium/core";
+
+const { git, ci } = await detectRunContext({
+  env: process.env,
+  cwd: process.cwd(),
+  git: createGitClient({ cwd: process.cwd() }),
+  logger,
+});
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -278,6 +302,9 @@ Atium's own tests:
   Defaults are deterministic: a fixed start time, a run id derived from a seed
   (`withSeed`) and test ids and fingerprints derived from the content.
 - `FakeLogger`: a `Logger` that records every call.
+- `FakeGitClient`: a `GitClient` that answers from memory (a `FakeGitState`)
+  and records every query as a `GitQuery`; `new FakeGitClient("unavailable")`
+  throws `GIT_UNAVAILABLE`.
 - `fixedClock(ms)`: a `Clock` that always returns the same time.
 - `thrownAtiumError(action)` and `rejectedAtiumError(promise)`: return the
   `AtiumError` thrown or rejected with, and fail the test on anything else.
