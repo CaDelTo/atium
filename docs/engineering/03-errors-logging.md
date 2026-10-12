@@ -122,11 +122,11 @@ export interface Logger {
 }
 ```
 
-- `@atium/core` define la interfaz y la implementación ([ADR-0022](../adr/0022-logger-reloj-en-core.md)), `createStderrLogger({ stream, env, redactor, namespace, verbose })`. El stream y el entorno se inyectan; en producción son `process.stderr` y `process.env`. En los tests se usa `FakeLogger` de `@atium/core/testing`, que guarda las llamadas en `entries`.
+- `@atium/core` define la interfaz y la implementación ([ADR-0022](../adr/0022-logger-reloj-en-core.md)), `createStderrLogger({ stream, env, redactor, namespace, level, verbose })`. El stream y el entorno se inyectan; en producción son `process.stderr` y `process.env`. En los tests se usa `FakeLogger` de `@atium/core/testing`, que guarda las llamadas en `entries`.
 - Formato: una línea por entrada, `<namespace> <nivel> <mensaje> <contexto JSON>`. Por ejemplo, `atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}`. Los caracteres de control del mensaje (salvo el tab), incluidos los saltos de línea y las secuencias ANSI, se escapan. Cada objeto del contexto se escribe una vez: si reaparece, se escribe `"[Repeated]"`, y si se contiene a sí mismo, `"[Circular]"`. Los `Error` del contexto se escriben como `{ name, message, code?, hint?, stack?, cause? }`, y el stack solo aparece con la depuración activa.
 - Una implementación de `Logger` **nunca lanza**: `failOpen` registra desde su `catch` y un logger que lanzara rompería la suite del usuario.
 - En los paquetes no se usa `console.*` (regla `no-console`). Se usa el `Logger` inyectado.
-- Niveles: `error`, `warn`, `info` y `debug`. Los tres primeros se escriben siempre; `debug`, solo con la depuración activa.
+- Niveles: `error`, `warn`, `info` y `debug` (`LOG_LEVELS`). `level` es el nivel mínimo que se escribe. Por defecto es `info`, así que se escriben los tres primeros; lo resuelve `loadConfig` desde los flags y `ATIUM_LOG_LEVEL` ([18-cli-config.md](../design/18-cli-config.md) §26.3). `debug` solo se escribe con la depuración activa: `level: "debug"`, `--verbose` o `DEBUG`.
 - Contexto estructurado como segundo argumento, no concatenado en el mensaje.
 - El logger aplica la redacción de datos sensibles antes de escribir.
 - Depuración: `DEBUG=atium:*` o `--verbose`. `DEBUG` sigue la sintaxis del paquete debug (patrones separados por comas o espacios, `*` como comodín y exclusiones con `-`, que ganan sobre cualquier inclusión sin importar el orden) y se compara con el namespace del logger, por ejemplo `atium:cli`.

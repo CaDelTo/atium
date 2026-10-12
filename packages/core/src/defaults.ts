@@ -1,4 +1,5 @@
 import type { FindingSeverity } from "./findings/finding.js";
+import type { LogLevel } from "./logger.js";
 
 /**
  * Maximum number of items in each capped list of the data model.
@@ -56,11 +57,13 @@ export const MODEL_TEXT_CAPS_BYTES = {
 } as const;
 
 /**
- * Maximum size of a path quoted in an error message, in UTF-8 bytes of the
- * value once escaped for JSON. Paths come from reports, fixtures and storage,
- * so the message neither grows without bound nor carries control characters.
+ * Maximum size of a path or a value quoted in an error message, in UTF-8 bytes
+ * of the value once escaped for JSON. Paths come from reports, fixtures and
+ * storage, and values from the config file, so the message neither grows
+ * without bound nor carries control characters.
  *
- * Source: 06-security.md, "Rutas de archivos".
+ * Source: engineering/06-security.md, "Rutas de archivos", and
+ * 18-cli-config.md §26.3.
  */
 export const ERROR_PATH_PREVIEW_BYTES = 200;
 
@@ -118,3 +121,51 @@ export const REDACT_DEFAULTS = Object.freeze({
   /** Every built-in pattern (`REDACT_PATTERN_IDS`). */
   patterns: Object.freeze(["jwt", "bearer", "aws-key", "gcp-key", "azure-key"] as const),
 });
+
+/**
+ * Config file names searched in the root when neither `--config` nor
+ * `ATIUM_CONFIG` names one, in this order. Finding more than one is an error.
+ *
+ * Source: 18-cli-config.md §26.3.
+ */
+export const CONFIG_FILE_NAMES = Object.freeze([
+  "atium.config.ts",
+  "atium.config.mts",
+  "atium.config.js",
+  "atium.config.mjs",
+  "atium.config.json",
+] as const);
+
+/**
+ * Largest Levenshtein distance, compared in lowercase, between an unknown
+ * config key and the known key suggested for it. `storgae` is at 2 from
+ * `storage`.
+ *
+ * Source: 18-cli-config.md §26.3.
+ */
+export const CONFIG_SUGGESTION_MAX_DISTANCE = 2;
+
+/**
+ * Lowest severity logged when neither a flag nor `ATIUM_LOG_LEVEL` sets one:
+ * `error`, `warn` and `info` are written; `debug` is not.
+ *
+ * Source: 18-cli-config.md §26.3, "Precedencia en V0", and
+ * engineering/03-errors-logging.md, "Logging".
+ */
+export const DEFAULT_LOG_LEVEL = "info" satisfies LogLevel;
+
+/**
+ * The `quarantine` section when the config omits it or its `mode`.
+ *
+ * Source: 07-flaky.md, "Modos".
+ */
+export const QUARANTINE_DEFAULTS = Object.freeze({ mode: "run-and-ignore" } as const);
+
+/**
+ * The `llm` section when the config omits it or its `enabled`: the LLM is
+ * opt-in.
+ *
+ * Source: 00-overview.md, principle 8, and 20-security-privacy.md §28, row
+ * "LLM".
+ */
+export const LLM_DEFAULTS = Object.freeze({ enabled: false } as const);

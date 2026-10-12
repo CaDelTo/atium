@@ -80,6 +80,47 @@ describe("createStderrLogger", () => {
         expect(stream.chunks).toEqual([]);
       },
     );
+
+    function levelsWrittenWith(
+      overrides: Partial<Omit<StderrLoggerOptions, "stream">>,
+    ): readonly string[] {
+      const stream = fakeStream();
+      const logger = loggerFor(stream, overrides);
+      logger.error("e");
+      logger.warn("w");
+      logger.info("i");
+      logger.debug("d");
+      return stream.chunks.map((chunk) => chunk.split(" ")[1] ?? "");
+    }
+
+    it.each([
+      ["error", ["error"]],
+      ["warn", ["error", "warn"]],
+      ["info", ["error", "warn", "info"]],
+      ["debug", ["error", "warn", "info", "debug"]],
+    ] as const)("writes down to level %s", (level, expected) => {
+      expect(levelsWrittenWith({ level })).toEqual(expected);
+    });
+
+    it("writes debug entries when DEBUG enables them, whatever the level", () => {
+      expect(levelsWrittenWith({ level: "error", env: { DEBUG: "atium:*" } })).toEqual([
+        "error",
+        "debug",
+      ]);
+      expect(levelsWrittenWith({ level: "warn", verbose: true })).toEqual([
+        "error",
+        "warn",
+        "debug",
+      ]);
+    });
+
+    it("includes error stacks at level debug", () => {
+      const stream = fakeStream();
+
+      loggerFor(stream, { level: "debug" }).error("Write failed", { error: new Error("boom") });
+
+      expect(stream.chunks[0]).toContain('"stack":"Error: boom');
+    });
   });
 
   describe("context", () => {

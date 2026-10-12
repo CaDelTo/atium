@@ -1,5 +1,11 @@
-/** Severity of a log entry, one per {@link Logger} method. */
-export type LogLevel = "error" | "warn" | "info" | "debug";
+/**
+ * Every log level, from the most to the least severe. Used as a threshold,
+ * a level lets through itself and every level before it.
+ */
+export const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
+
+/** Severity of a log entry, one per {@link Logger} method. See {@link LOG_LEVELS}. */
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 /**
  * Structured data attached to a log entry, such as `{ runId, durationMs }`.

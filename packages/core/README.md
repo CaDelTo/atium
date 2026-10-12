@@ -6,7 +6,7 @@ Shared foundation for Atium. Every other Atium package builds on it.
 
 Today it provides `assertNever`, the error types (`AtiumError`, `ERROR_CODES`,
 `ErrorCode`, `isAtiumError`), `Result` with `ok` and `err`, the `Logger`
-interface with `LogLevel` and `LogContext`, the stderr logger
+interface with `LogLevel`, `LOG_LEVELS` and `LogContext`, the stderr logger
 `createStderrLogger` with `StderrLoggerOptions` and `LogStream`, the `Clock`
 interface with `systemClock`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
@@ -19,8 +19,12 @@ interface with `systemClock`, and the `failOpen` helper with its
 For redaction it provides `createRedactor` with its `Redactor` type,
 `RedactConfigSchema` with `RedactConfig`, the pattern ids
 `REDACT_PATTERN_IDS` with `RedactPatternId`, and `HeaderValue`.
-Configuration, CI detection, the analysis pipeline, error fingerprinting and
-storage interfaces are planned.
+For configuration it provides `defineConfig`, `loadConfig` with
+`LoadConfigOptions`, `LoadedConfig`, `ConfigFlags` and `ConfigEnv`, and
+`AtiumConfigSchema` with `AtiumConfig`, `AtiumConfigInput`,
+`QUARANTINE_MODES` and `QuarantineMode`.
+CI detection, the analysis pipeline, error fingerprinting and storage
+interfaces are planned.
 
 ## Installation
 
@@ -77,12 +81,14 @@ which fails when both the ESM and the CommonJS build are loaded:
 import { isAtiumError } from "@atium/core";
 
 try {
-  config = await loadConfig(cwd);
+  await runCommand();
 } catch (error) {
-  if (!isAtiumError(error) || error.code !== "CONFIG_NOT_FOUND") {
+  if (!isAtiumError(error)) {
     throw error;
   }
-  config = DEFAULT_CONFIG;
+  // An expected failure, such as CONFIG_INVALID: show it and exit with code 2.
+  process.stderr.write(`${error.message}\n${error.hint ?? ""}\n`);
+  process.exitCode = 2;
 }
 ```
 
@@ -201,7 +207,8 @@ redactFields({ user: { accessToken: "t", name: "Ana" } }); // accessToken become
 
 Atium's own diagnostics go to stderr through `createStderrLogger`, one line
 per entry. It redacts the message and the context before writing, writes
-`debug` entries only with `verbose` or when `DEBUG` enables its namespace (for
+entries down to `level` (`info` by default), writes `debug` entries only with
+`level: "debug"`, with `verbose` or when `DEBUG` enables its namespace (for
 example `DEBUG=atium:*`), colors the level only on a terminal without
 `NO_COLOR`, and never throws. Code that needs the time takes a `Clock`;
 `systemClock` is the real one:
@@ -220,6 +227,45 @@ logger.warn("history sync failed; continuing without it", { error });
 // atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}
 ```
 
+The config lives in `atium.config.{ts,mts,js,mjs,json}`; `defineConfig` only
+adds types:
+
+```ts
+// atium.config.ts
+import { defineConfig } from "@atium/core";
+
+export default defineConfig({
+  adapters: ["playwright"],
+  quarantine: { mode: "run-and-ignore" },
+});
+```
+
+`loadConfig` finds the file (`flags.config`, else `ATIUM_CONFIG`, else the
+single `atium.config.*` in `cwd`), loads it with jiti, imported only then, and
+validates it. Without a file, every section takes its defaults. Precedence is
+flags > `ATIUM_*` variables > file > defaults; in V0 only `ATIUM_CONFIG` and
+`ATIUM_LOG_LEVEL` are read. An invalid config throws `CONFIG_INVALID` with the
+key path, the value received and a hint, which suggests the closest known key
+for a misspelled one (`storgae` → `storage`). The resolved log level and
+`redact` section configure the logger:
+
+```ts
+import { createRedactor, createStderrLogger, loadConfig } from "@atium/core";
+
+const { config, logLevel } = await loadConfig({
+  cwd: process.cwd(),
+  env: process.env,
+  flags: { config: options.config },
+});
+const logger = createStderrLogger({
+  stream: process.stderr,
+  env: process.env,
+  redactor: createRedactor(config.redact),
+  namespace: "atium:cli",
+  level: logLevel,
+});
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -233,6 +279,8 @@ Atium's own tests:
   (`withSeed`) and test ids and fingerprints derived from the content.
 - `FakeLogger`: a `Logger` that records every call.
 - `fixedClock(ms)`: a `Clock` that always returns the same time.
+- `thrownAtiumError(action)` and `rejectedAtiumError(promise)`: return the
+  `AtiumError` thrown or rejected with, and fail the test on anything else.
 
 ```ts
 import { aRun, aTestResult } from "@atium/core/testing";
@@ -245,7 +293,8 @@ const run = aRun()
 
 ## Configuration
 
-This package has no configuration of its own yet.
+This package defines the schema of `atium.config.*` and loads it (see
+`defineConfig` and `loadConfig` above); it has no settings of its own.
 
 ## Documentation
 

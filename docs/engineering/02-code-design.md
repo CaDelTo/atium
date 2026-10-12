@@ -22,7 +22,7 @@ Si un analizador necesita algo de otro, ese algo pertenece a `core` (por ejemplo
 ## Núcleo funcional, borde imperativo
 
 - **Analizadores = funciones puras:** reciben datos y devuelven `Finding[]`. No leen archivos, no hacen requests, no consultan Git directamente; todo llega por el `AnalysisContext`.
-- **I/O solo en los bordes:** storage, adapters, `suite-index` (lectura de archivos) y CLI.
+- **I/O solo en los bordes:** storage, adapters, `suite-index` (lectura de archivos) y CLI. En `core`, solo la búsqueda y la carga del archivo de configuración (`core/src/config/config-file.ts`, [ADR-0017](../adr/0017-carga-config-jiti.md)); la precedencia y la validación son puras.
 - **Determinismo:** reloj, generador aleatorio y entorno se inyectan. La misma entrada produce la misma salida.
 
 ```ts

@@ -1,7 +1,9 @@
 import pc from "picocolors";
 import { assertNever } from "./assert-never.js";
 import { isDebugEnabled } from "./debug-namespaces.js";
+import { DEFAULT_LOG_LEVEL } from "./defaults.js";
 import type { LogContext, Logger, LogLevel } from "./logger.js";
+import { LOG_LEVELS } from "./logger.js";
 import type { Redactor } from "./redact/redactor.js";
 import { serializeContext } from "./serialize-context.js";
 
@@ -28,7 +30,13 @@ export interface StderrLoggerOptions {
    * patterns match, so `DEBUG=atium:*` enables every Atium logger.
    */
   readonly namespace: string;
-  /** Enables `debug` entries regardless of `DEBUG`, as `--verbose` does. */
+  /**
+   * Lowest severity written, as resolved by `loadConfig` from the flags and
+   * `ATIUM_LOG_LEVEL`. Defaults to `"info"`. `"debug"` enables `debug`
+   * entries like `verbose`.
+   */
+  readonly level?: LogLevel;
+  /** Enables `debug` entries regardless of `DEBUG` and `level`, as `--verbose` does. */
   readonly verbose?: boolean;
 }
 
@@ -43,9 +51,11 @@ const UNFORMATTABLE_LINE = "[unformattable log entry]";
  * atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}
  * ```
  *
- * - `error`, `warn` and `info` are always written. `debug` is written only
- *   with `verbose` or when `DEBUG` enables the namespace; then error stacks
- *   are included in every entry, whatever its level.
+ * - `error`, `warn` and `info` are written down to `level`, which is `info`
+ *   by default: with `level: "warn"`, only `error` and `warn`. `debug` is
+ *   written only with `level: "debug"`, with `verbose` or when `DEBUG`
+ *   enables the namespace, whatever `level` is; then error stacks are
+ *   included in every entry.
  * - The message goes through `redactor.redact`, with control characters other
  *   than the tab escaped, so an entry cannot forge another one or drive the
  *   terminal; the context goes, as JSON, through `redactor.redactFields`.
@@ -55,24 +65,29 @@ const UNFORMATTABLE_LINE = "[unformattable log entry]";
  *   cannot be serialized is replaced by a marker, and a failing write is
  *   dropped.
  *
- * @param options - Stream, environment, redactor, namespace and verbosity.
+ * @param options - Stream, environment, redactor, namespace, level and verbosity.
  * @returns The logger. It keeps no state besides its options.
  *
  * @example
  * ```ts
+ * const { config, logLevel } = await loadConfig({ cwd: process.cwd(), env: process.env });
  * const logger = createStderrLogger({
  *   stream: process.stderr,
  *   env: process.env,
- *   redactor: createRedactor(RedactConfigSchema.parse({})),
+ *   redactor: createRedactor(config.redact),
  *   namespace: "atium:cli",
- *   verbose: flags.verbose,
+ *   level: logLevel,
  * });
  * logger.debug("Run uploaded", { runId, durationMs });
  * ```
  */
 export function createStderrLogger(options: StderrLoggerOptions): Logger {
   const { stream, redactor, namespace } = options;
-  const debugEnabled = options.verbose === true || isDebugEnabled(options.env["DEBUG"], namespace);
+  const threshold = LOG_LEVELS.indexOf(options.level ?? DEFAULT_LOG_LEVEL);
+  const debugEnabled =
+    options.level === "debug" ||
+    options.verbose === true ||
+    isDebugEnabled(options.env["DEBUG"], namespace);
   const colors = pc.createColors(stream.isTTY === true && !options.env["NO_COLOR"]);
 
   const format = (level: LogLevel, message: string, context: LogContext | undefined): string => {
@@ -84,6 +99,10 @@ export function createStderrLogger(options: StderrLoggerOptions): Logger {
   };
 
   const write = (level: LogLevel, message: string, context: LogContext | undefined): void => {
+    const enabled = level === "debug" ? debugEnabled : LOG_LEVELS.indexOf(level) <= threshold;
+    if (!enabled) {
+      return;
+    }
     let line: string;
     try {
       line = format(level, message, context);
@@ -110,9 +129,7 @@ export function createStderrLogger(options: StderrLoggerOptions): Logger {
       write("info", message, context);
     },
     debug: (message: string, context?: LogContext) => {
-      if (debugEnabled) {
-        write("debug", message, context);
-      }
+      write("debug", message, context);
     },
   });
 }
