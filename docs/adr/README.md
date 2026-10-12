@@ -25,6 +25,6 @@ Decisiones de diseño ya tomadas. Para cambiar una, se crea un ADR nuevo que la 
 | [0019](0019-idioma-mensajes-cli-reglas.md) | Mensajes del CLI, de las reglas y de los reportes en inglés | Aceptada |
 | [0020](0020-idioma-documentacion-publica.md) | Documentación pública en inglés | Aceptada |
 | [0021](0021-typescript-6.md) | TypeScript 6 mientras el toolchain no soporte TypeScript 7 | Aceptada |
-| [0022](0022-logger-reloj-en-core.md) | Logger y reloj implementados en core, y `DEBUG` leído sin el paquete debug | Propuesta |
+| [0022](0022-logger-reloj-en-core.md) | Logger y reloj implementados en core, y `DEBUG` leído sin el paquete debug | Aceptada |
 
 Plantilla: [0000-template.md](0000-template.md)

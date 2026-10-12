@@ -1,6 +1,6 @@
 # ADR-0022: Logger y reloj implementados en core, y `DEBUG` leído sin el paquete debug
 
-- Estado: Propuesta
+- Estado: Aceptada
 - Fecha: 2026-10-12
 - Diseño relacionado: 17-tech-stack.md, 18-cli-config.md §26; 02-code-design.md y 03-errors-logging.md (estándares)
 
