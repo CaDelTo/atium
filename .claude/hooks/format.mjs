@@ -3,6 +3,10 @@
 // Best-effort by design: it must never block or fail the agent's work.
 import { execFileSync } from "node:child_process";
 
+// Run from the project root: Prettier reads .prettierignore from its working
+// directory, so running it from a package folder would format ignored files.
+const projectDir = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+
 let input = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => {
@@ -13,6 +17,7 @@ process.stdin.on("end", () => {
     const filePath = JSON.parse(input)?.tool_input?.file_path;
     if (typeof filePath === "string" && filePath.length > 0) {
       execFileSync("pnpm", ["exec", "prettier", "--write", "--ignore-unknown", filePath], {
+        cwd: projectDir,
         stdio: "ignore",
         timeout: 15_000,
       });
