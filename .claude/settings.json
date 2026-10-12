@@ -17,7 +17,15 @@
       "Bash(pnpm bench:*)",
       "Bash(git worktree add:*)",
       "Bash(git worktree remove:*)",
-      "Bash(git worktree list)"
+      "Bash(git worktree list)",
+      "Bash(gh auth status)",
+      "Bash(gh repo view:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh label list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)"
     ],
     "deny": [
       "Bash(git push:*)",
@@ -31,7 +39,12 @@
       "Edit(./.claude/settings.json)",
       "Write(./.claude/settings.json)",
       "Edit(./.claude/hooks/**)",
-      "Write(./.claude/hooks/**)"
+      "Write(./.claude/hooks/**)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue delete:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh repo delete:*)"
     ]
   },
   "hooks": {
