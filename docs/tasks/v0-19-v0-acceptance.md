@@ -14,7 +14,7 @@
 
 - Test de integración: para cada proveedor de CI (variables simuladas) y para local, construir un run con builders y `detectRunContext`, guardarlo en SQLite y en archivo de run, leerlo de vuelta y compararlo.
 - Ejecutar `/audit` y convertir los hallazgos en tareas nuevas.
-- Actualizar el estado de las tareas en docs/tasks/README.md.
+- Comprobar en GitHub que los issues de las tareas anteriores de V0 están cerrados.
 
 ## Criterios de aceptación
 

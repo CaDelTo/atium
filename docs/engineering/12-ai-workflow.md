@@ -16,7 +16,7 @@ El agente principal planifica, decide e implementa. Las tareas mecánicas o de l
 
 | Nivel | Modelo | Para qué | Ejemplos |
 |---|---|---|---|
-| Ligero | `haiku` | Tareas mecánicas, búsqueda, ejecutar herramientas y resumir su salida | `explorer`, `verifier`, `duplication-auditor`, `docs-checker`, `perf-benchmarker` |
+| Ligero | `haiku` | Tareas mecánicas, búsqueda, ejecutar herramientas y resumir su salida | `explorer`, `verifier`, `duplication-auditor`, `docs-checker`, `perf-benchmarker`, `issue-writer` |
 | Intermedio | `sonnet` | Juicio sobre código con criterios claros | `code-reviewer`, `security-reviewer`, `test-writer` |
 | Principal | `inherit` (el modelo de la sesión) | Precisión crítica, decisiones, diseño | `design-auditor`, planificación, implementación de fórmulas, ADRs |
 
@@ -35,6 +35,7 @@ Reglas:
 | `duplication-auditor` | haiku | No | Duplicación (jscpd), código sin usar (knip), smells (sonarjs) |
 | `docs-checker` | haiku | No | TSDoc, docs de reglas, changesets, diseño actualizado |
 | `perf-benchmarker` | haiku | No | Benchmarks contra `main` y contra los presupuestos del diseño |
+| `issue-writer` | haiku | No (solo issues en GitHub) | Milestone, etiquetas e issues de una fase con el formato de [08-git-workflow.md](08-git-workflow.md#issues) |
 | `code-reviewer` | sonnet | No | Revisión contra [11-code-review.md](11-code-review.md) |
 | `security-reviewer` | sonnet | No | Revisión contra [06-security.md](06-security.md) |
 | `test-writer` | sonnet | Solo tests | Casos borde, contratos, property-based |
@@ -46,21 +47,25 @@ Los subagentes no ven la conversación principal: cada invocación debe incluir 
 
 | Comando | Qué hace |
 |---|---|
-| `/task <archivo>` | Lee una tarea de `docs/tasks/`, reúne contexto con `explorer`, presenta un plan y espera aprobación |
+| `/task <n\|archivo>` | Lee el issue (número) o el archivo de `docs/tasks/`, reúne contexto con `explorer`, presenta un plan y espera aprobación; al aprobarse crea la rama `<tipo>/<n>-<nombre>` y comenta en el issue |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |
 | `/review [ref]` | Revisión en paralelo con los agentes de revisión; consolida un solo reporte |
 | `/audit` | Auditoría de todo el repo y propuesta de tareas |
 | `/adr <título>` | ADR nuevo desde la plantilla |
-| `/plan-phase <fase>` | Divide una fase del roadmap en tareas; propone la lista y espera aprobación antes de crear archivos |
-| `/handoff` | Cierra la sesión: escribe una entrada en `docs/progress.md` y actualiza el estado de las tareas |
+| `/plan-phase <fase>` | Divide una fase del roadmap en tareas; propone la lista y espera aprobación; después crea los archivos y, con `issue-writer`, el milestone y los issues |
+| `/handoff` | Cierra la sesión: escribe una entrada en `docs/progress.md` y la comenta en el issue de la tarea |
 
 ## Flujo de una tarea
 
 ```
 inicio de sesión → leer la última entrada de docs/progress.md
    ▼
-/task docs/tasks/v1-04-hard-wait-rule.md
-   │  explorer reúne contexto → plan → aprobación
+siguiente tarea → issue abierto más antiguo del milestone actual
+                  con las dependencias cerradas o Hechas
+   ▼
+/task 25   (o /task docs/tasks/v1-04-hard-wait-rule.md)
+   │  gh issue view → explorer reúne contexto → plan → aprobación
+   │  rama feat/25-hard-wait-rule + comentario en el issue
    ▼
 implementación (modelo principal)
    │  hook: Prettier en cada archivo editado
@@ -71,9 +76,11 @@ implementación (modelo principal)
            (+ security-reviewer / design-auditor / perf-benchmarker según los archivos)
    │  bloqueantes → corregir → /review
    ▼
-resumen final → revisión humana → PR
+resumen final → push (una persona) → PR con "Closes #25"
    ▼
-/handoff → entrada en docs/progress.md + estado de tareas
+/handoff → entrada en docs/progress.md + comentario en el issue
+   ▼
+revisión humana → merge (una persona) → el issue se cierra
 ```
 
 Al cerrar una fase: `/audit` y luego `/plan-phase <siguiente fase>`.
@@ -104,6 +111,16 @@ No se ejecuta `pnpm verify` en un hook: es lento y se ejecuta explícitamente co
 
 Todo lo demás pide confirmación.
 
+## GitHub (`gh`)
+
+El agente usa `gh` para leer y escribir issues y PRs del repo. El formato de los issues está en [08-git-workflow.md](08-git-workflow.md#issues).
+
+- **Lectura:** `gh issue view`, `gh issue list`, `gh label list`, `gh pr view`, `gh pr list`, `gh pr checks`.
+- **Escritura (pide confirmación):** `gh issue create`, `gh issue edit`, `gh issue comment`, `gh label create`, `gh pr create`.
+- **`gh api`:** solo para crear el milestone de una fase (`/plan-phase`, `issue-writer`). No se deniega en los permisos porque `/plan-phase` lo necesita; el límite lo imponen los prompts.
+- **Nunca:** cerrar, borrar o transferir issues, mergear o cerrar PRs, ni hacer `git push`. Lo hace una persona.
+- Los cuerpos largos se pasan con `--body-file` desde un directorio temporal fuera del repo.
+
 ## Auditorías periódicas
 
 `/audit` al cerrar cada fase del roadmap, y cada vez que `jscpd` o `knip` muestren una tendencia creciente. Los hallazgos se convierten en tareas en `docs/tasks/`, no en arreglos directos.
@@ -114,7 +131,8 @@ Claude Code no recuerda sesiones anteriores. La continuidad vive en el repositor
 
 | Archivo | Qué guarda |
 |---|---|
-| `docs/tasks/README.md` | Estado de cada tarea |
+| `docs/tasks/` | Especificación de cada tarea |
+| GitHub Issues | Estado de cada tarea (abierto, en curso, cerrado) y comentarios de cada sesión |
 | `docs/progress.md` | Contexto de las últimas sesiones: qué quedó a medias, decisiones, problemas y siguiente paso |
 | `docs/adr/` | Decisiones permanentes |
 

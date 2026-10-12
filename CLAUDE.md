@@ -14,8 +14,10 @@ red, gaps de cobertura y priorización.
 - Los comandos de la sección "Comandos" y la configuración de herramientas de
   docs/engineering/10-tooling.md son el objetivo de V0; hasta que existan,
   crearlos es parte de la tarea.
-- Las tareas y su estado están en docs/tasks/README.md. La siguiente tarea es la
-  primera Pendiente cuyas dependencias estén Hechas.
+- La especificación de cada tarea está en docs/tasks/ y su estado en GitHub
+  Issues (un issue por tarea, un milestone por fase). La siguiente tarea es el
+  issue abierto más antiguo del milestone actual (el milestone abierto de la
+  fase más baja) cuyas dependencias estén cerradas o Hechas.
 - Al empezar cada sesión, lee la entrada más reciente de docs/progress.md.
 
 # Documentación
@@ -27,7 +29,7 @@ Precedencia ante contradicciones: ADRs > diseño > estándares de ingeniería.
 - Estándares de código: docs/engineering/README.md (incluye Definition of Done)
 - Revisión de código: docs/engineering/11-code-review.md
 - Agentes, comandos y modelos: docs/engineering/12-ai-workflow.md
-- Tareas: docs/tasks/
+- Tareas: docs/tasks/ (especificación) y GitHub Issues (estado)
 - Bitácora entre sesiones: docs/progress.md
 
 Al empezar una tarea, lee docs/design/00-overview.md, el archivo de diseño del
@@ -83,7 +85,11 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 
 # Flujo de trabajo
 
-- Empieza las tareas con `/task docs/tasks/<archivo>`.
+- Empieza las tareas con `/task <n|archivo>` (número de issue o
+  `docs/tasks/<archivo>`).
+- Cada tarea va en una rama `<tipo>/<n>-<nombre>` y su PR incluye `Closes #<n>`
+  (formato en docs/engineering/08-git-workflow.md, sección "Issues").
+- Nunca cierres issues ni mergees PRs: lo hace una persona.
 - Antes de escribir código en una tarea no trivial, presenta un plan breve
   (archivos a tocar, enfoque, tests) y espera aprobación.
 - Una tarea a la vez. No avances a la siguiente ni hagas cambios fuera del
@@ -105,7 +111,8 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Delega a subagentes ligeros (`haiku`) lo mecánico: buscar (`explorer`),
   ejecutar verificaciones (`verifier`), detectar duplicación y código muerto
   (`duplication-auditor`), revisar documentación (`docs-checker`), medir
-  rendimiento (`perf-benchmarker`).
+  rendimiento (`perf-benchmarker`), crear los issues de una fase
+  (`issue-writer`).
 - Revisión con criterio (`sonnet`): `code-reviewer`, `security-reviewer`,
   `test-writer`.
 - Lo crítico lo hace el modelo de la sesión: fórmulas, estados, esquemas,

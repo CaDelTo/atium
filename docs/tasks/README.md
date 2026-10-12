@@ -1,6 +1,6 @@
 # Tareas
 
-Cada tarea es un archivo `docs/tasks/<fase>-<nn>-<nombre>.md` (por ejemplo `v0-03-model.md`) y se inicia en Claude Code con `/task docs/tasks/<archivo>`.
+Cada tarea es un archivo `docs/tasks/<fase>-<nn>-<nombre>.md` (por ejemplo `v0-03-model.md`) con su especificación, y un issue en GitHub que guarda su estado (salvo v0-01 a v0-03, terminadas antes de este flujo). Se inicia en Claude Code con `/task <n>` (número de issue, también `#<n>`) o `/task docs/tasks/<archivo>`.
 
 Una tarea debe poder completarse en una sesión y en un PR de menos de 400 líneas.
 
@@ -36,33 +36,42 @@ Estándares: docs/engineering/01-typescript.md, 04-testing.md
 
 ## Estado
 
-Al cerrar una tarea, cambia su estado aquí en el mismo PR. Estados: Pendiente, En curso, Hecha, Bloqueada.
+El estado se consulta en GitHub Issues, no en este archivo. Cada fase tiene un milestone y cada tarea un issue con las etiquetas `phase:vN` y `type:task` (formato en [08-git-workflow.md](../engineering/08-git-workflow.md#issues)):
+
+| Estado | En GitHub |
+|---|---|
+| Pendiente | Abierto, sin rama ni PR, con todas sus dependencias cerradas o Hechas |
+| En curso | Abierto, con rama o PR |
+| Bloqueada | Abierto, sin rama ni PR, con alguna dependencia abierta |
+| Hecha | Cerrado |
+
+La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas. El PR de cada tarea incluye `Closes #<n>`; solo una persona cierra issues y mergea PRs.
 
 ### V0 — Fundaciones
 
 Criterio de la fase: docs/design/22-roadmap.md §30.
 
-| Tarea | Título | Depende de | Estado |
+| Tarea | Título | Depende de | Issue |
 |---|---|---|---|
-| [v0-01-monorepo-bootstrap](v0-01-monorepo-bootstrap.md) | Bootstrap del monorepo | ninguna | Hecha |
-| [v0-02-core-skeleton](v0-02-core-skeleton.md) | Esqueleto del paquete core | v0-01 | Hecha |
-| [v0-03-quality-tooling](v0-03-quality-tooling.md) | Herramientas de calidad y `pnpm verify` | v0-02 | Hecha |
-| [v0-04-ci-pipeline](v0-04-ci-pipeline.md) | Pipeline de CI y plantillas del repositorio | v0-03 | Pendiente |
-| [v0-05-errors-result-failopen](v0-05-errors-result-failopen.md) | Errores, `Result` y `failOpen` | v0-02 | Pendiente |
-| [v0-06-model-schemas](v0-06-model-schemas.md) | Esquemas Zod del modelo de datos | v0-05 | Pendiente |
-| [v0-07-test-builders](v0-07-test-builders.md) | Builders de datos de prueba | v0-06 | Pendiente |
-| [v0-08-identity-and-paths](v0-08-identity-and-paths.md) | Identidad de tests y rutas | v0-06 | Pendiente |
-| [v0-09-finding-model](v0-09-finding-model.md) | Modelo de Finding y orden determinista | v0-06 | Pendiente |
-| [v0-10-redaction](v0-10-redaction.md) | Redacción de datos sensibles | v0-05 | Pendiente |
-| [v0-11-logger-clock](v0-11-logger-clock.md) | Logger y reloj | v0-10 | Pendiente |
-| [v0-12-config](v0-12-config.md) | Configuración: esquema, carga y precedencia | v0-11 | Pendiente |
-| [v0-13-ci-context](v0-13-ci-context.md) | Detección de contexto de git y CI | v0-12 | Pendiente |
-| [v0-14-run-files](v0-14-run-files.md) | Archivos de run (`.ndjson.gz`) | v0-13 | Pendiente |
-| [v0-15-storage-contract](v0-15-storage-contract.md) | Interfaces de storage, contrato y fake en memoria | v0-14 | Pendiente |
-| [v0-16-storage-sqlite](v0-16-storage-sqlite.md) | Backend SQLite | v0-15 | Pendiente |
-| [v0-17-cli-skeleton](v0-17-cli-skeleton.md) | CLI base e `init` | v0-12 | Pendiente |
-| [v0-18-doctor](v0-18-doctor.md) | Comando `doctor` | v0-13, v0-16, v0-17 | Pendiente |
-| [v0-19-v0-acceptance](v0-19-v0-acceptance.md) | Aceptación de V0 | todas las anteriores | Pendiente |
+| [v0-01-monorepo-bootstrap](v0-01-monorepo-bootstrap.md) | Bootstrap del monorepo | ninguna | Hecha ([PR #1](https://github.com/CaDelTo/atium/pull/1)) |
+| [v0-02-core-skeleton](v0-02-core-skeleton.md) | Esqueleto del paquete core | v0-01 | Hecha ([PR #3](https://github.com/CaDelTo/atium/pull/3)) |
+| [v0-03-quality-tooling](v0-03-quality-tooling.md) | Herramientas de calidad y `pnpm verify` | v0-02 | Hecha ([PR #3](https://github.com/CaDelTo/atium/pull/3)) |
+| [v0-04-ci-pipeline](v0-04-ci-pipeline.md) | Pipeline de CI y plantillas del repositorio | v0-03 | [#5](https://github.com/CaDelTo/atium/issues/5) |
+| [v0-05-errors-result-failopen](v0-05-errors-result-failopen.md) | Errores, `Result` y `failOpen` | v0-02 | [#6](https://github.com/CaDelTo/atium/issues/6) |
+| [v0-06-model-schemas](v0-06-model-schemas.md) | Esquemas Zod del modelo de datos | v0-05 | [#7](https://github.com/CaDelTo/atium/issues/7) |
+| [v0-07-test-builders](v0-07-test-builders.md) | Builders de datos de prueba | v0-06 | [#8](https://github.com/CaDelTo/atium/issues/8) |
+| [v0-08-identity-and-paths](v0-08-identity-and-paths.md) | Identidad de tests y rutas | v0-06 | [#9](https://github.com/CaDelTo/atium/issues/9) |
+| [v0-09-finding-model](v0-09-finding-model.md) | Modelo de Finding y orden determinista | v0-06 | [#10](https://github.com/CaDelTo/atium/issues/10) |
+| [v0-10-redaction](v0-10-redaction.md) | Redacción de datos sensibles | v0-05 | [#11](https://github.com/CaDelTo/atium/issues/11) |
+| [v0-11-logger-clock](v0-11-logger-clock.md) | Logger y reloj | v0-10 | [#12](https://github.com/CaDelTo/atium/issues/12) |
+| [v0-12-config](v0-12-config.md) | Configuración: esquema, carga y precedencia | v0-11 | [#13](https://github.com/CaDelTo/atium/issues/13) |
+| [v0-13-ci-context](v0-13-ci-context.md) | Detección de contexto de git y CI | v0-12 | [#14](https://github.com/CaDelTo/atium/issues/14) |
+| [v0-14-run-files](v0-14-run-files.md) | Archivos de run (`.ndjson.gz`) | v0-13 | [#15](https://github.com/CaDelTo/atium/issues/15) |
+| [v0-15-storage-contract](v0-15-storage-contract.md) | Interfaces de storage, contrato y fake en memoria | v0-14 | [#16](https://github.com/CaDelTo/atium/issues/16) |
+| [v0-16-storage-sqlite](v0-16-storage-sqlite.md) | Backend SQLite | v0-15 | [#17](https://github.com/CaDelTo/atium/issues/17) |
+| [v0-17-cli-skeleton](v0-17-cli-skeleton.md) | CLI base e `init` | v0-12 | [#18](https://github.com/CaDelTo/atium/issues/18) |
+| [v0-18-doctor](v0-18-doctor.md) | Comando `doctor` | v0-13, v0-16, v0-17 | [#19](https://github.com/CaDelTo/atium/issues/19) |
+| [v0-19-v0-acceptance](v0-19-v0-acceptance.md) | Aceptación de V0 | todas las anteriores | [#20](https://github.com/CaDelTo/atium/issues/20) |
 
 Orden sugerido:
 
