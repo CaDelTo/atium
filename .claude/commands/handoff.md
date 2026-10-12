@@ -1,5 +1,5 @@
 ---
-description: Guarda el estado de la sesión en docs/progress.md para que la siguiente sesión continúe sin perder contexto
+description: Guarda el estado de la sesión en docs/progress.md y en el issue de la tarea para que la siguiente sesión continúe sin perder contexto
 ---
 
 Cierra la sesión dejando el estado por escrito.
@@ -17,7 +17,9 @@ Cierra la sesión dejando el estado por escrito.
 - **Siguiente paso:** la primera acción concreta de la próxima sesión.
 ```
 
-3. Actualiza el estado de las tareas tocadas en docs/tasks/README.md (Pendiente, En curso, Hecha, Bloqueada).
+3. Comenta la misma entrada en el issue de la tarea de la sesión con `gh issue comment N --body-file <archivo>`, escribiendo el archivo en un directorio temporal fuera del repo. El issue se identifica por la rama actual (`<tipo>/<n>-…`) o por la conversación; si la sesión no tuvo issue, omite el comentario y dilo.
 4. Si docs/progress.md tiene más de 10 entradas, mueve las más antiguas a docs/progress-archive.md, dejando las 10 más recientes.
 5. Sé literal y específico: la próxima sesión no tendrá esta conversación. No incluyas valores de variables de entorno, tokens ni datos sensibles.
 6. Muestra la entrada al usuario. No hagas commit salvo que te lo pida.
+
+Nunca cierres issues: lo hace una persona.

@@ -4,7 +4,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 - Las entradas más recientes van primero.
 - Se conservan las 10 últimas; las anteriores pasan a `docs/progress-archive.md`.
-- El estado de cada tarea vive en `docs/tasks/README.md`; aquí va el contexto que no cabe ahí.
+- El estado de cada tarea vive en su issue de GitHub (índice en `docs/tasks/README.md`); aquí va el contexto que no cabe ahí.
 
 ## Entradas
 
