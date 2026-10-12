@@ -22,7 +22,7 @@ Si un analizador necesita algo de otro, ese algo pertenece a `core` (por ejemplo
 ## Núcleo funcional, borde imperativo
 
 - **Analizadores = funciones puras:** reciben datos y devuelven `Finding[]`. No leen archivos, no hacen requests, no consultan Git directamente; todo llega por el `AnalysisContext`.
-- **I/O solo en los bordes:** storage, adapters, `suite-index` (lectura de archivos) y CLI. En `core`, solo la búsqueda y la carga del archivo de configuración (`core/src/config/config-file.ts`, [ADR-0017](../adr/0017-carga-config-jiti.md)); la precedencia y la validación son puras.
+- **I/O solo en los bordes:** storage, adapters, `suite-index` (lectura de archivos) y CLI. En `core`, solo la búsqueda y la carga del archivo de configuración (`core/src/config/config-file.ts`, [ADR-0017](../adr/0017-carga-config-jiti.md)) y la detección del contexto de Git y CI, que los reporters necesitan y no pueden pedir al CLI: `core/src/ci/git-client.ts` ejecuta Git, `core/src/ci/github-event.ts` lee el payload del evento de GitHub y `core/src/ci/env-ci-fallback.ts` usa env-ci ([02-data-model.md §10.1](../design/02-data-model.md#101-detección-detectruncontext)). La precedencia, la validación y las reglas por proveedor son puras.
 - **Determinismo:** reloj, generador aleatorio y entorno se inyectan. La misma entrada produce la misma salida.
 
 ```ts

@@ -1,4 +1,6 @@
 import { DEFAULT_LOG_LEVEL } from "../defaults.js";
+import type { EnvVars } from "../env.js";
+import { envValue } from "../env.js";
 import { AtiumError } from "../errors.js";
 import type { LogLevel } from "../logger.js";
 import { LOG_LEVELS } from "../logger.js";
@@ -10,8 +12,8 @@ import type { AtiumConfig } from "./schema.js";
 import { AtiumConfigSchema } from "./schema.js";
 import { didYouMean, suggestKey } from "./suggest.js";
 
-/** Environment variables read by the config, normally `process.env`. */
-export type ConfigEnv = Readonly<Record<string, string | undefined>>;
+/** Environment variables read by the config, normally `process.env`. Same as {@link EnvVars}. */
+export type ConfigEnv = EnvVars;
 
 /**
  * Values given as CLI flags, which take precedence over everything else.
@@ -58,10 +60,8 @@ export function explicitConfigFile(
   if (flags.config !== undefined) {
     return { path: flags.config, origin: "--config" };
   }
-  const fromEnv = env["ATIUM_CONFIG"];
-  return fromEnv === undefined || fromEnv === ""
-    ? undefined
-    : { path: fromEnv, origin: "ATIUM_CONFIG" };
+  const fromEnv = envValue(env, "ATIUM_CONFIG");
+  return fromEnv === undefined ? undefined : { path: fromEnv, origin: "ATIUM_CONFIG" };
 }
 
 /**
@@ -95,8 +95,8 @@ export function resolveConfig(
 }
 
 function logLevelFromEnv(env: ConfigEnv): LogLevel | undefined {
-  const value = env["ATIUM_LOG_LEVEL"];
-  if (value === undefined || value === "") {
+  const value = envValue(env, "ATIUM_LOG_LEVEL");
+  if (value === undefined) {
     return undefined;
   }
   const level = LOG_LEVELS.find((candidate) => candidate === value);

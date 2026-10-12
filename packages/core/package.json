@@ -45,9 +45,11 @@
     "schema:export": "vitest run src/model/json-schema.test.ts --update"
   },
   "dependencies": {
+    "env-ci": "11.2.0",
     "fastest-levenshtein": "1.0.16",
     "jiti": "2.7.0",
     "picocolors": "1.1.1",
+    "simple-git": "4.0.2",
     "zod": "4.6.5"
   },
   "devDependencies": {
