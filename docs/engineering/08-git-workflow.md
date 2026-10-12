@@ -78,12 +78,12 @@ Depende de #N
 
 | Estado | En GitHub |
 |---|---|
-| Pendiente | Abierto, sin rama ni PR, con todas sus dependencias cerradas o Hechas |
-| En curso | Abierto, con rama o PR |
-| Bloqueada | Abierto, sin rama ni PR, con alguna dependencia abierta |
+| Pendiente | Abierto, sin rama, PR ni worktree, con todas sus dependencias cerradas o Hechas |
+| En curso | Abierto, con rama, PR o worktree `atium-<n>` (creado por `/parallel`) |
+| Bloqueada | Abierto, sin rama, PR ni worktree, con alguna dependencia abierta |
 | Hecha | Cerrado |
 
-La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas. El milestone actual es el milestone abierto de la fase más baja.
+La siguiente tarea es el issue Pendiente más antiguo del milestone actual: abierto, con sus dependencias cerradas o Hechas y sin rama, PR ni worktree. El milestone actual es el milestone abierto de la fase más baja. Varias tareas Pendientes se pueden hacer a la vez con `/parallel` (ver "Trabajo en paralelo" en [12-ai-workflow.md](12-ai-workflow.md#trabajo-en-paralelo)).
 
 ### Quién hace qué
 

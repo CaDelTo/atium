@@ -1,6 +1,6 @@
 ---
 description: Empieza una tarea a partir de su issue o de su descripción en docs/tasks/
-argument-hint: "<número de issue (#6 o 6) o archivo de tarea, por ejemplo docs/tasks/v0-05-errors-result-failopen.md>"
+argument-hint: "<número de issue (#6 o 6) o archivo de tarea, por ejemplo docs/tasks/v0-05-errors-result-failopen.md> [en paralelo con #M …]"
 ---
 
 Empieza la tarea indicada en `$ARGUMENTS`. El formato de issues y ramas está en la sección "Issues" y "Ramas" de docs/engineering/08-git-workflow.md.
@@ -9,13 +9,14 @@ Empieza la tarea indicada en `$ARGUMENTS`. El formato de issues y ramas está en
    - Con un número (`#N` o `N`): `gh issue view N`. El archivo es el de `docs/tasks/` cuyo nombre empieza por el ID del prefijo `[vN-xx]` del título; búscalo en local, porque el enlace del cuerpo da 404 hasta que el archivo llega a `main`.
    - Con un archivo: lista los issues con `gh issue list --state all --limit 500 --json number,title` y busca el que empieza por el prefijo `[vN-xx]` del ID. Si no hay issue, dilo y sigue solo con el archivo.
    - Si el issue está cerrado, o alguna dependencia sigue abierta, avisa y pregunta antes de seguir.
+   - Comprueba que nadie más la tiene en curso: rama `*/<n>-*` local o remota (`git fetch origin` y `git branch -a --list '*/<n>-*'`), PR abierto que la cierre (`gh pr list --state open --limit 200 --json number,headRefName,body`) o un worktree `atium-<n>` distinto del directorio actual (`git worktree list`). Si hay alguno, avisa y detente; si es la rama o el worktree actual, pregunta si es la continuación de esta misma tarea antes de seguir.
+   - Si `$ARGUMENTS` incluye `en paralelo con #M` (uno o más números), otra sesión trabaja a la vez en esos issues: aplica las reglas de la sección "Trabajo en paralelo" de docs/engineering/12-ai-workflow.md y lee el archivo de tarea de cada `#M` para conocer su alcance.
 2. Lee la tarea completa.
 3. Usa el subagente `explorer` para reunir las secciones de docs/design/, los ADR y los estándares de docs/engineering/ que aplican, y el código existente relacionado.
-4. Presenta un plan: archivos a crear o modificar, enfoque, tests, riesgos y dudas. Señala cualquier valor que el diseño no defina. Incluye el nombre de la rama.
+4. Presenta un plan: archivos a crear o modificar, enfoque, tests, riesgos y dudas. Señala cualquier valor que el diseño no defina. Incluye el nombre de la rama. En paralelo, indica además qué archivos compartidos vas a tocar y que no tocas el alcance de las otras tareas.
 5. Espera aprobación antes de escribir código.
 6. Al aprobarse el plan:
-   - Actualiza `main`: `git fetch` y `git switch main && git merge --ff-only origin/main`.
-   - Crea la rama `<tipo>/<n>-<nombre>`: `git switch -c <rama>`.
+   - Crea la rama `<tipo>/<n>-<nombre>` desde `main` actualizado: `git fetch origin` y `git switch --no-track -c <rama> origin/main`. No uses `git switch main`: dentro de un worktree falla porque `main` está activa en el repo principal.
    - Comenta en el issue, en español, que la tarea empezó: `gh issue comment N --body "Tarea iniciada en la rama \`<rama>\`."`.
 7. Después de implementar: `/verify`, luego `/review`, y resume según la sección "Flujo de trabajo" de CLAUDE.md. El PR incluye `Closes #N`.
 

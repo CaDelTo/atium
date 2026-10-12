@@ -17,7 +17,8 @@ red, gaps de cobertura y priorización.
 - La especificación de cada tarea está en docs/tasks/ y su estado en GitHub
   Issues (un issue por tarea, un milestone por fase). La siguiente tarea es el
   issue abierto más antiguo del milestone actual (el milestone abierto de la
-  fase más baja) cuyas dependencias estén cerradas o Hechas.
+  fase más baja) cuyas dependencias estén cerradas o Hechas y que no tenga rama,
+  PR ni worktree.
 - Al empezar cada sesión, lee la entrada más reciente de docs/progress.md.
 
 # Documentación
@@ -92,8 +93,10 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Nunca cierres issues ni mergees PRs: lo hace una persona.
 - Antes de escribir código en una tarea no trivial, presenta un plan breve
   (archivos a tocar, enfoque, tests) y espera aprobación.
-- Una tarea a la vez. No avances a la siguiente ni hagas cambios fuera del
-  alcance pedido; si ves algo que mejorar, menciónalo al final.
+- Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
+  fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
+- Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
+  `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
 - Escribe o actualiza los tests junto con el código, no después.
 - Si cambias un comportamiento descrito en docs/design/, actualiza el diseño en
   el mismo cambio.

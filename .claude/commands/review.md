@@ -1,9 +1,9 @@
 ---
 description: Revisión completa de los cambios actuales con subagentes en paralelo
-argument-hint: "[ref base, por defecto main]"
+argument-hint: "[ref base, por defecto origin/main]"
 ---
 
-Revisa los cambios actuales contra el ref `$ARGUMENTS`. Si está vacío, usa `main`.
+Revisa los cambios actuales contra el ref `$ARGUMENTS`. Si está vacío, ejecuta `git fetch origin` y usa `origin/main`: el `main` local puede estar desactualizado, sobre todo dentro de un worktree.
 
 1. Obtén los archivos cambiados con `git diff --name-only` contra ese ref.
 2. Lanza en paralelo, pasando a cada uno el ref y la lista de archivos:
