@@ -66,7 +66,7 @@ export function resolveInside(root: string, relative: string): string {
 - Scripts de instalación de dependencias deshabilitados salvo una lista explícita (`allowBuilds` de pnpm en `pnpm-workspace.yaml`, con `strictDepBuilds: true`; reemplaza a `onlyBuiltDependencies` desde pnpm 11). Las dependencias cuyo script no hace falta se listan con `false` (por ejemplo `esbuild`, cuyo binario llega por un paquete opcional). `lefthook` está permitido: su `postinstall` solo ejecuta `lefthook install` para registrar los hooks de Git y no hace nada si `CI` está definido.
 - Renovate con espera mínima de 14 días antes de proponer una versión nueva.
 - `minimumReleaseAge: 20160` (14 días, en minutos) en `pnpm-workspace.yaml`: pnpm solo resuelve versiones con esa antigüedad, incluidas las transitivas, y rechaza un lockfile con entradas más nuevas (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Si una actualización lo exige, se regenera con `pnpm clean --lockfile && pnpm install`.
-- `pnpm audit` en CI.
+- `pnpm audit --audit-level high` en CI (job `audit` de `.github/workflows/verify.yml`): una advisory high o critical bloquea el merge. Si el parche todavía no cumple los 14 días de `minimumReleaseAge`, se espera a que los cumpla en lugar de saltarse la regla.
 
 ## Publicación
 
@@ -75,6 +75,6 @@ export function resolveInside(root: string, relative: string): string {
 
 ## GitHub Actions
 
-- Actions de terceros fijadas por SHA, no por tag.
+- Actions de terceros fijadas por SHA del commit de una release oficial, no por tag, con la versión en un comentario (`# v7.0.1`). Renovate las actualiza.
 - `permissions:` mínimos en cada workflow.
 - Nunca `pull_request_target` con checkout del código del PR.

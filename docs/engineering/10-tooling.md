@@ -20,6 +20,7 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
 | Property-based | fast-check |
 | Mutation testing | Stryker (nocturno) |
 | Dependencias | Renovate, `pnpm audit` |
+| CI | GitHub Actions (`.github/workflows/verify.yml`) |
 
 ## Scripts de la raíz
 
@@ -163,6 +164,8 @@ export default tseslint.config(
 ```
 
 `.prettierignore` excluye `dist`, `coverage`, `fixtures`, `reports`, `pnpm-lock.yaml`, `**/*.md` (Prettier realinea las tablas y reescribe los ejemplos de código de los documentos) y `.claude` (los hooks no son editables por el agente).
+
+Finales de línea: `lf` en todos los archivos (default de Prettier y `end_of_line = lf` en `.editorconfig`). `.gitattributes` fuerza `eol=lf` al hacer checkout para que `prettier --check` pase en Windows, salvo en `fixtures/`, cuyos archivos son salidas reales de frameworks y se guardan byte a byte.
 
 ## dependency-cruiser
 
@@ -359,7 +362,22 @@ export default defineConfig({
   "minimumReleaseAge": "14 days",
   "schedule": ["before 6am on monday"],
   "packageRules": [
-    { "matchUpdateTypes": ["minor", "patch"], "groupName": "non-major dependencies" }
+    { "matchUpdateTypes": ["minor", "patch"], "groupName": "non-major dependencies" },
+    {
+      "description": "Stay on TypeScript 6 until the toolchain supports TypeScript 7 (ADR-0021).",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    }
   ]
 }
 ```
+
+Vive en `renovate.json`. La regla de `typescript` fija la serie 6 ([ADR-0021](../adr/0021-typescript-6.md)). `config:recommended` también actualiza las Actions fijadas por SHA y su comentario de versión.
+
+## CI
+
+`.github/workflows/verify.yml` se ejecuta en cada PR y en cada push a `main`:
+
+- Job `verify`: `pnpm install --frozen-lockfile` y `pnpm verify` en Node 22 y 24 × Linux, macOS y Windows ([21-testing-strategy.md](../design/21-testing-strategy.md) §29; la dimensión de versiones de Playwright llega con los adapters).
+- Job `audit`: `pnpm audit --audit-level high` ([06-security.md](06-security.md)).
+- `permissions: contents: read`, Actions fijadas por SHA, `concurrency` que cancela ejecuciones obsoletas del mismo PR (nunca las de `main`) y `timeout-minutes: 30` por job.

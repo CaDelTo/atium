@@ -95,7 +95,7 @@ La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas d
 
 - Una tarea por PR.
 - Menos de 400 líneas cambiadas, sin contar fixtures ni archivos generados. Si es más grande, se divide.
-- Plantilla:
+- Plantilla (`.github/pull_request_template.md`):
 
 ```markdown
 Closes #<n>
