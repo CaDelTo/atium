@@ -8,6 +8,26 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-11 — #4 Seguimiento de tareas con GitHub Issues
+
+- **Hecho:**
+  - `main` local avanzado (fast-forward) a `origin/main` (`757ce22`, PR #3).
+  - En GitHub: issue de seguimiento #4 (sin milestone ni `type:task`); milestone `V0`; etiquetas `phase:v0` y `type:task`; issues #5–#20 para v0-04 → v0-19 (v0-04 = #5 … v0-19 = #20), creados por `issue-writer` (lanzado como `general-purpose` con haiku porque el agente se creó en la sesión) y verificados con `gh`: sin duplicados, etiquetas y milestone correctos, dependencias de #5, #19 y #20 correctas, cuerpos de #6 y #15 idénticos a los criterios de sus archivos.
+  - Rama `chore/4-issues-workflow`, commit `1daf6dc` `docs(repo): track tasks with GitHub Issues`: sección "Issues" en `08-git-workflow.md` (única fuente del formato), ramas `<tipo>/<n>-<nombre>`, `Closes #<n>` en la plantilla de PR, fila de idioma; `.claude/agents/issue-writer.md`; `/task`, `/handoff`, `/plan-phase`; `CLAUDE.md`; `12-ai-workflow.md` (tablas, comandos, diagrama, memoria, apartado `gh`); columna Issue en `docs/tasks/README.md`; línea de estado en `docs/progress.md`; `v0-19` ya no pide actualizar el README.
+  - Verificado: `pnpm format:check` pasa; `/review` sin bloqueantes, los dos importantes corregidos (v0-19 obsoleto; `/task N` localiza el archivo por el prefijo `[vN-xx]` porque el enlace del issue da 404 hasta que el archivo llega a `main`).
+  - Push hecho por el usuario; PR #21 abierto con `Closes #4`, sin mergear.
+- **En curso:** nada. PR #21 pendiente de revisión y merge por una persona.
+- **Decisiones:**
+  - Todas las del plan aprobado quedaron escritas en `08-git-workflow.md`, `CLAUDE.md`, `12-ai-workflow.md` y los comandos.
+  - Sin escribir en ningún lado: qué es el "milestone actual" en la regla de siguiente tarea (propuesta: el milestone abierto de la fase más baja).
+- **Problemas:**
+  - Permisos de `gh` incluidos en el PR #21.
+  - La tabla de estados y la regla de siguiente tarea están repetidas en `08-git-workflow.md`, `docs/tasks/README.md`, `CLAUDE.md` y `12-ai-workflow.md` (pedido en el plan); pueden divergir.
+  - `/audit` convierte hallazgos en tareas pero no crea sus issues.
+  - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código", ya falso.
+  - `issue-writer` no aparece como tipo de subagente hasta reiniciar la sesión de Claude Code.
+- **Siguiente paso:** cuando una persona mergee el PR #21, `/task 5` (v0-04, depende de v0-03 Hecha; es el issue abierto más antiguo de `V0`).
+
 ### 2026-10-09 — v0-01-monorepo-bootstrap
 
 - **Hecho:** tarea v0-01 terminada en la rama `chore/root-monorepo-bootstrap` (sin push ni PR; `git push` está en `deny` en `.claude/settings.json`). Dos commits:
