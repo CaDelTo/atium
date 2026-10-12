@@ -70,7 +70,7 @@ const run = aRun()
 - Se aíslan solo los **bordes**: sistema de archivos, red, Git, procesos, reloj.
 - No se mockean módulos internos del proyecto.
 - **No se mockea lo que no es tuyo:** las librerías de terceros se envuelven en una interfaz propia y se reemplaza esa interfaz.
-- Se prefieren **fakes** (implementaciones simples en memoria) sobre mocks con expectativas de llamadas. Ejemplo: `InMemoryStorage` implementa `StorageReader` y `StorageWriter`.
+- Se prefieren **fakes** (implementaciones simples en memoria) sobre mocks con expectativas de llamadas. Ejemplo: `InMemoryStorage` (`@atium/core/testing`) implementa `Storage`, que reúne `StorageReader`, `StorageWriter` y `close`.
 
 ## Tests de contrato
 
@@ -80,8 +80,8 @@ Cuando hay varias implementaciones de una interfaz, todas pasan la misma suite:
 // packages/core/test-contracts/storage.contract.ts
 export function storageContract(create: () => Promise<Storage>): void {
   describe("storage contract", () => {
-    it("returns runs written by concurrent writers without loss", async () => { /* ... */ });
-    it("compaction is idempotent", async () => { /* ... */ });
+    it("keeps every run written by concurrent writers", async () => { /* ... */ });
+    it("accepts exactly one of several concurrent writes of the same id", async () => { /* ... */ });
   });
 }
 

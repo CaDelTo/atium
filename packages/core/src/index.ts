@@ -68,3 +68,4 @@ export { readRunFile, readRunFileEntries } from "./storage/run-file-reader.js";
 export type { RunFileEntry } from "./storage/run-file-reader.js";
 export { runFilePath, writeRunFile } from "./storage/run-file-writer.js";
 export type { WriteRunFileOptions } from "./storage/run-file-writer.js";
+export type { ListRunsQuery, Storage, StorageReader, StorageWriter } from "./storage/storage.js";
