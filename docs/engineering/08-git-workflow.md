@@ -83,7 +83,7 @@ Depende de #N
 | Bloqueada | Abierto, sin rama ni PR, con alguna dependencia abierta |
 | Hecha | Cerrado |
 
-La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas.
+La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas. El milestone actual es el milestone abierto de la fase más baja.
 
 ### Quién hace qué
 

@@ -17,9 +17,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Verificado: `pnpm format:check` pasa; `/review` sin bloqueantes, los dos importantes corregidos (v0-19 obsoleto; `/task N` localiza el archivo por el prefijo `[vN-xx]` porque el enlace del issue da 404 hasta que el archivo llega a `main`).
   - Push hecho por el usuario; PR #21 abierto con `Closes #4`, sin mergear.
 - **En curso:** nada. PR #21 pendiente de revisión y merge por una persona.
-- **Decisiones:**
-  - Todas las del plan aprobado quedaron escritas en `08-git-workflow.md`, `CLAUDE.md`, `12-ai-workflow.md` y los comandos.
-  - Sin escribir en ningún lado: qué es el "milestone actual" en la regla de siguiente tarea (propuesta: el milestone abierto de la fase más baja).
+- **Decisiones:** todas las del plan aprobado quedaron escritas en `08-git-workflow.md`, `CLAUDE.md`, `12-ai-workflow.md` y los comandos.
 - **Problemas:**
   - Permisos de `gh` incluidos en el PR #21.
   - La tabla de estados y la regla de siguiente tarea están repetidas en `08-git-workflow.md`, `docs/tasks/README.md`, `CLAUDE.md` y `12-ai-workflow.md` (pedido en el plan); pueden divergir.

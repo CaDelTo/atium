@@ -16,8 +16,8 @@ red, gaps de cobertura y priorización.
   crearlos es parte de la tarea.
 - La especificación de cada tarea está en docs/tasks/ y su estado en GitHub
   Issues (un issue por tarea, un milestone por fase). La siguiente tarea es el
-  issue abierto más antiguo del milestone actual cuyas dependencias estén
-  cerradas o Hechas.
+  issue abierto más antiguo del milestone actual (el milestone abierto de la
+  fase más baja) cuyas dependencias estén cerradas o Hechas.
 - Al empezar cada sesión, lee la entrada más reciente de docs/progress.md.
 
 # Documentación
