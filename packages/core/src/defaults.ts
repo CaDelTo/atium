@@ -52,3 +52,12 @@ export const MODEL_TEXT_CAPS_BYTES = {
   /** Any other string of the model, including record keys. */
   default: 2048,
 } as const;
+
+/**
+ * Maximum size of a path quoted in an error message, in UTF-8 bytes of the
+ * value once escaped for JSON. Paths come from reports, fixtures and storage,
+ * so the message neither grows without bound nor carries control characters.
+ *
+ * Source: 06-security.md, "Rutas de archivos".
+ */
+export const ERROR_PATH_PREVIEW_BYTES = 200;

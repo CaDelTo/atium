@@ -114,6 +114,34 @@ import { truncateUtf8 } from "@atium/core";
 const message = truncateUtf8(rawMessage, 2048);
 ```
 
+Paths stored in the model are POSIX and relative to the repository root, and
+the identity of a test is derived from them. `toPosixRelative` recognizes
+Windows paths on any operating system. `computeTestId` takes a `TestIdentity`
+(the original `project`, `file` and `titlePath`) and joins the levels of the
+title with `TITLE_PATH_SEPARATOR` (`" › "`):
+
+```ts
+import { computeTestId, TITLE_PATH_SEPARATOR, toPosixRelative } from "@atium/core";
+import type { TestIdentity } from "@atium/core";
+
+const file = toPosixRelative("C:\\repo", "C:\\repo\\tests\\cart.spec.ts"); // "tests/cart.spec.ts"
+const test: TestIdentity = { project: "chromium", file, titlePath: ["cart", "checkout"] };
+const testId = computeTestId(test);
+const title = test.titlePath.join(TITLE_PATH_SEPARATOR); // "cart › checkout"
+```
+
+A path that comes from data (an artifact in a report, a fixture, a storage
+path) is resolved with `resolveInside` before reading or writing it. It throws
+an `AtiumError` with code `MODEL_INVALID` if the path escapes the root or, on
+Windows, has a name Windows would not open as written (such as `CON` or a
+trailing dot). The check is lexical, so it does not follow symlinks:
+
+```ts
+import { resolveInside } from "@atium/core";
+
+const trace = resolveInside(repoRoot, attachment.path);
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 

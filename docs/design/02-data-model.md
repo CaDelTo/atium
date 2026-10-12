@@ -152,6 +152,9 @@ Los topes de listas y textos, los conteos `*Dropped` y `detailTruncated` están 
 testId = sha1(project | file | titlePath.join(" › ")).slice(0, 16)
 ```
 
+- `|` es el carácter literal que separa los tres campos, sin espacios alrededor, y `›` es U+203A. Si el test no tiene `project`, se usa la cadena vacía: `sha1("|tests/a.spec.ts|cart › checkout")`. `file` es la ruta POSIX relativa a la raíz del repo.
+- Como los niveles se unen con ` › `, un título que contiene ` › ` (o un `project` o `file` con `|`) puede dar el mismo `testId` que un test dividido de otra forma. No se corrige porque la fórmula la fija ADR-0003.
+- No se aplica normalización Unicode: el mismo nombre en NFC y en NFD da `testId` distintos.
 - Se calcula sobre los valores originales de `project`, `file` y `titlePath`, antes de los topes de [ADR-0018](../adr/0018-formato-archivos-run.md), para que la identidad del test no cambie al truncar.
 - **Tests parametrizados:** cada variante tiene su propio título y por tanto su propio `testId`.
 - **Renombres:** cuando en un mismo commit desaparece un `testId` y aparece otro, se vinculan si se cumple alguna de estas condiciones:
