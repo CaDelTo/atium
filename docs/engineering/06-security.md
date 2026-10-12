@@ -28,15 +28,15 @@ execFile("git", ["log", branch]);
 
 - Toda ruta que viene de datos (artefactos en reportes, rutas de fixtures, rutas en el storage) se resuelve y se verifica que quede dentro de la raíz del repo o del directorio temporal permitido.
 - Las rutas guardadas en el modelo son relativas y en formato POSIX.
+- Usa `resolveInside` de `@atium/core`. Compara con `path.relative` en lugar de `startsWith`, para no fallar con la raíz `/` ni con mayúsculas distintas en la unidad de Windows. Rechaza la propia raíz, `..`, `../…`, rutas en otra unidad y rutas con NUL.
+- En Windows rechaza además los nombres que Windows no abriría tal cual: con punto o espacio final, o nombres de dispositivo (`CON`, `PRN`, `AUX`, `NUL`, `COM0`–`COM9` y `LPT0`–`LPT9`, también con `¹`, `²` o `³`, y con cualquier extensión).
+- La comprobación es léxica: no sigue symlinks. Un symlink dentro de la raíz que apunte fuera no se detecta; antes de escribir o borrar, resuelve la ruta con `fs.realpath`.
+- Los mensajes de error citan la ruta con `JSON.stringify`, para no arrastrar caracteres de control, y la recortan a 200 bytes (`ERROR_PATH_PREVIEW_BYTES`).
 
 ```ts
-export function resolveInside(root: string, relative: string): string {
-  const resolved = path.resolve(root, relative);
-  if (!resolved.startsWith(path.resolve(root) + path.sep)) {
-    throw new AtiumError("MODEL_INVALID", `Path escapes project root: ${relative}`);
-  }
-  return resolved;
-}
+import { resolveInside } from "@atium/core";
+
+const trace = resolveInside(repoRoot, attachment.path); // AtiumError MODEL_INVALID si escapa
 ```
 
 ## Secretos y datos sensibles
