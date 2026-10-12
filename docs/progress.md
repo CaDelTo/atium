@@ -8,6 +8,101 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-11 — #8 v0-07-test-builders
+
+- **Hecho:**
+  - Rama `feat/8-test-builders` (desde `main` en `49d9ae6`). El push lo hizo el usuario (el agente no tiene permiso para `git push`). PR #26 abierto con `Closes #8`, sin mergear.
+  - Commit `71f0ae5` `docs(repo): add handoff entry for #7`: la entrada de #7 que estaba sin commitear al empezar la sesión.
+  - Commit `3cb82c3` `feat(core): add test data builders`, en `packages/core/src/testing/`:
+    - `run-builder.ts` (`aRun`: `.withSeed(n)`, `.onCommit(sha)`, `.onProvider(name)`, `.withResult(builder)`, `.with(patch)`), `test-result-builder.ts` (`aTestResult(title?)`: `.passed()`, `.failedThenPassed()`, `.failedAllAttempts(n)`, `.forTest(builder)`, `.inFile(file)`, `.with(patch)`), `test-case-builder.ts` (`aTestCase(title?)`: `.inFile`, `.inProject`, `.withTags`, `.with`), `attempt-builder.ts` (`anAttempt()`: `.withIndex`, `.passed()`, `.failed(errorBuilder?)`, `.with`) y `error-builder.ts` (`anError(type?)`: `.withMessage`, `.with`). Exportados con sus tipos `*Builder` desde `src/testing/index.ts`.
+    - Sin clases: cada builder es una función que devuelve un objeto congelado con `Object.freeze`; cada método crea un builder nuevo. `.with(patch)` copia el patch con `structuredClone`. `build()` hace `XSchema.parse(...)`: valida, da los tipos branded sin `as` y devuelve el objeto congelado (`.readonly()` de Zod).
+    - `deterministic.ts` (interno, no sale por `index.ts`): `FIXED_START = "2026-10-08T14:03:00.000Z"`, `fixedTimePlus(ms)`, `seededHex(seed)` (sha256, 16 hex) y `seededRunId(seed)` (UUID v7 con el timestamp de `FIXED_START` y bits aleatorios de `sha256("run:" + seed)`).
+    - Defaults:
+      - `aRun()`: id de seed 1, sin `ci`, playwright en linux/x64/22.20.0, `finishedAt` = inicio + 150 s.
+      - `aTestCase()`: `tests/example.spec.ts`, `titlePath = [title]`, título por defecto `"example test"`. `testId` = `seededHex(JSON.stringify([project, file, titlePath]))`.
+      - `anError()`: `TimeoutError`, `"Timeout 5000ms exceeded."`, `failedAtMs` 1000. `fingerprint` = `seededHex(JSON.stringify([type, message]))`; `family` = `seededHex("family:" + type)`.
+      - `anAttempt()`: índice 0, `passed`, 1000 ms. `startedAt` = inicio + índice × su propia duración.
+    - `failedAllAttempts(n)` lanza `RangeError` si `n` no es un entero ≥ 1. Con más de 20 intentos, el Zod de `build()` lanza.
+    - Tests: un `.test.ts` por archivo, con defaults válidos, inmutabilidad, determinismo (incluido un id de run fijo como golden value), round trip JSON del `Run` y property-based de `seededHex` y `seededRunId` (seed `20261011`).
+    - Docs: README de core, `docs/engineering/04-testing.md` (dos viñetas en "Datos de prueba") y un comentario en `src/model/samples.test-support.ts` que explica por qué los tests de esquema no usan los builders.
+  - Verificado:
+    - `pnpm verify` exit 0 con Node 22.23.3: 279 tests y 100% de cobertura.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker): sin bloqueantes. Se corrigieron los 2 importantes (TSDoc inexacto de `family` y tags faltantes en `deterministic.ts`) y las 7 sugerencias.
+    - CI del PR #26 (run `38204259056`): `audit` falla (ver Problemas); los jobs `verify` estaban pendientes al cerrar la sesión.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan. Están en el código, el TSDoc, el README y `04-testing.md`:
+    - Builders como funciones, sin clases.
+    - `build()` valida con Zod.
+    - Los valores por defecto de los builders son datos de prueba, no defaults del producto, así que no van en `defaults.ts`.
+    - `samples.test-support.ts` se queda sin migrar a los builders.
+    - La entrada de #7 se commitea en esta rama.
+  - Tomadas durante la implementación o en `/review`. Solo están en el código y el TSDoc:
+    - El `testId` por defecto NO es el de §9.3: se calcula con sha256 y `JSON.stringify` para evitar colisiones.
+    - Se usa sha256 en lugar de sha1 porque la regla `sonarjs/hashing` marca sha1 como error.
+    - Los patches se copian con `structuredClone`.
+- **Problemas:**
+  - En v0-08, `computeTestId` debe usar sha1 según §9.3, y `sonarjs/hashing` lo marcará como error. Hay que decidir con el usuario si se desactiva la regla en esa línea con una justificación (hoy no hay ningún `eslint-disable` en el repo).
+  - Cuando exista `computeTestId`, conviene que `aTestCase` lo use en lugar de `seededHex`. Hoy esto no está escrito en ninguna tarea.
+  - Sin cambios desde #7:
+    - `audit` falla en el PR #26 por `shell-quote` y `source-map-js`.
+    - `05-fingerprinting.md` §13.2: no está claro el `family = sha1(...)` sin `slice`.
+    - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
+  - El Node activo por defecto del shell es 23.1.0, y dependency-cruiser no lo admite. `pnpm verify` hay que ejecutarlo con `source ~/.nvm/nvm.sh && nvm use 22`.
+  - El hook `test-guard` bloqueó borrar un archivo de test temporal que el agente usaba para inspeccionar valores. No se rodeó, y el archivo nunca llegó a crearse.
+- **Siguiente paso:**
+  1. Revisar que los jobs `verify` del PR #26 pasen. El usuario mergea.
+  2. `/task 9` (v0-08 identidad de tests y rutas). Depende solo de v0-06. Antes de implementar `computeTestId`, preguntar por `sonarjs/hashing` y proponer que `aTestCase` lo use.
+  3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js` descrito en la entrada de #6. Antes, preguntar al usuario la rama y el issue.
+  4. En v0-14: `RunHeaderSchema` (`RunSchema` sin `results`), límites del lector (64 KiB, 1 MiB y 256 MiB), umbral de 768 KiB y ventana de 10 pasos en `defaults.ts`.
+
+### 2026-10-11 — #7 v0-06-model-schemas
+
+- **Hecho:**
+  - Rama `feat/7-model-schemas` (desde `main` en `aa3d005`). PR #25 con `Closes #7`, mergeado por el usuario (merge `49d9ae6`); el issue #7 quedó cerrado. `main` local actualizado a `49d9ae6`.
+  - Commit `b77f58f` `docs(repo): add handoff entry for #6`: la entrada de #6 que estaba sin commitear al empezar la sesión.
+  - Commit `349d2fc` `feat(core): add Zod schemas of the data model`:
+    - `packages/core/src/model/`: un archivo por entidad (`run.ts`, `test-result.ts`, `test-case.ts`, `attempt.ts`, `error-occurrence.ts`, `network.ts`, `bdd.ts`), con los campos de §9.2. Objetos `z.strictObject(...).readonly()`: rechazan claves desconocidas y el objeto parseado queda congelado. Opcionales con `.exactOptional()` (rechazan `undefined` explícito). Tipos con `z.infer`.
+    - `ids.ts`: `RunIdSchema` (UUID v7 estricto), `TestIdSchema` y `FingerprintSchema` (`/^[0-9a-f]{16}$/`), branded.
+    - `fields.ts` (interno): `cappedString(maxBytes)` (`.max(n, { abort: true })` como precheck más un `refine` con la medida exacta), `TextSchema` (2 KiB), `cappedList`, `NonNegativeIntSchema`, `MillisecondsSchema`, `DroppedCountSchema` (entero ≥ 1), `TimestampSchema` (`z.iso.datetime()` solo UTC con `Z`, más `.max(2048)`).
+    - `text.ts`: `jsonEscapedByteLength` (interno, para el escritor de v0-14) y `truncateUtf8(value, maxBytes)` (público; lanza `RangeError` si `maxBytes` no es un entero ≥ 0). Sin marcador ni elipsis.
+    - `src/defaults.ts`: `MODEL_LIST_CAPS` y `MODEL_TEXT_CAPS_BYTES` (ADR-0018). No se exportan desde `index.ts`.
+    - Constantes exportadas: `SCHEMA_VERSION`, `ATTEMPT_STATUSES`, `TEST_OUTCOMES`, `FRAMEWORK_NAMES`.
+    - JSON Schema en `packages/core/schemas/run.v1.json`, generado por `pnpm --filter @atium/core schema:export` (`vitest run src/model/json-schema.test.ts --update`, con `toMatchFileSnapshot`). `runJsonSchema()` quita `readOnly` y añade `title` y `description`. `schemas` añadido a `files` y a `.prettierignore`.
+    - Dependencias: `zod@4.6.5` (dependency de core) y `fast-check@4.10.2` (dev). Son las últimas versiones que admite `minimumReleaseAge`.
+    - Tests: uno por esquema, con casos válidos e inválidos en `it.each`, más el round trip JSON del `Run` y property-based de `text.ts` (seed fija `20261011`, 1000 runs, contra `JSON.stringify`). Las muestras válidas están en `src/model/samples.test-support.ts` (solo tests).
+    - Docs: README de core, `docs/engineering/10-tooling.md` (`.prettierignore`) y `docs/design/16-repository-structure.md` (`core/schemas/` contiene el JSON Schema publicado).
+  - Verificado:
+    - `pnpm verify` exit 0 con Node 22.23.3: 223 tests y 100% de cobertura.
+    - `pnpm --filter @atium/core pkg:check` pasa.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor). Bloqueantes corregidos: timestamps sin tope y TSDoc de las muestras. Importantes corregidos: `10-tooling.md`, `16-repository-structure.md` y `files`. Sugerencias 6–8 aplicadas.
+    - CI del PR #25 (run `38200407349`): los 6 jobs `verify` pasan; `audit` falla (ver Problemas).
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan; están en el código y el TSDoc, no en `docs/design/`:
+    - Topes de `message` y `stack`: 2048 y 8192 bytes ("2 KB" y "8 KB" de §9.2 leídos como KiB).
+    - `ci.shard.index` en base 1, con `index ≤ total`.
+    - `Run.id` como UUID v7 estricto.
+    - Objetos estrictos: las claves desconocidas se rechazan.
+  - Aprobadas por el usuario en `/review`; tampoco están en `docs/design/`:
+    - `runAttempt`, `prNumber`, `workers`, `location.line` y `location.column` exigen ≥ 1.
+    - `retries` y el resto de conteos, índices, duraciones y offsets son enteros ≥ 0. `p95Ms` también es entero.
+    - `NetworkCall.status` acepta 0.
+    - `TestId` y `Fingerprint` van en hex minúscula.
+    - `attempts`, `titlePath` y `steps` pueden ir vacíos, y los strings vacíos se aceptan.
+    - La única validación entre campos es la del shard.
+  - `family` es un string libre con el tope por defecto.
+  - `schema:export` usa `toMatchFileSnapshot` para no añadir `tsx` u otro runner.
+  - El PR #25 superó las 400 líneas de la guía de `08-git-workflow.md`: unas 670 de código y docs más unas 880 de tests. El usuario lo aceptó como un solo PR, porque "una tarea por PR" choca con el límite. No quedó escrito como excepción.
+- **Problemas:**
+  - `docs/design/05-fingerprinting.md` §13.2 define `family = sha1(...)` sin `.slice(0, 16)`, a diferencia de `fingerprint`. No está claro si es el sha1 completo; afecta al cálculo de `family` en la fase de fingerprinting.
+  - El job `audit` sigue fallando en el PR #25 y en `main` (run `38200827926`, `49d9ae6`) por `shell-quote` (critical) y `source-map-js` (high). Es el mismo problema de #6. `zod` y `fast-check` no aparecen en el audit.
+  - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
+- **Siguiente paso:**
+  1. `/task 8` (v0-07 Builders de datos de prueba). Depende de v0-06. Las muestras de `src/model/samples.test-support.ts` pueden servir de punto de partida o quedar sustituidas por los builders.
+  2. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js` descrito en la entrada de #6. Antes, preguntar al usuario la rama y el issue.
+  3. En v0-14: `RunHeaderSchema` (`RunSchema` sin `results`), límites del lector (64 KiB, 1 MiB y 256 MiB), umbral de 768 KiB y ventana de 10 pasos en `defaults.ts`.
+
 ### 2026-10-11 — #6 v0-05-errors-result-failopen
 
 - **Hecho:**
