@@ -7,7 +7,10 @@ Shared foundation for Atium. Every other Atium package builds on it.
 Today it provides `assertNever`, the error types (`AtiumError`, `ERROR_CODES`,
 `ErrorCode`, `isAtiumError`), `Result` with `ok` and `err`, the `Logger`
 interface with `LogLevel` and `LogContext`, and the `failOpen` helper with its
-`FailOpenOptions`. The data model, configuration, CI detection, the analysis
+`FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
+`TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
+`NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
+`Fingerprint`, and `truncateUtf8`. Configuration, CI detection, the analysis
 pipeline, findings, fingerprinting and storage interfaces are planned.
 
 ## Installation
@@ -86,6 +89,33 @@ const history = await failOpen(
   () => storage.sync({ signal }),
 );
 ```
+
+Data that comes from outside, such as a framework report or a run file, is
+validated with the model schemas. Types are derived from them, and parsed
+objects are frozen:
+
+```ts
+import { AtiumError, RunSchema } from "@atium/core";
+import type { Run } from "@atium/core";
+
+const parsed = RunSchema.safeParse(JSON.parse(text));
+if (!parsed.success) {
+  throw new AtiumError("MODEL_INVALID", `Run file ${path} is invalid: ${parsed.error.message}`);
+}
+const run: Run = parsed.data;
+```
+
+Text fields have caps measured in UTF-8 bytes of the value once escaped for
+JSON (ADR-0018), so a producer truncates with `truncateUtf8` before validating:
+
+```ts
+import { truncateUtf8 } from "@atium/core";
+
+const message = truncateUtf8(rawMessage, 2048);
+```
+
+The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
+the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
 The `@atium/core/testing` entry point holds test builders and fakes for
 Atium's own tests. Today it provides `FakeLogger`, a `Logger` that records

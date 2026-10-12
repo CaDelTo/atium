@@ -1,0 +1,651 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+    },
+    "git": {
+      "type": "object",
+      "properties": {
+        "commitSha": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "headSha": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "branch": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "baseBranch": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "dirty": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "commitSha",
+        "dirty"
+      ],
+      "additionalProperties": false
+    },
+    "ci": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "runId": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "runAttempt": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "jobId": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "shard": {
+          "type": "object",
+          "properties": {
+            "index": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "total": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "index",
+            "total"
+          ],
+          "additionalProperties": false
+        },
+        "prNumber": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "provider"
+      ],
+      "additionalProperties": false
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "os": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "arch": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "nodeVersion": {
+          "type": "string",
+          "maxLength": 2048
+        },
+        "framework": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "enum": [
+                "playwright",
+                "cypress",
+                "junit",
+                "ctrf"
+              ]
+            },
+            "version": {
+              "type": "string",
+              "maxLength": 2048
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "os",
+        "arch",
+        "nodeVersion",
+        "framework"
+      ],
+      "additionalProperties": false
+    },
+    "frameworkConfig": {
+      "type": "object",
+      "properties": {
+        "retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "workers": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "projects": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "startedAt": {
+      "type": "string",
+      "maxLength": 2048,
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "finishedAt": {
+      "type": "string",
+      "maxLength": 2048,
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "test": {
+            "type": "object",
+            "properties": {
+              "testId": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{16}$"
+              },
+              "project": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "file": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "titlePath": {
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 2048
+                }
+              },
+              "tags": {
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 2048
+                }
+              },
+              "location": {
+                "type": "object",
+                "properties": {
+                  "line": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "column": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "line",
+                  "column"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "testId",
+              "file",
+              "titlePath",
+              "tags"
+            ],
+            "additionalProperties": false
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "flaky",
+              "skipped"
+            ]
+          },
+          "attempts": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "passed",
+                    "failed",
+                    "timedOut",
+                    "interrupted",
+                    "skipped"
+                  ]
+                },
+                "startedAt": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "error": {
+                  "type": "object",
+                  "properties": {
+                    "fingerprint": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{16}$"
+                    },
+                    "family": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "type": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "message": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "stack": {
+                      "type": "string",
+                      "maxLength": 8192
+                    },
+                    "locator": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "matcher": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "expected": {
+                          "type": "string",
+                          "maxLength": 2048
+                        },
+                        "actual": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "name"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "failedAtMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "fingerprint",
+                    "family",
+                    "type",
+                    "message",
+                    "failedAtMs"
+                  ],
+                  "additionalProperties": false
+                },
+                "network": {
+                  "type": "object",
+                  "properties": {
+                    "endpoints": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "urlTemplate": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "statuses": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string",
+                              "maxLength": 2048
+                            },
+                            "additionalProperties": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "failures": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "p95Ms": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "urlTemplate",
+                          "count",
+                          "statuses",
+                          "failures",
+                          "p95Ms"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "endpointsDropped": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "calls": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "urlTemplate": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "host": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "status": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "failure": {
+                            "type": "string",
+                            "maxLength": 2048
+                          },
+                          "startedAtMs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "durationMs": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "graphqlOperation": {
+                            "type": "string",
+                            "maxLength": 2048
+                          }
+                        },
+                        "required": [
+                          "method",
+                          "urlTemplate",
+                          "host",
+                          "startedAtMs"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "callsDropped": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "endpoints"
+                  ],
+                  "additionalProperties": false
+                },
+                "console": {
+                  "type": "object",
+                  "properties": {
+                    "errors": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "warnings": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "samples": {
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 1024
+                      }
+                    }
+                  },
+                  "required": [
+                    "errors",
+                    "warnings",
+                    "samples"
+                  ],
+                  "additionalProperties": false
+                },
+                "pageErrors": {
+                  "maxItems": 20,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "maxLength": 2048
+                  }
+                },
+                "pageErrorsDropped": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "artifacts": {
+                  "type": "object",
+                  "properties": {
+                    "trace": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "screenshots": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "maxLength": 2048
+                      }
+                    },
+                    "ariaSnapshot": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "video": {
+                      "type": "string",
+                      "maxLength": 2048
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "index",
+                "status",
+                "startedAt",
+                "durationMs"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "attemptsDropped": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "workerIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sequenceInWorker": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "quarantined": {
+            "type": "boolean"
+          },
+          "bdd": {
+            "type": "object",
+            "properties": {
+              "feature": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "scenario": {
+                "type": "string",
+                "maxLength": 2048
+              },
+              "steps": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "keyword": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "text": {
+                      "type": "string",
+                      "maxLength": 512
+                    },
+                    "status": {
+                      "type": "string",
+                      "maxLength": 2048
+                    },
+                    "durationMs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "definition": {
+                      "type": "string",
+                      "maxLength": 256
+                    }
+                  },
+                  "required": [
+                    "keyword",
+                    "text",
+                    "status",
+                    "durationMs"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "stepsDropped": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "feature",
+              "scenario",
+              "steps"
+            ],
+            "additionalProperties": false
+          },
+          "detailTruncated": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "test",
+          "outcome",
+          "attempts",
+          "quarantined"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "git",
+    "environment",
+    "startedAt",
+    "finishedAt",
+    "results"
+  ],
+  "additionalProperties": false,
+  "title": "Atium run (schemaVersion 1)",
+  "description": "One execution of a job or shard, with its results. Text limits are measured in UTF-8 bytes of the value once escaped for JSON, without the surrounding quotes; maxLength is only an upper bound of that measure. Run files store this object as NDJSON: the run without results on line 1, then one result per line (ADR-0018)."
+}

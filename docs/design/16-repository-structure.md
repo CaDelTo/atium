@@ -10,8 +10,9 @@ Monorepo con paquetes independientes, para que cada usuario instale solo lo que 
 atium/
 ├── packages/
 │   ├── core/                    @atium/core
+│   │   ├── schemas/             JSON Schema publicado (generado desde model/)
 │   │   └── src/
-│   │       ├── model/           esquemas Zod, tipos y JSON Schema publicado
+│   │       ├── model/           esquemas Zod y tipos
 │   │       ├── config/          defineConfig, carga y validación
 │   │       ├── ci/              detección de proveedor y contexto git
 │   │       ├── pipeline/        orquestador de analizadores

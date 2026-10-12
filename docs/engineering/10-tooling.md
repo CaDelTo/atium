@@ -163,7 +163,7 @@ export default tseslint.config(
 }
 ```
 
-`.prettierignore` excluye `dist`, `coverage`, `fixtures`, `reports`, `pnpm-lock.yaml`, `**/*.md` (Prettier realinea las tablas y reescribe los ejemplos de código de los documentos) y `.claude` (los hooks no son editables por el agente).
+`.prettierignore` excluye `dist`, `coverage`, `fixtures`, `reports`, `pnpm-lock.yaml`, `packages/core/schemas` (JSON Schema generado por `pnpm --filter @atium/core schema:export`), `**/*.md` (Prettier realinea las tablas y reescribe los ejemplos de código de los documentos) y `.claude` (los hooks no son editables por el agente).
 
 Finales de línea: `lf` en todos los archivos (default de Prettier y `end_of_line = lf` en `.editorconfig`). `.gitattributes` fuerza `eol=lf` al hacer checkout para que `prettier --check` pase en Windows, salvo en `fixtures/`, cuyos archivos son salidas reales de frameworks y se guardan byte a byte.
 
