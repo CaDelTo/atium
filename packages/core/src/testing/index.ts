@@ -7,4 +7,5 @@
  *
  * @packageDocumentation
  */
-export {};
+export { FakeLogger } from "./fake-logger.js";
+export type { LogEntry } from "./fake-logger.js";

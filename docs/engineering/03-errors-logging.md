@@ -27,7 +27,10 @@ export class AtiumError extends Error {
   readonly hint: string | undefined;
 
   constructor(code: ErrorCode, message: string, options?: { cause?: unknown; hint?: string }) {
-    super(message, { cause: options?.cause });
+    super(
+      message,
+      options !== undefined && "cause" in options ? { cause: options.cause } : undefined,
+    );
     this.name = "AtiumError";
     this.code = code;
     this.hint = options?.hint;
@@ -36,7 +39,9 @@ export class AtiumError extends Error {
 ```
 
 - Al envolver un error, siempre se pasa `cause` para conservar la cadena.
+- `cause` solo se define si la clave está en las opciones, igual que en un `Error` nativo: sin `cause`, el error no tiene esa propiedad.
 - Los códigos son parte de la API pública: no se renombran ni se reutilizan.
+- Para reconocer un `AtiumError` en un `catch` se usa `isAtiumError(error)` y no `instanceof`: si se cargan a la vez el build ESM y el CommonJS de `@atium/core`, cada uno tiene su propia clase e `instanceof` falla con los errores del otro. Lo mismo pasa entre realms (`vm`, workers), así que `isAtiumError` comprueba `name === "AtiumError"` y que `code` sea un `ErrorCode` conocido.
 
 ## `Result` para fallos que el llamador debe manejar
 
@@ -105,6 +110,20 @@ Cada mensaje dice **qué pasó, por qué y cómo arreglarlo**.
 
 ## Logging
 
+```ts
+export type LogLevel = "error" | "warn" | "info" | "debug";
+export type LogContext = Readonly<Record<string, unknown>>;
+
+export interface Logger {
+  error(message: string, context?: LogContext): void;
+  warn(message: string, context?: LogContext): void;
+  info(message: string, context?: LogContext): void;
+  debug(message: string, context?: LogContext): void;
+}
+```
+
+- `@atium/core` define la interfaz; la implementación vive en v0-11. En los tests se usa `FakeLogger` de `@atium/core/testing`, que guarda las llamadas en `entries`.
+- Una implementación de `Logger` **nunca lanza**: `failOpen` registra desde su `catch` y un logger que lanzara rompería la suite del usuario.
 - En los paquetes no se usa `console.*` (regla `no-console`). Se usa el `Logger` inyectado.
 - Niveles: `error`, `warn`, `info`, `debug`.
 - Contexto estructurado como segundo argumento, no concatenado en el mensaje.
