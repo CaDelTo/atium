@@ -1,0 +1,7 @@
+# Check out text files with LF on every OS: Prettier requires LF, so
+# `prettier --check` would fail on Windows runners with CRLF checkouts
+# (docs/engineering/10-tooling.md, Prettier).
+* text=auto eol=lf
+
+# Real framework outputs: keep them byte for byte.
+fixtures/** -text
