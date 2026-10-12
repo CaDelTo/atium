@@ -45,6 +45,7 @@
     "schema:export": "vitest run src/model/json-schema.test.ts --update"
   },
   "dependencies": {
+    "picocolors": "1.1.1",
     "zod": "4.6.5"
   },
   "devDependencies": {

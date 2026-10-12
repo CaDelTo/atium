@@ -1,4 +1,6 @@
 export { assertNever } from "./assert-never.js";
+export { systemClock } from "./clock.js";
+export type { Clock } from "./clock.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
@@ -48,3 +50,5 @@ export { createRedactor, RedactConfigSchema } from "./redact/redactor.js";
 export type { HeaderValue, RedactConfig, Redactor } from "./redact/redactor.js";
 export { err, ok } from "./result.js";
 export type { Result } from "./result.js";
+export { createStderrLogger } from "./stderr-logger.js";
+export type { LogStream, StderrLoggerOptions } from "./stderr-logger.js";

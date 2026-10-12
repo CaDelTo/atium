@@ -6,7 +6,9 @@ Shared foundation for Atium. Every other Atium package builds on it.
 
 Today it provides `assertNever`, the error types (`AtiumError`, `ERROR_CODES`,
 `ErrorCode`, `isAtiumError`), `Result` with `ok` and `err`, the `Logger`
-interface with `LogLevel` and `LogContext`, and the `failOpen` helper with its
+interface with `LogLevel` and `LogContext`, the stderr logger
+`createStderrLogger` with `StderrLoggerOptions` and `LogStream`, the `Clock`
+interface with `systemClock`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
 `TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
 `NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
@@ -197,6 +199,27 @@ redactHeaders({ Authorization: "Basic dXNlcjpwYXNz" }); // { Authorization: "[RE
 redactFields({ user: { accessToken: "t", name: "Ana" } }); // accessToken becomes "[REDACTED]"
 ```
 
+Atium's own diagnostics go to stderr through `createStderrLogger`, one line
+per entry. It redacts the message and the context before writing, writes
+`debug` entries only with `verbose` or when `DEBUG` enables its namespace (for
+example `DEBUG=atium:*`), colors the level only on a terminal without
+`NO_COLOR`, and never throws. Code that needs the time takes a `Clock`;
+`systemClock` is the real one:
+
+```ts
+import { createRedactor, createStderrLogger, RedactConfigSchema } from "@atium/core";
+
+const logger = createStderrLogger({
+  stream: process.stderr,
+  env: process.env,
+  redactor: createRedactor(RedactConfigSchema.parse({})),
+  namespace: "atium:cli",
+  verbose: false,
+});
+logger.warn("history sync failed; continuing without it", { error });
+// atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -209,6 +232,7 @@ Atium's own tests:
   Defaults are deterministic: a fixed start time, a run id derived from a seed
   (`withSeed`) and test ids and fingerprints derived from the content.
 - `FakeLogger`: a `Logger` that records every call.
+- `fixedClock(ms)`: a `Clock` that always returns the same time.
 
 ```ts
 import { aRun, aTestResult } from "@atium/core/testing";
