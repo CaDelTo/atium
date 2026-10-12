@@ -63,8 +63,9 @@ export function resolveInside(root: string, relative: string): string {
 - Se agregan solo si están en [17-tech-stack.md](../design/17-tech-stack.md) o se justifican en el PR.
 - Antes de agregar una: mantenimiento activo, licencia compatible, tamaño, dependencias transitivas.
 - Lockfile versionado.
-- Scripts de instalación de dependencias deshabilitados salvo una lista explícita (`allowBuilds` de pnpm en `pnpm-workspace.yaml`, con `strictDepBuilds: true`; reemplaza a `onlyBuiltDependencies` desde pnpm 11).
+- Scripts de instalación de dependencias deshabilitados salvo una lista explícita (`allowBuilds` de pnpm en `pnpm-workspace.yaml`, con `strictDepBuilds: true`; reemplaza a `onlyBuiltDependencies` desde pnpm 11). Las dependencias cuyo script no hace falta se listan con `false` (por ejemplo `esbuild`, cuyo binario llega por un paquete opcional). `lefthook` está permitido: su `postinstall` solo ejecuta `lefthook install` para registrar los hooks de Git y no hace nada si `CI` está definido.
 - Renovate con espera mínima de 14 días antes de proponer una versión nueva.
+- `minimumReleaseAge: 20160` (14 días, en minutos) en `pnpm-workspace.yaml`: pnpm solo resuelve versiones con esa antigüedad, incluidas las transitivas, y rechaza un lockfile con entradas más nuevas (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Si una actualización lo exige, se regenera con `pnpm clean --lockfile && pnpm install`.
 - `pnpm audit` en CI.
 
 ## Publicación

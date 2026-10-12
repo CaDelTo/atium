@@ -1,0 +1,19 @@
+# Local Git hooks (docs/engineering/10-tooling.md). Installed by the lefthook
+# postinstall on `pnpm install`.
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "*.{ts,js,cjs,mjs,json,md,yml}"
+      run: pnpm prettier --check {staged_files}
+    lint:
+      glob: "*.{ts,js,cjs,mjs}"
+      run: pnpm eslint {staged_files}
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm commitlint --edit {1}
+pre-push:
+  commands:
+    typecheck:
+      run: pnpm typecheck

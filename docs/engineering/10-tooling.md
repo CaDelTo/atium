@@ -33,7 +33,7 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test -- --coverage",
-    "deps:check": "depcruise packages --config .dependency-cruiser.cjs",
+    "deps:check": "turbo run build && depcruise packages --config .dependency-cruiser.cjs",
     "unused": "knip",
     "dupes": "jscpd packages",
     "pkg:check": "turbo run pkg:check",
@@ -43,11 +43,16 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
 }
 ```
 
-En cada paquete publicable: `"pkg:check": "publint && attw --pack ."`. Se ejecuta en CI antes de publicar.
+En cada paquete publicable: `"pkg:check": "publint && attw --pack . --profile node16"`. Se ejecuta en CI antes de publicar. El perfil `node16` omite la resolución `node10`, que no aplica con Node ≥ 22 y no resuelve subpaths como `./testing`.
 
-En cada paquete con carpeta `bench/`: `"bench": "vitest bench --run"`. Los benchmarks no forman parte de `pnpm verify` (son lentos); los ejecuta `perf-benchmarker` y el CI de rendimiento.
+En cada paquete con carpeta `bench/`: `"bench": "vitest bench --run"`. Los benchmarks no forman parte de `pnpm verify` (son lentos); los ejecuta `perf-benchmarker` y el CI de rendimiento. En Vitest 5, `bench` es parte del contexto del test (`test("…", async ({ bench }) => { await bench("…", fn).run(); })`) y no hay `--outputJson` ni `--compare`: los resultados se exportan con `--reporter=json --outputFile=<archivo>`.
 
 ## ESLint (código del proyecto)
+
+Además de las reglas comunes:
+
+- Los archivos `.js`, `.cjs` y `.mjs` no tienen información de tipos (`disableTypeChecked`): son configs de la raíz que no pertenecen a ningún tsconfig. Los `*.config.ts` de la raíz usan el proyecto por defecto (`allowDefaultProject`).
+- `.claude/` se ignora: es configuración del agente, no código del producto.
 
 ```js
 // eslint.config.js
@@ -57,14 +62,21 @@ import prettier from "eslint-config-prettier";
 import sonarjs from "eslint-plugin-sonarjs";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/coverage/**", "fixtures/**"] },
+  { ignores: ["**/dist/**", "**/coverage/**", "fixtures/**", ".claude/**"] },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
   sonarjs.configs.recommended,
   {
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      parserOptions: {
+        // Root TypeScript configs belong to no package tsconfig.
+        projectService: {
+          allowDefaultProject: ["*.config.ts"],
+          defaultProject: "tsconfig.base.json",
+        },
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
@@ -75,6 +87,7 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/explicit-module-boundary-types": "error",
       "@typescript-eslint/prefer-readonly": "error",
+      "@typescript-eslint/no-unused-vars": ["error", { ignoreRestSiblings: true }],
       "no-console": "error",
       "no-eval": "error",
       "no-implied-eval": "error",
@@ -96,9 +109,22 @@ export default tseslint.config(
       ],
       "no-restricted-imports": [
         "error",
-        { patterns: [{ group: ["@atium/*/src/*"], message: "Import from the package entry point." }] },
+        {
+          patterns: [
+            { group: ["@atium/*/src/*"], message: "Import from the package entry point." },
+          ],
+        },
       ],
     },
+  },
+  {
+    // Root config files are not part of any tsconfig, so they get no type information.
+    files: ["**/*.{js,cjs,mjs}"],
+    extends: [tseslint.configs.disableTypeChecked],
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: { globals: { module: "writable", require: "readonly" } },
   },
   {
     files: ["**/*.test.ts", "**/test/**", "**/bench/**"],
@@ -107,6 +133,11 @@ export default tseslint.config(
       "@typescript-eslint/no-non-null-assertion": "off",
       "sonarjs/no-duplicate-string": "off",
     },
+  },
+  {
+    // Benchmarks measure; they have nothing to assert.
+    files: ["**/bench/**"],
+    rules: { "sonarjs/assertions-in-tests": "off" },
   },
   {
     files: ["*.config.{js,ts,mjs}", "**/*.config.{js,ts,mjs}"],
@@ -131,15 +162,29 @@ export default tseslint.config(
 }
 ```
 
+`.prettierignore` excluye `dist`, `coverage`, `fixtures`, `reports`, `pnpm-lock.yaml`, `**/*.md` (Prettier realinea las tablas y reescribe los ejemplos de código de los documentos) y `.claude` (los hooks no son editables por el agente).
+
 ## dependency-cruiser
 
-Reglas que reflejan la tabla de capas de [02-code-design.md](02-code-design.md):
+Reglas que reflejan la tabla de capas de [02-code-design.md](02-code-design.md).
+
+- `enhancedResolveOptions` resuelve los imports entre paquetes por sus `exports`, igual que Node, es decir, hacia el `dist/` del paquete. Por eso `deps:check` construye primero, y `dist/` está en `doNotFollow` (entra al grafo como destino, no se recorre) y no en `exclude`.
+- `not-to-unresolvable` hace fallar un import que no resuelve (por ejemplo, sin `dist/`); sin ella, ese import pasaría por encima de todas las reglas de capas.
+- dependency-cruiser rechaza expresiones con cuantificadores anidados, por eso `no-test-code-in-src` enumera las carpetas con paquetes anidados.
 
 ```js
 // .dependency-cruiser.cjs
+/** @type {import("dependency-cruiser").IConfiguration} */
 module.exports = {
   forbidden: [
     { name: "no-circular", severity: "error", from: {}, to: { circular: true } },
+    {
+      // An unresolved import would slip past every layer rule, so it fails on its own.
+      name: "not-to-unresolvable",
+      severity: "error",
+      from: {},
+      to: { couldNotResolve: true },
+    },
     {
       name: "core-is-independent",
       severity: "error",
@@ -167,13 +212,26 @@ module.exports = {
     {
       name: "no-test-code-in-src",
       severity: "error",
-      from: { path: "^packages/[^/]+/src/", pathNot: "\\.test\\.ts$" },
+      // Covers packages/<name>/src and nested ones such as packages/analyzers/<name>/src.
+      from: {
+        path: "^packages/([^/]+|(adapters|analyzers|storage|reporters)/[^/]+)/src/",
+        pathNot: "\\.test\\.ts$",
+      },
       to: { path: "\\.test\\.ts$" },
     },
   ],
   options: {
     tsConfig: { fileName: "tsconfig.base.json" },
-    doNotFollow: { path: "node_modules" },
+    // Workspace packages resolve to their built `dist/` through `exports`: keep those
+    // files in the graph as targets so the layer rules see them, but do not cruise them.
+    doNotFollow: { path: ["node_modules", "(^|/)dist/"] },
+    exclude: { path: "(^|/)(coverage|node_modules)/" },
+    // Resolve workspace packages through their `exports` like Node does.
+    enhancedResolveOptions: {
+      exportsFields: ["exports"],
+      conditionNames: ["import", "require", "node", "default", "types"],
+      mainFields: ["module", "main", "types", "typings"],
+    },
   },
 };
 ```
@@ -206,6 +264,17 @@ Archivo `.jscpd.json` (la carpeta `reports/` va en `.gitignore`):
 - Los bloques duplicados individuales se revisan en `/review` con `duplication-auditor`, que distingue conocimiento duplicado (se unifica) de similitud accidental (puede quedarse).
 - Los tests se excluyen del umbral: un poco de repetición en tests mejora la legibilidad. La duplicación de datos de prueba se resuelve con builders.
 
+## knip
+
+`knip.json` en la raíz. knip detecta los workspaces desde `pnpm-workspace.yaml` y los plugins (Vitest, tsup, ESLint, etc.) desde cada `package.json`:
+
+```json
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": [".claude/**"]
+}
+```
+
 ## commitlint
 
 ```js
@@ -233,10 +302,10 @@ pre-commit:
   parallel: true
   commands:
     format:
-      glob: "*.{ts,js,json,md,yml}"
+      glob: "*.{ts,js,cjs,mjs,json,md,yml}"
       run: pnpm prettier --check {staged_files}
     lint:
-      glob: "*.{ts,js}"
+      glob: "*.{ts,js,cjs,mjs}"
       run: pnpm eslint {staged_files}
 commit-msg:
   commands:
@@ -259,6 +328,8 @@ export default defineConfig({
     sequence: { shuffle: true },
     coverage: {
       provider: "v8",
+      include: ["src/**/*.ts"],
+      exclude: ["src/**/*.test.ts"],
       thresholds: { lines: 90, branches: 90, functions: 90, statements: 90 },
     },
   },
@@ -266,6 +337,19 @@ export default defineConfig({
 ```
 
 Los umbrales por paquete siguen [04-testing.md](04-testing.md#cobertura-y-mutation-testing).
+
+El `vitest.config.ts` de la raíz solo agrupa los proyectos, para ejecutar todos los tests desde la raíz o el editor. `pnpm test` los sigue ejecutando por paquete con Turborepo:
+
+```ts
+// vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    projects: ["packages/*/vitest.config.ts", "packages/*/*/vitest.config.ts"],
+  },
+});
+```
 
 ## Renovate
 

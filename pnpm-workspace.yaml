@@ -5,5 +5,15 @@ packages:
 
 # Dependency install scripts are blocked unless explicitly allowed here
 # (docs/engineering/06-security.md).
-allowBuilds: {}
+allowBuilds:
+  # The postinstall only verifies the binary that the optional @esbuild/*
+  # package already provides.
+  esbuild: false
+  # The postinstall only runs `lefthook install` to register the Git hooks
+  # (lefthook.yml); it does nothing when CI is set.
+  lefthook: true
 strictDepBuilds: true
+
+# Resolve only versions published at least 14 days ago, transitive ones included
+# (docs/engineering/06-security.md). In minutes.
+minimumReleaseAge: 20160

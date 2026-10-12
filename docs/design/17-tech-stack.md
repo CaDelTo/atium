@@ -37,6 +37,8 @@
 | Mutation (opcional) | Stryker | No reinventar |
 | Documentación | Astro Starlight o VitePress | Una página por regla |
 
+Las dependencias se fijan en la última versión estable, con una excepción: TypeScript se queda en la serie 6.x. TypeScript 7 es la versión nativa y su paquete npm ya no expone la API JS del compilador, que necesitan tsup (para generar las declaraciones) y typescript-eslint. Se pasa a 7 cuando ambas herramientas la soporten ([ADR-0021](../adr/0021-typescript-6.md)).
+
 ### Calidad de código
 
 Herramientas que hacen cumplir los estándares de [`docs/engineering/`](../engineering/README.md); su configuración está en [10-tooling.md](../engineering/10-tooling.md).
@@ -50,7 +52,7 @@ Herramientas que hacen cumplir los estándares de [`docs/engineering/`](../engin
 | Código duplicado | jscpd | Umbral de duplicación en `pnpm verify` |
 | Code smells | eslint-plugin-sonarjs | Complejidad cognitiva, funciones y ramas duplicadas |
 | Paquetes publicables | publint, @arethetypeswrong/cli | Exports, tipos y ESM/CJS correctos |
-| Commits | commitlint | Conventional Commits |
+| Commits | commitlint + `@commitlint/config-conventional` | Conventional Commits |
 | Hooks de Git | lefthook | Rápido, sin dependencias de Node en el hook |
 | Property-based testing | fast-check | Normalizadores, fingerprints y fórmulas |
 | Cobertura | @vitest/coverage-v8 | Umbrales por paquete |
