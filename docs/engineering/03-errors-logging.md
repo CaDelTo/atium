@@ -87,7 +87,7 @@ No se distribuyen `try/catch` por todo el código: dentro de los bordes, el cód
 
 ## Reglas
 
-- Nunca un `catch` vacío.
+- Nunca un `catch` vacío. Única excepción: el `catch` alrededor de la escritura del `Logger` en su stream. El logger es el último destino de los errores (`failOpen` lo llama desde su propio `catch`), así que un fallo al escribir no tiene dónde registrarse y no puede llegar a la suite del usuario (ADR-0006). Ese `catch` lleva un comentario que lo explica.
 - Nunca capturar un error para ignorarlo sin registrarlo.
 - Solo se captura lo que se puede manejar; el resto se deja subir.
 - En `catch`, el error es `unknown`: se estrecha antes de usarlo.
@@ -122,13 +122,14 @@ export interface Logger {
 }
 ```
 
-- `@atium/core` define la interfaz; la implementación vive en v0-11. En los tests se usa `FakeLogger` de `@atium/core/testing`, que guarda las llamadas en `entries`.
+- `@atium/core` define la interfaz y la implementación ([ADR-0022](../adr/0022-logger-reloj-en-core.md)), `createStderrLogger({ stream, env, redactor, namespace, verbose })`. El stream y el entorno se inyectan; en producción son `process.stderr` y `process.env`. En los tests se usa `FakeLogger` de `@atium/core/testing`, que guarda las llamadas en `entries`.
+- Formato: una línea por entrada, `<namespace> <nivel> <mensaje> <contexto JSON>`. Por ejemplo, `atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}`. Los caracteres de control del mensaje (salvo el tab), incluidos los saltos de línea y las secuencias ANSI, se escapan. Cada objeto del contexto se escribe una vez: si reaparece, se escribe `"[Repeated]"`, y si se contiene a sí mismo, `"[Circular]"`. Los `Error` del contexto se escriben como `{ name, message, code?, hint?, stack?, cause? }`, y el stack solo aparece con la depuración activa.
 - Una implementación de `Logger` **nunca lanza**: `failOpen` registra desde su `catch` y un logger que lanzara rompería la suite del usuario.
 - En los paquetes no se usa `console.*` (regla `no-console`). Se usa el `Logger` inyectado.
-- Niveles: `error`, `warn`, `info`, `debug`.
+- Niveles: `error`, `warn`, `info` y `debug`. Los tres primeros se escriben siempre; `debug`, solo con la depuración activa.
 - Contexto estructurado como segundo argumento, no concatenado en el mensaje.
 - El logger aplica la redacción de datos sensibles antes de escribir.
-- Depuración: `DEBUG=atium:*` o `--verbose`.
+- Depuración: `DEBUG=atium:*` o `--verbose`. `DEBUG` sigue la sintaxis del paquete debug (patrones separados por comas o espacios, `*` como comodín y exclusiones con `-`, que ganan sobre cualquier inclusión sin importar el orden) y se compara con el namespace del logger, por ejemplo `atium:cli`.
 
 ```ts
 // ✗
@@ -142,7 +143,7 @@ logger.debug("Run uploaded", { runId, durationMs });
 
 - **stdout:** solo resultados (texto o el formato pedido con `--format`). Debe poder redirigirse a un archivo o a otro programa.
 - **stderr:** logs, avisos y progreso.
-- Los colores se desactivan con `NO_COLOR` o cuando la salida no es una terminal.
+- Los colores se desactivan con `NO_COLOR` (definida y no vacía) o cuando la salida no es una terminal.
 
 ## Timeouts y cancelación
 

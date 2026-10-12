@@ -15,7 +15,7 @@
 | Carga de config | jiti ([ADR-0017](../adr/0017-carga-config-jiti.md)) | Soporta `atium.config.ts`; precedencia y validación propias |
 | CLI | Commander | Los plugins van en la config; no hace falta oclif |
 | Terminal | picocolors, cli-table3; respeta `NO_COLOR` | Ligeros |
-| Logs de depuración | debug (`DEBUG=atium:*`) | Estándar en Node |
+| Logs de depuración | Sintaxis de `DEBUG` del paquete debug (`DEBUG=atium:*`), leída por el logger de core sin la dependencia | Estándar en Node; el paquete usa estado global y escribe solo en stderr, sin redacción ni stream inyectado ([ADR-0022](../adr/0022-logger-reloj-en-core.md)) |
 | Detección de CI | env-ci + reglas propias | Cubre los proveedores comunes |
 | Linter | ESLint 9 + typescript-eslint (project service) | Editor, autofix, resolución entre archivos |
 | Parser CSS | parsel-js | Analiza selectores CSS para E2E002 |

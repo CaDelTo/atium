@@ -31,6 +31,8 @@ atium export|import  mover historial en JSON
 
 Opciones globales: `--config`, `--format`, `--output`, `--ci`, `--strict`, `--quiet`, `--verbose`.
 
+Logs propios: van a stderr; stdout queda solo para resultados. `--verbose` o `DEBUG=atium:*` activan los mensajes de depuración y los stacks de los errores; `DEBUG` sigue la sintaxis del paquete debug. Los colores se desactivan con `NO_COLOR` (definida y no vacía) o cuando stderr no es una terminal. El formato de línea y las reglas de redacción están en [03-errors-logging.md](../engineering/03-errors-logging.md#logging) ([ADR-0022](../adr/0022-logger-reloj-en-core.md)).
+
 ### 26.2 Códigos de salida
 
 | Código | Significado |
@@ -102,4 +104,4 @@ export default defineConfig({
 });
 ```
 
-Variables de entorno principales: `ATIUM_CONFIG`, `ATIUM_STORAGE_*`, `ATIUM_COMMIT_SHA`, `ATIUM_BRANCH`, `ATIUM_CHAOS`, `ATIUM_LOG_LEVEL`, `NO_COLOR`.
+Variables de entorno principales: `ATIUM_CONFIG`, `ATIUM_STORAGE_*`, `ATIUM_COMMIT_SHA`, `ATIUM_BRANCH`, `ATIUM_CHAOS`, `ATIUM_LOG_LEVEL`, `NO_COLOR`. `ATIUM_LOG_LEVEL` y `--quiet` todavía no están implementados en el logger (v0-11); se resuelven con la configuración (v0-12) y el CLI (v0-17).

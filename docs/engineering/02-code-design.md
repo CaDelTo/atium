@@ -53,7 +53,7 @@ export function isBroken(results: readonly RunOutcome[], policy: BrokenPolicy): 
 | Abierto/cerrado | Reglas, analizadores, reporters y backends se agregan vía plugins sin tocar el orquestador |
 | Sustitución de Liskov | Todos los backends de storage pasan la misma suite de tests de contrato; lo mismo para adapters |
 | Segregación de interfaces | `StorageReader` y `StorageWriter` separados; un analizador recibe solo lo que declara en `requires` |
-| Inversión de dependencias | `core` define interfaces (`StorageReader`, `Logger`, `Clock`); las implementaciones viven en otros paquetes |
+| Inversión de dependencias | `core` define interfaces (`StorageReader`, `Logger`, `Clock`); las implementaciones viven en otros paquetes, salvo las que necesitan todos y solo pueden venir de `core`: `createStderrLogger` (los reporters no pueden depender del CLI) y `systemClock` ([ADR-0022](../adr/0022-logger-reloj-en-core.md)) |
 
 ## Funciones
 
