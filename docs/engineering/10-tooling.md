@@ -48,6 +48,8 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
 
 En cada paquete publicable: `"pkg:check": "publint && attw --pack . --profile node16"`. Se ejecuta en CI antes de publicar. El perfil `node16` omite la resolución `node10`, que no aplica con Node ≥ 22 y no resuelve subpaths como `./testing`.
 
+`@atium/cli` solo tiene `bin`, sin API programática ni entrypoints que `attw` pueda comprobar, así que su `pkg:check` es solo `publint`. Sus tests ejecutan el binario construido, así que en `turbo.json` su tarea `test` (y `bench`) depende también de su propio `build`: `"@atium/cli#test": { "dependsOn": ["^build", "build"] }`.
+
 En cada paquete con carpeta `bench/`: `"bench": "vitest bench --run"`. Los benchmarks no forman parte de `pnpm verify` (son lentos); los ejecuta `perf-benchmarker` y el CI de rendimiento. En Vitest 5, `bench` es parte del contexto del test (`test("…", async ({ bench }) => { await bench("…", fn).run(); })`) y no hay `--outputJson` ni `--compare`: los resultados se exportan con `--reporter=json --outputFile=<archivo>`.
 
 ## ESLint (código del proyecto)

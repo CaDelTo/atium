@@ -41,5 +41,5 @@ Se ejecutan dentro de la suite del usuario, así que cada milisegundo cuenta:
 
 ## Arranque del CLI
 
-- `atium --help` en menos de 300 ms.
+- `atium --help` en menos de 300 ms, de media, con el binario construido en un proceso nuevo de Node (`packages/cli/bench/help.bench.ts`).
 - Las dependencias pesadas (TypeScript, ESLint, AWS SDK, SQLite) se importan de forma diferida dentro del comando que las usa (`await import(...)`).

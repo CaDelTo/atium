@@ -126,7 +126,7 @@ export interface Logger {
 - Formato: una línea por entrada, `<namespace> <nivel> <mensaje> <contexto JSON>`. Por ejemplo, `atium:cli warn history sync failed; continuing without it {"error":{"name":"Error","message":"..."}}`. Los caracteres de control del mensaje (salvo el tab), incluidos los saltos de línea y las secuencias ANSI, se escapan. Cada objeto del contexto se escribe una vez: si reaparece, se escribe `"[Repeated]"`, y si se contiene a sí mismo, `"[Circular]"`. Los `Error` del contexto se escriben como `{ name, message, code?, hint?, stack?, cause? }`, y el stack solo aparece con la depuración activa.
 - Una implementación de `Logger` **nunca lanza**: `failOpen` registra desde su `catch` y un logger que lanzara rompería la suite del usuario.
 - En los paquetes no se usa `console.*` (regla `no-console`). Se usa el `Logger` inyectado.
-- Niveles: `error`, `warn`, `info` y `debug` (`LOG_LEVELS`). `level` es el nivel mínimo que se escribe. Por defecto es `info`, así que se escriben los tres primeros; lo resuelve `loadConfig` desde los flags y `ATIUM_LOG_LEVEL` ([18-cli-config.md](../design/18-cli-config.md) §26.3). `debug` solo se escribe con la depuración activa: `level: "debug"`, `--verbose` o `DEBUG`.
+- Niveles: `error`, `warn`, `info` y `debug` (`LOG_LEVELS`). `level` es el nivel mínimo que se escribe. Por defecto es `info`, así que se escriben los tres primeros; lo resuelve `loadConfig` desde los flags y `ATIUM_LOG_LEVEL` ([18-cli-config.md](../design/18-cli-config.md) §26.3). Un comando que no carga la config, como `init`, solo usa `--quiet` o `--verbose` (§26.1). `debug` solo se escribe con la depuración activa: `level: "debug"`, `--verbose` o `DEBUG`.
 - Contexto estructurado como segundo argumento, no concatenado en el mensaje.
 - El logger aplica la redacción de datos sensibles antes de escribir.
 - Depuración: `DEBUG=atium:*` o `--verbose`. `DEBUG` sigue la sintaxis del paquete debug (patrones separados por comas o espacios, `*` como comodín y exclusiones con `-`, que ganan sobre cualquier inclusión sin importar el orden) y se compara con el namespace del logger, por ejemplo `atium:cli`.
@@ -142,7 +142,7 @@ logger.debug("Run uploaded", { runId, durationMs });
 ## Salida del CLI
 
 - **stdout:** solo resultados (texto o el formato pedido con `--format`). Debe poder redirigirse a un archivo o a otro programa.
-- **stderr:** logs, avisos y progreso.
+- **stderr:** logs, avisos y progreso. Los errores de configuración o de uso se escriben sin el formato del logger, como mensaje y `Hint:`, pero con la misma redacción y con los caracteres de control escapados ([18-cli-config.md](../design/18-cli-config.md) §26.2).
 - Los colores se desactivan con `NO_COLOR` (definida y no vacía) o cuando la salida no es una terminal.
 
 ## Timeouts y cancelación

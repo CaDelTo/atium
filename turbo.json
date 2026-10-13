@@ -21,6 +21,14 @@
     "bench": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "@atium/cli#test": {
+      "dependsOn": ["^build", "build"],
+      "outputs": ["coverage/**"]
+    },
+    "@atium/cli#bench": {
+      "dependsOn": ["^build", "build"],
+      "cache": false
     }
   }
 }

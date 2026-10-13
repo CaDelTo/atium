@@ -29,7 +29,7 @@ El usuario aprobó ambas desviaciones en el plan de v0-11 (#12).
 - El parser de `DEBUG` es código propio que hay que mantener. Es pequeño y no construye expresiones regulares a partir del entorno.
 - Quien use el paquete debug en otros proyectos verá la misma sintaxis en `DEBUG`. No funcionan las extensiones del paquete, como `DEBUG_COLORS` o `DEBUG_DEPTH`.
 - `02-code-design.md` y `17-tech-stack.md` se actualizaron en el mismo cambio que este ADR.
-- `ATIUM_LOG_LEVEL` y `--quiet` no se resuelven aquí. Nota posterior: v0-12 resolvió `ATIUM_LOG_LEVEL` con `loadConfig` y la opción `level` del logger (18-cli-config.md §26.3); `--quiet` queda para v0-17 (CLI).
+- `ATIUM_LOG_LEVEL` y `--quiet` no se resuelven aquí. Nota posterior: v0-12 resolvió `ATIUM_LOG_LEVEL` con `loadConfig` y la opción `level` del logger (18-cli-config.md §26.3); `--quiet` queda para v0-17 (CLI). Nota posterior: v0-17 traduce `--quiet` a `level: "error"` y `--verbose` a `level: "debug"` (18-cli-config.md §26.1).
 
 ## Alternativas descartadas
 
