@@ -70,14 +70,15 @@ El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-ar
   - Un run inexistente es `ok(undefined)`, no un error.
   - Un `id` repetido da `STORAGE_CONFLICT` y el run guardado queda intacto (ADR-0007).
   - Un storage inaccesible o ya cerrado da `STORAGE_UNAVAILABLE`.
+  - Un backend que valida lo que escribe devuelve `MODEL_INVALID`, sin guardar nada, para un run que no cumple `RunSchema` o que no puede guardar tal cual. Si valida lo que lee, devuelve `MODEL_INVALID` para un run guardado que ya no cumple `RunSchema`. El fake en memoria no valida; SQLite valida en los dos sentidos (§23.6).
 - **`listRuns`:**
   - Orden: `startedAt` descendente (el más reciente primero) y, en empate, `id` descendente. Así `limit` devuelve los últimos N runs.
   - `branch`: coincidencia exacta con `git.branch`. Los runs sin rama no coinciden con ningún filtro de rama.
   - `since`: fecha y hora ISO 8601 con `Z` o un offset, inclusiva (`startedAt >= since`). Se compara como instante, no como texto. Una fecha y hora sin zona se rechaza, porque `Date.parse` la leería en la zona horaria de la máquina y el resultado cambiaría entre CI y local.
   - `limit`: obligatorio, entero ≥ 1 y como mucho `Number.MAX_SAFE_INTEGER`.
-  - Un `limit` o un `since` inválidos son un bug del llamador: `RangeError`, no `Result`. Se comprueban antes que nada, así que también se lanza con el storage cerrado.
+  - Un `limit` o un `since` inválidos son un bug del llamador: `RangeError`, no `Result`. Se comprueban antes que nada, así que también se lanza con el storage cerrado. Todos los backends usan `parseListRunsQuery` de `@atium/core`, que además devuelve `since` como instante en milisegundos.
 - **`close`:** es idempotente. Después de cerrar, toda operación con argumentos válidos devuelve `STORAGE_UNAVAILABLE`.
-- **Contrato:** todo backend pasa la suite `packages/core/test-contracts/storage.contract.ts`, que cubre lo anterior y las escrituras concurrentes: N runs distintos escritos a la vez se leen todos, y de varias escrituras simultáneas del mismo `id` gana exactamente una. La suite usa runs dentro de los topes de ADR-0018, porque un backend de archivos los aplica al escribir.
+- **Contrato:** todo backend pasa la suite `packages/core/test-contracts/storage.contract.ts` (`storageContract`, exportada como `@atium/core/test-contracts`), que cubre lo anterior y las escrituras concurrentes: N runs distintos escritos a la vez se leen todos, y de varias escrituras simultáneas del mismo `id` gana exactamente una. La suite usa runs dentro de los topes de ADR-0018, porque un backend de archivos los aplica al escribir.
 
 ### 23.3 Niveles de datos y retención
 
@@ -127,3 +128,49 @@ Si el volumen crece más allá de esto, DuckDB sobre Parquet es la alternativa c
 | `network_calls` | `(run_id, test_id, attempt, seq)` | Llamadas de intentos fallidos |
 | `daily_rollups` | `(test_id, day)` | Agregados diarios |
 | `findings` | `(run_id, fingerprint)` | Findings de cada análisis |
+
+En V0 existen `runs`, `test_cases`, `test_results`, `attempts` y `errors` (`@atium/storage-sqlite`). Las demás tablas llegan con migraciones en sus fases.
+
+- **Apertura** (`openSqliteStorage({ rootDir, path?, logger })`):
+  - Base en `.atium/atium.db` (`SQLITE_DATABASE_PATH`) o en `path`, relativo a la raíz del repo o absoluto dentro de ella, resuelto con `resolveInside`. Un `path` fuera de la raíz da `MODEL_INVALID`.
+  - Crea los directorios que falten con permisos `0700` (`SQLITE_DIRECTORY_MODE`).
+  - Comprueba otra vez la ruta tras resolver los symlinks del directorio con `realpath` (06-security.md). Si un symlink la saca de la raíz, o si el archivo de la base es un symlink, da `MODEL_INVALID`. El archivo se crea con `O_NOFOLLOW` donde existe.
+  - Un archivo nuevo se crea con permisos `0600` (`SQLITE_FILE_MODE`), como los archivos de run; SQLite da los mismos a `-wal` y `-shm`. Un archivo existente conserva los suyos.
+  - Activa el modo WAL y `foreign_keys`. Si el sistema de archivos no admite WAL, la base se abre igual y se registra un aviso en el `logger`. `busy_timeout`: 5.000 ms (`SQLITE_BUSY_TIMEOUT_MS`), el default de better-sqlite3.
+  - Aplica las migraciones pendientes de Drizzle (`packages/storage/sqlite/drizzle/`, generadas con `pnpm --filter @atium/storage-sqlite db:generate`). Dos procesos que abren a la vez una base nueva pueden aplicar la misma migración a la vez; el segundo falla con `STORAGE_UNAVAILABLE` y la siguiente apertura funciona.
+  - Si no puede crear, abrir o migrar la base, da `STORAGE_UNAVAILABLE`.
+  - `close` no falla: si SQLite no puede cerrar la base, lo registra como aviso en el `logger` (ADR-0006).
+- **Principio del esquema:**
+  - `test_results` y `attempts` guardan lo que observó cada run, así que `getRun` devuelve el run exactamente como se escribió, aunque los tags, la ubicación o el mensaje de un error cambien entre runs.
+  - `test_cases` y `errors` son catálogos derivados de esas filas.
+  - Las estructuras anidadas que todavía no tienen tabla propia son columnas JSON: `frameworkConfig`, `titlePath`, tags, `bdd`, `matcher`, `network`, `console`, `pageErrors` y `artifacts`. La red pasará a `network_endpoints` y `network_calls` con su migración.
+  - Las fechas conservan su texto ISO original. Las columnas `*_ms` guardan el mismo instante para ordenar y filtrar.
+  - Un campo ausente es `NULL` y al leer se omite la clave, no se pone `undefined`.
+- **Columnas de V0:**
+
+| Tabla | Clave / índices | Columnas |
+|---|---|---|
+| `runs` | `id`; `(commit_sha)`, `(branch, started_at_ms, id)`, `(started_at_ms, id)` | `schema_version`; `git` (`commit_sha`, `head_sha`, `branch`, `base_branch`, `dirty`); `ci_*` (`provider`, `run_id`, `run_attempt`, `job_id`, `shard_index`, `shard_total`, `pr_number`; `ci_provider` nulo significa sin `ci`); entorno (`os`, `arch`, `node_version`, `framework_name`, `framework_version`); `framework_config` JSON; `started_at`, `started_at_ms`, `finished_at` |
+| `test_cases` | `test_id` | `project`, `file`, `title_path`, `tags`, `first_seen_ms`, `last_seen_ms` |
+| `test_results` | `(run_id, test_id)`; `(test_id, started_at_ms)`; `run_id` → `runs` en cascada | `position` (orden en `results`), `started_at_ms` del run, el `TestCase` de ese run (`project`, `file`, `title_path`, `tags`, `location_line`, `location_column`), `outcome`, `attempts_dropped`, `worker_index`, `sequence_in_worker`, `quarantined`, `bdd`, `detail_truncated` (1 o nulo) |
+| `attempts` | `(run_id, test_id, attempt_index)`; `(error_fingerprint)`; `(run_id, test_id)` → `test_results` en cascada | `position`, `status`, `started_at`, `duration_ms`, la ocurrencia del error (`error_fingerprint`, `error_family`, `error_type`, `error_message`, `error_stack`, `error_locator`, `error_matcher`, `error_failed_at_ms`), `network`, `console`, `page_errors`, `page_errors_dropped`, `artifacts` |
+| `errors` | `fingerprint` | `type`, `family`, `sample_message` |
+
+- **Índices:** la tabla general de arriba no lista `runs (started_at_ms, id)`; ese índice sirve a `listRuns` sin filtro de rama. Los dos índices de `runs` que usa `listRuns` terminan en `id`, para resolver el desempate del orden.
+- **Catálogos:**
+  - `test_cases` se actualiza con un upsert. `first_seen_ms` y `last_seen_ms` son el mínimo y el máximo de los inicios de run. `project`, `file`, `title_path` y `tags` vienen del run más reciente, aunque se escriba después uno más antiguo. Con dos runs del mismo instante, gana el último escrito.
+  - `errors` guarda el tipo, la familia y, como muestra, el mensaje de la primera ocurrencia escrita de cada `fingerprint`. El modelo no tiene un mensaje normalizado; esa columna llegará con su fase.
+- **Escritura:**
+  - El storage guarda los textos tal como llegan: se redactan antes de `writeRun` ([20-security-privacy.md §28.1](20-security-privacy.md)).
+  - Un `writeRun` es una transacción `IMMEDIATE` con sentencias preparadas reutilizadas. Toma el lock de escritura antes de comprobar el `id`, así que dos procesos no pueden encontrarlo libre a la vez.
+  - Antes valida el run con `RunSchema`.
+  - Un `testId` repetido en un run o un `index` de intento repetido en un resultado chocan con las claves: dan `MODEL_INVALID` sin guardar nada. Pendiente: `atium stress` (`--repeat-each`, [07-flaky.md](07-flaky.md)) produce repeticiones del mismo test en un run; habrá que decidir si el adapter las une o si cambia la clave.
+- **Lectura:**
+  - Reconstruye el run y lo valida con `RunSchema`.
+  - Dan `MODEL_INVALID`:
+    - Un JSON que no se puede parsear. El mensaje dice qué run es pero no cita el texto que da `JSON.parse`, que es contenido del run (§23.2.1).
+    - Columnas de un mismo campo que no concuerdan: una ocurrencia de error sin una columna obligatoria, solo una de `ci_shard_index` y `ci_shard_total`, solo una de `location_line` y `location_column`, columnas `ci_*` sin `ci_provider`, o un `detail_truncated` distinto de 1.
+    - Un run que no cumple el esquema. El mensaje incluye el resumen acotado de `describeIssues`.
+  - Los mensajes citan rutas e ids con `quoteForMessage`.
+  - Cualquier otro error de SQLite da `STORAGE_UNAVAILABLE` con el error como `cause`.
+- **Rendimiento:** escribir un run de 1.000 tests tarda menos de 1 s. El benchmark está en `packages/storage/sqlite/bench/` y también mide un run de 5.000 tests, sin presupuesto.

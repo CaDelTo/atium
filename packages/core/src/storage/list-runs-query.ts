@@ -9,9 +9,49 @@ import type { ListRunsQuery } from "./storage.js";
  */
 const SinceSchema = z.iso.datetime({ offset: true });
 
+/** A {@link ListRunsQuery} checked by {@link parseListRunsQuery}. */
+export interface ParsedListRunsQuery {
+  /** Exact `git.branch` to match; absent to match every run. */
+  readonly branch?: string;
+  /** `since` in milliseconds since the epoch; absent to match every run. */
+  readonly sinceMs?: number;
+  /** Maximum number of runs: an integer from 1 to `Number.MAX_SAFE_INTEGER`. */
+  readonly limit: number;
+}
+
 interface StartedRun {
   readonly run: Run;
   readonly startMs: number;
+}
+
+/**
+ * Checks a {@link ListRunsQuery} so every backend rejects the same queries
+ * before doing anything else, even after `close`.
+ *
+ * @param query - Query passed to `listRuns`.
+ * @returns The query with `since` as an instant in milliseconds.
+ * @throws `RangeError` if `limit` is not an integer from 1 to
+ *   `Number.MAX_SAFE_INTEGER` or `since` is not an ISO 8601 date-time with a
+ *   zone: both are bugs in the caller.
+ *
+ * @example
+ * ```ts
+ * parseListRunsQuery({ since: "2026-10-08T16:03:00+02:00", limit: 10 });
+ * // { sinceMs: 1791468180000, limit: 10 }
+ * ```
+ */
+export function parseListRunsQuery(query: ListRunsQuery): ParsedListRunsQuery {
+  if (!Number.isSafeInteger(query.limit) || query.limit < 1) {
+    throw new RangeError(
+      `listRuns limit must be an integer from 1 to ${String(Number.MAX_SAFE_INTEGER)}, got ${String(query.limit)}.`,
+    );
+  }
+  const sinceMs = parseSince(query.since);
+  return {
+    ...(query.branch === undefined ? {} : { branch: query.branch }),
+    ...(sinceMs === undefined ? {} : { sinceMs }),
+    limit: query.limit,
+  };
 }
 
 /**
@@ -26,17 +66,10 @@ interface StartedRun {
  *
  * @param query - Query passed to `listRuns`.
  * @returns A function that selects the matching runs from a collection.
- * @throws `RangeError` if `limit` is not an integer of at least 1 or `since`
- *   is not an ISO 8601 date-time with a zone: both are bugs in the caller.
+ * @throws `RangeError` if the query is invalid (see {@link parseListRunsQuery}).
  */
 export function runSelector(query: ListRunsQuery): (runs: Iterable<Run>) => Run[] {
-  if (!Number.isSafeInteger(query.limit) || query.limit < 1) {
-    throw new RangeError(
-      `listRuns limit must be an integer of at least 1, got ${String(query.limit)}.`,
-    );
-  }
-  const { branch, limit } = query;
-  const sinceMs = parseSince(query.since);
+  const { branch, sinceMs, limit } = parseListRunsQuery(query);
   return (runs) =>
     Array.from(runs, (run) => ({ run, startMs: Date.parse(run.startedAt) }))
       .filter(

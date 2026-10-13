@@ -85,9 +85,13 @@ export function storageContract(create: () => Promise<Storage>): void {
   });
 }
 
-// packages/storage/s3/test/s3.test.ts
-storageContract(() => createS3Storage(localMinioConfig));
+// packages/storage/sqlite/src/sqlite-storage.test.ts
+import { storageContract } from "@atium/core/test-contracts";
+
+storageContract(async () => openIn(await newRepository())); // openIn: openSqliteStorage + unwrap
 ```
+
+Los demás paquetes importan las suites por nombre de paquete, desde `@atium/core/test-contracts`; los tests de core las importan con rutas relativas.
 
 Aplica a: backends de storage, adapters (todos producen un modelo válido desde sus fixtures) y reporters.
 

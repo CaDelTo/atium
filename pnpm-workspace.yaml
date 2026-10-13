@@ -6,6 +6,10 @@ packages:
 # Dependency install scripts are blocked unless explicitly allowed here
 # (docs/engineering/06-security.md).
 allowBuilds:
+  # Native addon for @atium/storage-sqlite. The package ships prebuilt binaries
+  # for Linux, macOS and Windows (x64 and arm64); its node-gyp build only
+  # compiles the addon on other platforms.
+  better-sqlite3: true
   # The postinstall only verifies the binary that the optional @esbuild/*
   # package already provides.
   esbuild: false

@@ -4,7 +4,10 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     "testing/index": "src/testing/index.ts",
+    "test-contracts/index": "test-contracts/storage.contract.ts",
   },
+  // The contract suites run inside the tests of other packages, which provide Vitest.
+  external: ["vitest"],
   format: ["esm", "cjs"],
   dts: {
     // tsup forces `baseUrl` in its declaration build, which TypeScript 6
