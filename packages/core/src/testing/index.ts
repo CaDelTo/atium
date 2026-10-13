@@ -25,3 +25,4 @@ export type { TestCaseBuilder } from "./test-case-builder.js";
 export { aTestResult } from "./test-result-builder.js";
 export type { TestResultBuilder } from "./test-result-builder.js";
 export { rejectedAtiumError, thrownAtiumError } from "./thrown-error.js";
+export { unwrap } from "./unwrap.js";
