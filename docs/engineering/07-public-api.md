@@ -15,7 +15,7 @@ Cambiar cualquiera de estos elementos afecta a usuarios:
 | Códigos de error | `ErrorCode` |
 | Variables de entorno | `ATIUM_*` |
 
-Todo lo que no está en esta lista es interno y puede cambiar sin aviso.
+Todo lo que no está en esta lista es interno y puede cambiar sin aviso; por ejemplo, el JSON de `atium doctor --format json` en V0.
 
 Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core/test-contracts` (suites de contrato) son internos aunque estén en `exports`. Solo los usan los tests de los paquetes de Atium y pueden cambiar sin aviso ni changeset. `test-contracts` es solo ESM porque importa Vitest, y `attw` lo excluye.
 

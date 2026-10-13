@@ -42,3 +42,27 @@ export const CONFIG_PACKAGE = "@atium/core";
  * Source: 18-cli-config.md §26.1.
  */
 export const MANIFEST_MAX_BYTES = 1024 * 1024;
+
+/**
+ * Lowest Node.js version `atium doctor` accepts: the `engines` of this
+ * package, which Commander 15 requires, within the Node 22 LTS of ADR-0002.
+ *
+ * Source: 18-cli-config.md §26.1.
+ */
+export const MIN_NODE_VERSION = "22.12.0";
+
+/**
+ * Directory of Atium's local files, such as the SQLite database and the run
+ * files, relative to the root of the repository, which in the CLI is the
+ * working directory. `atium doctor` checks it can be written.
+ *
+ * Source: 15-storage.md and 18-cli-config.md §26.1.
+ */
+export const ATIUM_DIRECTORY = ".atium";
+
+/**
+ * Values of `--format` that `atium doctor` accepts; the first is the default.
+ *
+ * Source: 18-cli-config.md §26.1.
+ */
+export const DOCTOR_FORMATS = Object.freeze(["text", "json"] as const);

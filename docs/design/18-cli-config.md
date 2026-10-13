@@ -8,7 +8,7 @@
 
 ```
 atium init           genera atium.config.ts y detecta frameworks
-atium doctor         verifica instalación, config, adapters y acceso al storage
+atium doctor         verifica Node, config, Git, contexto de CI, .atium/ y frameworks
 atium lint           linter + reglas cross-file
 atium ingest         importa JUnit XML o CTRF
 atium upload         sube los runs locales al storage remoto
@@ -50,6 +50,27 @@ Opciones globales: `--config`, `--format`, `--output`, `--ci`, `--strict`, `--qu
 - No acepta `--config` (error de uso): siempre crea el archivo en el directorio de trabajo. Si `ATIUM_CONFIG` está definida y no vacía, avisa de que los demás comandos cargarán ese archivo y no el creado.
 - No carga la configuración existente, así que tampoco lee `ATIUM_LOG_LEVEL`; su nivel de log es el de `--quiet` o `--verbose`, o `info`.
 
+`atium doctor`:
+
+- Comprueba que Atium puede funcionar en el directorio de trabajo con seis verificaciones, en este orden, cada una con estado `pass`, `warn` o `fail`. Toda verificación que no pasa lleva un `hint`.
+- En el CLI, la raíz del repositorio de la que parten `.atium/` y el resto de rutas de [15-storage.md](15-storage.md) es el directorio de trabajo, como en la búsqueda de la config (§26.3): no se sube a los directorios padre ni se pregunta a Git.
+
+  | id | Qué comprueba | `fail` | `warn` |
+  |---|---|---|---|
+  | `node` | Node.js ≥ `MIN_NODE_VERSION` (22.12.0, el `engines` del CLI, que exige Commander 15) | versión menor o ilegible | — |
+  | `config` | `loadConfig` como lo haría cualquier comando, con `--config`, `ATIUM_CONFIG` y `ATIUM_LOG_LEVEL`, así que ejecuta el `atium.config.*` del proyecto; muestra el archivo y sus `adapters` | `CONFIG_INVALID` o `CONFIG_NOT_FOUND`, con su mensaje y su `hint` | no hay archivo de config |
+  | `git` | `git rev-parse HEAD` y la rama, en el directorio de trabajo | Git no está instalado o no hay repositorio con commits, y un run lo necesita: `ci` falló con `GIT_UNAVAILABLE` | lo mismo, pero el commit sale del entorno (`ATIUM_COMMIT_SHA` o el proveedor), así que Git no hace falta; el `hint` lo dice |
+  | `ci` | `detectRunContext` (v0-13); muestra proveedor, run, PR, commit y rama (`local` fuera de CI) | `GIT_UNAVAILABLE` o `MODEL_INVALID` | — |
+  | `storage` | Que `.atium/` (`ATIUM_DIRECTORY`) se puede escribir: crea y borra un directorio temporal dentro. Si no existe, lo prueba en el directorio de trabajo, donde se crearía, sin crearlo. Un symlink se resuelve con `realpath` y la prueba va a su destino. No abre SQLite, para no crear ni migrar la base | no es un directorio, no se puede escribir, o es un symlink roto o que lleva fuera del directorio de trabajo (o a él mismo). Si la prueba se crea pero no se puede borrar, el error es interno | — |
+  | `frameworks` | Los adapters detectados en `package.json`, con las reglas y los mensajes de `init` | — | ninguno, o `package.json` falta, no es un archivo regular, supera 1 MiB, no se puede leer (el mensaje lleva el código del error, como `EACCES`) o no es un manifest |
+
+- Las verificaciones son independientes: un fallo no detiene las demás. Un error inesperado dentro de una es interno (§26.2).
+- Salida en stdout: una tabla (`CHECK`, `STATUS`, `RESULT`, con el `hint` debajo) y una línea de resumen, o con `--format json` un objeto `{ ok, checks: [{ id, status, message, hint?, details }] }` que valida `DoctorReportSchema` (`packages/cli/src/doctor/report.ts`), con los seis checks en este orden; `details` depende del `id`. `doctor` valida el informe con ese esquema antes de escribirlo. `--format` acepta `text` (por defecto) y `json`; otro valor es un error de uso y no se comprueba nada. `--output` y `--ci` no se usan.
+- Todos los textos del informe, `details` incluido, pasan por la redacción por defecto (§28.1, `redactFields`) en los dos formatos; en la tabla se escapan además los caracteres de control. Las rutas no se ocultan: un config fuera del directorio de trabajo se muestra con su ruta absoluta.
+- El JSON de `doctor` no es API pública en V0 ([07-public-api.md](../engineering/07-public-api.md)): puede cambiar sin aviso y no lleva versión.
+- Código de salida: 2 si alguna verificación da `fail`, después de escribir el informe; en stderr va `atium doctor found N failed check(s).` con su `hint`. Con solo `pass` y `warn`, 0. Ver §26.2.
+- Fuera de V0: la verificación del storage remoto (V4) y el resumen de errores internos que menciona [ADR-0006](../adr/0006-fail-open.md), que necesita un registro persistente de esos errores. Ninguna tarea lo recoge todavía.
+
 Logs propios: van a stderr; stdout queda solo para resultados. `--verbose` o `DEBUG=atium:*` activan los mensajes de depuración y los stacks de los errores; `DEBUG` sigue la sintaxis del paquete debug. Los colores se desactivan con `NO_COLOR` (definida y no vacía) o cuando stderr no es una terminal. El formato de línea y las reglas de redacción están en [03-errors-logging.md](../engineering/03-errors-logging.md#logging) ([ADR-0022](../adr/0022-logger-reloj-en-core.md)).
 
 ### 26.2 Códigos de salida
@@ -60,6 +81,8 @@ Logs propios: van a stderr; stdout queda solo para resultados. `--verbose` o `DE
 | 1 | Gate fallido: Findings nuevos sobre el umbral o tests fallidos fuera de cuarentena |
 | 2 | Error de configuración o de uso |
 | 3 | Error interno, solo con `--strict` |
+
+Una verificación fallida de `atium doctor` también sale con 2: es un problema del entorno o de la config que el usuario debe arreglar; el 1 queda reservado para `gate`.
 
 Son errores de configuración o de uso (código 2) los de Commander (opción o comando desconocidos, argumentos de más, opciones incompatibles), los errores de uso propios de un comando y los `AtiumError` con `CONFIG_INVALID` o `CONFIG_NOT_FOUND`: su mensaje y, en la línea siguiente, `  Hint: <hint>` se escriben en stderr con la redacción por defecto (§28.1) y con los caracteres de control escapados como `\uXXXX` (también DEL, los C1 y los de dirección bidireccional), salvo los saltos de línea y los tabs. Con `--verbose` se registran además la causa y el stack. Los errores que escribe Commander, que repiten lo que se tecleó, se escapan igual. Cualquier otro error, incluido un `AtiumError` con otro código, es interno.
 
