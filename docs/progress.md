@@ -8,6 +8,92 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #47 v1-07-linter-architecture
+
+- **Hecho:**
+  - **Rama, PR y merge:**
+    - Rama `docs/47-linter-architecture`, creada desde `origin/main` en `1eaeb06` (merge de #83, `/plan-phase v1`).
+    - Commit `38b16cd` `docs(repo): decide the linter architecture in ADR-0023`. El push lo hizo esta sesión con `git -C <repo> push -u origin <rama>`.
+    - PR #84 con `Closes #47`. El usuario ya lo mergeó (`25f1140`, 2026-10-13T20:35Z) y el issue #47 está cerrado.
+  - **CI del PR #84 al consultarla:**
+    - Pasan 5 de los 6 jobs `verify`.
+    - `verify (windows-latest, Node 22)` seguía `IN_PROGRESS` cuando se mergeó.
+    - `audit` falla, igual que en `main`; ver Problemas.
+  - **ADR-0023** (`docs/adr/0023-arquitectura-linter.md`), en estado Aceptada e indexado en `docs/adr/README.md`. Fija las seis decisiones de v1-07:
+    1. **Capas:**
+       - Entrada interna `@atium/core/pure`, solo con módulos sin I/O: `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result` y `assert-never`. El plugin de ESLint solo importa esa entrada.
+       - `@atium/eslint-plugin/syntax`, también interna, guarda la lógica E2E compartida. `suite-index` y `analyzers/*` solo pueden importar ese subpath del plugin.
+    2. **Nombres en ESLint:** descriptivos (`atium/no-hard-wait`, etc.). El código (`E2E001`) es el ID estable. Las reglas cross-file no tienen nombre en ESLint.
+    3. **Catálogo:**
+       - Tabla en `docs/design/03-linter.md` §11.8.
+       - La severidad del Finding sale del catálogo, no del nivel de ESLint. Los presets activan las reglas `error` como `"error"` y las `warning` e `info` como `"warn"`.
+       - E2E011 y E2E013 vienen desactivadas por defecto.
+       - E2E012 usa la categoría `maintainability`, porque no existe `security`.
+    4. **Documentación:**
+       - Páginas en inglés en `docs/rules/<código en minúsculas>.md`.
+       - La tabla de equivalencias de los presets va en `docs/rules/presets.md`.
+       - La URL la construye `ruleDocsUrl(code)` en `core/findings` y apunta a `https://github.com/CaDelTo/atium/blob/main/docs/rules/<código>.md`.
+    5. **`atium lint`:**
+       - Usa el `eslint.config.*` del usuario. Si no hay ninguno, usa el preset interno `recommended` y lo avisa por stderr.
+       - Sección nueva y estricta `lint: { include, exclude }` en `atium.config`, con defaults `["."]` y `[]`. Los argumentos `[paths...]` reemplazan a `include`.
+       - Los mensajes de reglas externas equivalentes (según la tabla de los presets) se convierten al código propio; los demás se ignoran. Los errores de parseo se avisan por stderr.
+       - Las reglas cross-file van en `analyzers["lint-crossfile"]`, con `rules: { E2E011: "on" }`.
+       - Sale con 1 si hay Findings nuevos de severidad `error`.
+    6. **Contexto de los analizadores:**
+       - `AnalysisContext.storage` pasa a ser opcional y solo está presente con la capacidad `history`.
+       - El índice no va en el contexto: el CLI crea `createLintCrossfileAnalyzer({ index })`.
+  - **Diseño y estándares actualizados:**
+    - `03-linter.md`: §11.1, el ejemplo de §11.2 y las secciones nuevas §11.8 a §11.10.
+    - `14-architecture.md` §22.2.
+    - `15-storage.md` §23.2.2.
+    - `16-repository-structure.md` §24.
+    - `18-cli-config.md` §26.2 y §26.3.
+    - `engineering/02-code-design.md`: tabla de capas y nombres.
+    - `03-errors-logging.md`: se quitó `atium.dev` del ejemplo.
+    - `07-public-api.md`: nombres de ESLint públicos, subpaths internos y alias de reglas renombradas.
+    - `09-documentation.md`: ruta de las páginas.
+  - **Tareas V1:**
+    - v1-08 a v1-38 citan ADR-0023 o §11.8 en lugar de "v1-07"; las líneas `Depende de: v1-07` se mantienen.
+    - v1-08 añade crear `@atium/core/pure` y `ruleDocsUrl`, y cambiar `atium.dev` en `packages/core/src/findings/samples.test-support.ts`.
+    - v1-37 añade:
+      - la sección `lint` del esquema;
+      - los avisos y el `overrideConfigFile`;
+      - el comentario de `gateFailed` en `packages/cli/src/exit-codes.ts`.
+    - v1-38 añade los `settings.atium` por archivo para el índice.
+    - v1-32 añade la clave `rules`.
+    - v1-20 añade `docs/rules/presets.md`.
+  - **Verificado:**
+    - `pnpm verify` en verde dos veces, antes y después de las correcciones del review: core 907 tests, cli 220 y sqlite 61.
+    - `/review` con code-reviewer, duplication-auditor y docs-checker, sin bloqueantes. Se corrigieron los 5 importantes y las 8 sugerencias.
+    - Se descartaron:
+      - repetir valores entre el ADR y el diseño (mismo patrón que ADR-0022);
+      - añadir la firma `atium lint [paths...]` a §26.1 (lo hace v1-37);
+      - el riesgo de I/O en `findings/` por el baseline (v1-28 solo define el esquema, y la regla de dependency-cruiser sobre `pure` lo detectaría).
+- **En curso:** nada. El repo principal quedó en la rama `docs/47-linter-architecture`, ya mergeada. Esta entrada está sin commitear.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan** ("Apruebo todo"):
+    - las seis recomendaciones;
+    - los valores del catálogo;
+    - los defaults de `lint`;
+    - el nombre `@atium/core/pure`;
+    - actualizar las referencias de las tareas.
+    Todo quedó en ADR-0023 y en el diseño.
+  - **Tomadas por mí tras "Corrige todo lo que puedas" en el review**, también escritas en ADR-0023, `03-linter.md` §11.8 a §11.10 y las tareas:
+    - la forma de `analyzers["lint-crossfile"].rules` (código a `"on"` u `"off"`, con los defaults del catálogo);
+    - el motivo de que E2E011 y E2E013 vengan desactivadas;
+    - la ubicación `docs/rules/presets.md`;
+    - reexportar `errors`, `result` y `assert-never` en `pure`.
+  - **No decidido:** cómo muestra el reporter de consola los hallazgos que ya están en el baseline. Quedó como "Decisión abierta" en `docs/tasks/v1-25-reporter-console.md`.
+- **Problemas:**
+  - **El job `audit` de CI sigue en rojo en `main`:** `shell-quote` es crítico y `source-map-js` es alto. `source-map-js` no cumple `minimumReleaseAge` hasta el 2026-10-14T14:08Z. El detalle está en `docs/tasks/v1-01-dependency-security-bump.md`.
+  - **Job de Windows sin terminar:** `verify (windows-latest, Node 22)` del PR #84 no había terminado al mergear. Como el cambio es solo de docs, no se espera fallo, pero no está comprobado.
+  - **Enlaces de documentación:** dan 404 mientras el repo sea privado (ADR-0023, Consecuencias).
+  - **Umbral de cobertura de cli** (de la entrada de #20): sigue sin decidir si se alinea en 80 % (`04-testing.md`) o en 90 % (`vitest.config.ts`).
+- **Siguiente paso:**
+  1. `git fetch origin` y empezar la siguiente tarea con `/task 41` (v1-01, el issue abierto más antiguo de V1, sin dependencias).
+  2. Commitear esta entrada en la rama de esa tarea.
+  3. Antes del 2026-10-14T14:08Z, `source-map-js` todavía no cumple `minimumReleaseAge`; si se empieza antes, revisar el plan de v1-01.
+
 ### 2026-10-13 — #20 v0-19-v0-acceptance
 
 - **Hecho:**
@@ -633,60 +719,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Hay cambios sin commitear en `main`: esta entrada, el archivo de progreso y ADR-0022 marcado como Aceptada (en el ADR y en `docs/adr/README.md`). El usuario decidió que van en la rama de #13: al crearla con `/task 13`, hacer primero estos commits: `docs(adr): accept ADR-0022` y `docs(repo): add handoff entry for #12`.
   2. El PR #32 ya está mergeado: `/task 13` (v0-12 configuración, depende de v0-11). Debe resolver `ATIUM_LOG_LEVEL` y conectar `redact` de la config con `createRedactor` para el logger. Ningún otro issue abierto de V0 tiene sus dependencias cerradas antes de #12.
   3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js` (entrada de #6, ya en `progress-archive.md`). Antes, preguntar al usuario la rama y el issue.
-
-### 2026-10-12 — #11 v0-10-redaction
-
-- **Hecho:**
-  - `/task 11 en paralelo con #10`, en el worktree `atium-11`. Rama `feat/11-redaction` creada desde `origin/main` (`86a01a2`). El usuario hizo el push. PR #30 abierto con `Closes #11`, sin mergear.
-  - Commit `03f5f2a` `feat(core): add secret redaction`:
-    - `packages/core/src/redact/patterns.ts`: `REDACT_PATTERN_IDS` = `jwt`, `bearer`, `aws-key`, `gcp-key`, `azure-key` (en ese orden se aplican, sin importar el orden de la config) y `createTextRedactor(ids)`, que crea copias propias de cada regex.
-    - `packages/core/src/redact/fields.ts`: `redactFieldsWith(value, { isSensitive, redactText })`. Copia iterativa (sin recursión) de arrays y objetos planos; soporta ciclos, escribe con `defineProperty` (seguro con `__proto__`) y no muta la entrada. Otros valores (`Error`, `Map`, clases) se devuelven tal cual, sin redactar.
-    - `packages/core/src/redact/redactor.ts`: `RedactConfigSchema`, `RedactConfig`, `HeaderValue`, `Redactor` y `createRedactor(config)`, que devuelve `{ redact, redactHeaders, redactFields }`.
-    - `src/defaults.ts`: bloque añadido al final con `REDACTED_MARKER = "[REDACTED]"` y `REDACT_DEFAULTS` (congelado). `src/index.ts`: exports nuevos tras `./paths.js`.
-  - Commit `e294609` `fix(core): close partial leaks and match sensitive names by fragment`: correcciones de `/review`, todas pedidas por el usuario ("Corrige todos"):
-    - `bearer` y `azure-key` consumen el valor hasta un delimitador (`[^\s"'<>,;[\]]+`), y `azure-key` no distingue mayúsculas y admite espacios alrededor de `=`.
-    - Comparación por fragmento en `headers` y `bodyFields`, con defaults ampliados.
-    - TSDoc completo; README, §28.1 y 18-cli-config.md actualizados; tests nuevos.
-  - Verificado:
-    - `pnpm verify` exit 0 con Node 22: 490 tests. Cobertura de `patterns.ts` y `redactor.ts` al 100 %; en `fields.ts` solo falta la rama `default: assertNever` del `switch`.
-    - Tiempo lineal: entradas adversarias de 1 MiB con tope de 2 s. A mano se comprobó que una regex JWT anclada con `\b` tarda 10 s con 256 KiB (cuadrática); con el lookbehind tarda menos de 1 ms.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker, security-reviewer, design-auditor): sin bloqueantes. Se aplicaron los 5 importantes y todas las sugerencias.
-    - CI del PR #30: no revisado al cerrar la sesión.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas en el plan (el usuario respondió "Si" a las recomendaciones):
-    - Se añaden `gcp-key` y `azure-key` a `aws-key`, y los cinco patrones están activos por defecto.
-    - Una lista de la config reemplaza a su default, no lo amplía.
-    - La API es un objeto `Redactor`, no solo la función `redact` (anotado en `docs/tasks/v0-10-redaction.md`).
-  - Tomadas por el agente (el usuario pidió "busca la mejor decisión posible"):
-    - `headers` y `bodyFields` son fragmentos de nombre. El nombre se normaliza (minúsculas, solo letras y dígitos de cualquier alfabeto) y basta con que contenga el fragmento, como el scrubbing por defecto de Sentry.
-    - Defaults de headers: `authorization`, `cookie`, `apikey`, `token`, `secret`, `session`.
-    - Defaults de `bodyFields`: `password`, `passwd`, `secret`, `token`, `apikey`, `credential`, `privatekey`, `sessionid`, `cardnumber`, `cvv`.
-    - Un fragmento sin letras ni dígitos se rechaza. No se usa `auth` porque redactaría `author`.
-    - Falsos positivos aceptados: `tokenCount`, `passwordPolicy` y la palabra que sigue a "bearer" en prosa.
-  - Ambigüedades del diseño resueltas por el agente:
-    - El JWT sin firma necesita el segundo punto.
-    - `aws-key` y `gcp-key` exigen la longitud exacta.
-    - `redactFields` solo recorre valores JSON; un cuerpo sin parsear solo pasa por los patrones.
-    - Las claves de los objetos no se redactan.
-  - Todo lo anterior quedó escrito en `docs/design/20-security-privacy.md` §28.1 y en el ejemplo `redact` de `18-cli-config.md` §26.3, que ahora muestra los defaults. No hay ADR: se consideró suficiente el diseño.
-  - Sin changeset porque `@atium/core` es `private`. Solo está escrito aquí y en el PR.
-- **Problemas:**
-  - El PR #30 tiene unas 1.020 líneas cambiadas, más que las 400 de `08-git-workflow.md`: 572 son tests y 68 documentación. Está dicho en el PR.
-  - #10 (v0-09, PR #31) se mergeó antes. `origin/main` (`f9e6d18`) se mergeó en esta rama y los conflictos se resolvieron conservando ambos lados (`12-ai-workflow.md`, "Cuando otra tarea se mergea antes"):
-    - `defaults.ts`: `SEVERITY_WEIGHTS` y después el bloque de redacción.
-    - README de core: los párrafos de findings y de redacción.
-    - `docs/progress.md`: esta entrada y la de #10, quedándose las 10 más recientes.
-    - `docs/progress-archive.md`: la cabecera de `main`; las dos ramas habían archivado la misma entrada.
-  - Nada llama todavía a `createRedactor`. v0-11 (logger) y v0-14 (escritor de runs) deben redactar **antes** de truncar con `truncateUtf8`.
-  - Fuera de alcance: emails, patrones definidos por el usuario y JWE.
-  - La rama del `default: assertNever` en `fields.ts` queda sin cubrir; no se puede alcanzar.
-  - Al resolver el merge se archivó además "2026-10-08 — Cambio de codename a atium".
-  - Sin cambios desde #9:
-    - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
-    - `pnpm verify` necesita `source ~/.nvm/nvm.sh && nvm use 22`.
-    - Contradicción sobre changesets: `11-code-review.md:70` frente al DoD.
-- **Siguiente paso:**
-  1. Revisar que los jobs del PR #30 pasen tras el push del merge con `main`.
-  2. Cuando una persona mergee el PR #30, `/parallel --cleanup` en el repo principal para retirar el worktree `atium-11`.
-  3. La siguiente tarea de V0 según la regla de `CLAUDE.md` (probablemente #12, v0-11 logger y reloj, que debe usar `createRedactor`).

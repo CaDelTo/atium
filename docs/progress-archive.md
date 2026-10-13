@@ -4,6 +4,63 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-12 — #11 v0-10-redaction
+
+- **Hecho:**
+  - `/task 11 en paralelo con #10`, en el worktree `atium-11`. Rama `feat/11-redaction` creada desde `origin/main` (`86a01a2`). El usuario hizo el push. PR #30 abierto con `Closes #11`, sin mergear.
+  - Commit `03f5f2a` `feat(core): add secret redaction`:
+    - `packages/core/src/redact/patterns.ts`: `REDACT_PATTERN_IDS` = `jwt`, `bearer`, `aws-key`, `gcp-key`, `azure-key` (en ese orden se aplican, sin importar el orden de la config) y `createTextRedactor(ids)`, que crea copias propias de cada regex.
+    - `packages/core/src/redact/fields.ts`: `redactFieldsWith(value, { isSensitive, redactText })`. Copia iterativa (sin recursión) de arrays y objetos planos; soporta ciclos, escribe con `defineProperty` (seguro con `__proto__`) y no muta la entrada. Otros valores (`Error`, `Map`, clases) se devuelven tal cual, sin redactar.
+    - `packages/core/src/redact/redactor.ts`: `RedactConfigSchema`, `RedactConfig`, `HeaderValue`, `Redactor` y `createRedactor(config)`, que devuelve `{ redact, redactHeaders, redactFields }`.
+    - `src/defaults.ts`: bloque añadido al final con `REDACTED_MARKER = "[REDACTED]"` y `REDACT_DEFAULTS` (congelado). `src/index.ts`: exports nuevos tras `./paths.js`.
+  - Commit `e294609` `fix(core): close partial leaks and match sensitive names by fragment`: correcciones de `/review`, todas pedidas por el usuario ("Corrige todos"):
+    - `bearer` y `azure-key` consumen el valor hasta un delimitador (`[^\s"'<>,;[\]]+`), y `azure-key` no distingue mayúsculas y admite espacios alrededor de `=`.
+    - Comparación por fragmento en `headers` y `bodyFields`, con defaults ampliados.
+    - TSDoc completo; README, §28.1 y 18-cli-config.md actualizados; tests nuevos.
+  - Verificado:
+    - `pnpm verify` exit 0 con Node 22: 490 tests. Cobertura de `patterns.ts` y `redactor.ts` al 100 %; en `fields.ts` solo falta la rama `default: assertNever` del `switch`.
+    - Tiempo lineal: entradas adversarias de 1 MiB con tope de 2 s. A mano se comprobó que una regex JWT anclada con `\b` tarda 10 s con 256 KiB (cuadrática); con el lookbehind tarda menos de 1 ms.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, security-reviewer, design-auditor): sin bloqueantes. Se aplicaron los 5 importantes y todas las sugerencias.
+    - CI del PR #30: no revisado al cerrar la sesión.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas en el plan (el usuario respondió "Si" a las recomendaciones):
+    - Se añaden `gcp-key` y `azure-key` a `aws-key`, y los cinco patrones están activos por defecto.
+    - Una lista de la config reemplaza a su default, no lo amplía.
+    - La API es un objeto `Redactor`, no solo la función `redact` (anotado en `docs/tasks/v0-10-redaction.md`).
+  - Tomadas por el agente (el usuario pidió "busca la mejor decisión posible"):
+    - `headers` y `bodyFields` son fragmentos de nombre. El nombre se normaliza (minúsculas, solo letras y dígitos de cualquier alfabeto) y basta con que contenga el fragmento, como el scrubbing por defecto de Sentry.
+    - Defaults de headers: `authorization`, `cookie`, `apikey`, `token`, `secret`, `session`.
+    - Defaults de `bodyFields`: `password`, `passwd`, `secret`, `token`, `apikey`, `credential`, `privatekey`, `sessionid`, `cardnumber`, `cvv`.
+    - Un fragmento sin letras ni dígitos se rechaza. No se usa `auth` porque redactaría `author`.
+    - Falsos positivos aceptados: `tokenCount`, `passwordPolicy` y la palabra que sigue a "bearer" en prosa.
+  - Ambigüedades del diseño resueltas por el agente:
+    - El JWT sin firma necesita el segundo punto.
+    - `aws-key` y `gcp-key` exigen la longitud exacta.
+    - `redactFields` solo recorre valores JSON; un cuerpo sin parsear solo pasa por los patrones.
+    - Las claves de los objetos no se redactan.
+  - Todo lo anterior quedó escrito en `docs/design/20-security-privacy.md` §28.1 y en el ejemplo `redact` de `18-cli-config.md` §26.3, que ahora muestra los defaults. No hay ADR: se consideró suficiente el diseño.
+  - Sin changeset porque `@atium/core` es `private`. Solo está escrito aquí y en el PR.
+- **Problemas:**
+  - El PR #30 tiene unas 1.020 líneas cambiadas, más que las 400 de `08-git-workflow.md`: 572 son tests y 68 documentación. Está dicho en el PR.
+  - #10 (v0-09, PR #31) se mergeó antes. `origin/main` (`f9e6d18`) se mergeó en esta rama y los conflictos se resolvieron conservando ambos lados (`12-ai-workflow.md`, "Cuando otra tarea se mergea antes"):
+    - `defaults.ts`: `SEVERITY_WEIGHTS` y después el bloque de redacción.
+    - README de core: los párrafos de findings y de redacción.
+    - `docs/progress.md`: esta entrada y la de #10, quedándose las 10 más recientes.
+    - `docs/progress-archive.md`: la cabecera de `main`; las dos ramas habían archivado la misma entrada.
+  - Nada llama todavía a `createRedactor`. v0-11 (logger) y v0-14 (escritor de runs) deben redactar **antes** de truncar con `truncateUtf8`.
+  - Fuera de alcance: emails, patrones definidos por el usuario y JWE.
+  - La rama del `default: assertNever` en `fields.ts` queda sin cubrir; no se puede alcanzar.
+  - Al resolver el merge se archivó además "2026-10-08 — Cambio de codename a atium".
+  - Sin cambios desde #9:
+    - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
+    - `pnpm verify` necesita `source ~/.nvm/nvm.sh && nvm use 22`.
+    - Contradicción sobre changesets: `11-code-review.md:70` frente al DoD.
+- **Siguiente paso:**
+  1. Revisar que los jobs del PR #30 pasen tras el push del merge con `main`.
+  2. Cuando una persona mergee el PR #30, `/parallel --cleanup` en el repo principal para retirar el worktree `atium-11`.
+  3. La siguiente tarea de V0 según la regla de `CLAUDE.md` (probablemente #12, v0-11 logger y reloj, que debe usar `createRedactor`).
+
 ### 2026-10-12 — #10 v0-09-finding-model
 
 - **Hecho:**
