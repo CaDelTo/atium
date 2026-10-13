@@ -8,6 +8,79 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #20 v0-19-v0-acceptance
+
+- **Hecho:**
+  - **Rama, PR y merge:**
+    - Rama `test/20-v0-acceptance`, creada desde `origin/main` en `d2887bc`.
+    - PR #40 con `Closes #20`, que el usuario ya mergeó (`5960c18`). El issue #20 está cerrado.
+    - El push lo hizo esta sesión con `git -C <repo> push -u origin <rama>`. La forma `git push ... 2>&1 | tail` fue denegada dos veces.
+  - **CI del PR #40:** pasan los 6 jobs `verify` (ubuntu, macos y windows, con Node 22 y 24). `audit` falla por `shell-quote`, igual que en `main`; ver Problemas.
+  - **Commits:**
+    - `0ce87aa` `docs(repo): add handoff entry for #19`: la entrada de #19, que estaba sin commitear al empezar.
+    - `695318f` `test(cli): add the V0 acceptance test`.
+    - `d0cc000` `docs(repo): add the V1 tasks from the V0 phase audit`.
+    - `ab670e9` `test(core): share unwrap in @atium/core/testing`.
+    - `26cb2e7` `test(cli): tighten the V0 acceptance test`.
+    - `eba899d` `docs(repo): fix the references and the template of the task files`.
+  - **Test de aceptación** (`packages/cli/test/v0-acceptance.test.ts`):
+    - Un `it.each` recorre 6 escenarios: GitHub, GitLab, Jenkins, CircleCI, Azure y local.
+    - En cada uno llama a `detectRunContext` con un `env` explícito y con `FakeGitClient`, que el escenario crea con una fábrica. Construye el run con `aRun().with(context)` y tres resultados: `passed`, `failedThenPassed` y `failedAllAttempts(2)`.
+    - Escribe y lee el run con `writeRunFile` y `readRunFile`.
+    - Lo escribe en SQLite, cierra, reabre y lo lee con `getRun`.
+    - Compara las dos lecturas con `toStrictEqual`. Comprueba también el contexto esperado, `git.queries` (vacío en CI y `headCommit`, `currentBranch` e `isDirty` en local) y que no hay logs por encima de `debug`.
+    - El `event.json` de GitHub se escribe en `<root>/runner/`.
+  - **Dependencias y helpers:**
+    - `@atium/storage-sqlite: workspace:*` en `devDependencies` de cli.
+    - `unwrap(result)` nuevo en `packages/core/src/testing/unwrap.ts`, con su test, exportado por `@atium/core/testing` y listado en el README de core. Sustituye las copias de `test-contracts/storage.contract.ts` y `storage/sqlite/src/sqlite-storage.test.ts`.
+  - **`/audit` de cierre de V0** (duplication-auditor, design-auditor y docs-checker): no hay bloqueantes. Los hallazgos son ahora 6 tareas, listadas en una tabla nueva de la sección V1 de `docs/tasks/README.md`, sin issue:
+    - `v1-01-dependency-security-bump`
+    - `v1-02-shared-fs-and-path-helpers`
+    - `v1-03-run-file-defaults`
+    - `v1-04-run-context-robustness`
+    - `v1-05-design-alignment`
+    - `v1-06-core-api-docs`
+  - **Plantilla de `docs/tasks/README.md`:** se añadieron `ID`, `Origen` (opcional) y la sección opcional "Decisiones abiertas en esta tarea".
+  - **`v0-19-v0-acceptance.md`:** se aclaró que "6 entornos" es la matriz de CI, y que el test cubre los 5 proveedores y el run local.
+  - **Comprobado en GitHub:** los issues #5–#19 están cerrados. v0-01 a v0-03 no tienen issue y son Hechas; #2 y #3 son PR mergeados.
+  - **Verificado:**
+    - `pnpm verify` local en verde: core 907 tests, sqlite 61 y cli 220.
+    - Cobertura, con umbral de 90 % en todo:
+
+      | Paquete | Líneas | Ramas | Funciones |
+      |---|---|---|---|
+      | core | 99,1 % | 96,3 % | 100 % |
+      | sqlite | 96,1 % | 94,4 % | 93,75 % |
+      | cli | 98 % | 96,6 % | 100 % |
+
+    - `/review` con 5 agentes, sin bloqueantes. Se corrigieron los 2 importantes (la copia de `unwrap` y una cita de ADR-0018 en v1-05) y las 5 sugerencias. Se descartaron 2 hallazgos falsos.
+    - Benchmark: `atium --help` tarda 61,7 ms (presupuesto: 300 ms) y no carga SQLite.
+    - Tras el merge, probado a mano en un repo temporal: `init` y `doctor` dan los 6 checks en `pass`, `--format json` funciona y un GitHub Actions simulado se detecta. El config generado necesita `@atium/core` en `node_modules`; como no está publicado, se enlazó con un symlink a `packages/core`.
+- **En curso:** nada. El repo principal quedó en `main`, en `5960c18`. Esta entrada está sin commitear.
+- **Decisiones:**
+  - **Aprobadas en el plan ("Si"):**
+    - `FakeGitClient` también en el caso local, sin Git real.
+    - Los hallazgos del audit van a V1.
+    - No hubo bloqueantes que dejar en V0.
+  - **Tomadas por mí, porque el usuario no respondió esas dudas del plan:**
+    - No se crearon issues para las tareas v1-01 a v1-06; los crea `/plan-phase v1`. Está escrito en `docs/tasks/README.md`.
+    - El umbral de cobertura de cli se dejó en 90 %, aunque `docs/engineering/04-testing.md` dice 80 % para "resto". **No quedó escrito en ningún sitio.**
+  - **Con "Recomienda todo lo que puedas" tras `/review`:** lo interpreté como corregir todo. La extracción de `unwrap` tocó dos tests existentes sin cambiar ninguna aserción, y el hook `test-guard` no bloqueó.
+  - **Sin tarea:** el resumen de errores internos de ADR-0006 no se convirtió en tarea, porque es una funcionalidad y no un hallazgo del audit. Queda para `/plan-phase v1`. §26.1 sigue diciendo "Ninguna tarea lo recoge todavía".
+- **Problemas:**
+  - **El job `audit` de CI sigue en rojo en `main`:**
+    - `shell-quote` es crítico.
+    - `source-map-js` es alto y no cumple `minimumReleaseAge` hasta el 2026-10-14T14:08Z.
+    - Hay dos avisos de `esbuild`.
+    - El detalle y el plan están en `docs/tasks/v1-01-dependency-security-bump.md`.
+  - **V0 no muestra nada útil al usuario final más allá de `init` y `doctor`.** El `atium.config.ts` que genera `init` importa `@atium/core`, que no se puede instalar desde npm porque el paquete es privado. `doctor` da `fail` en `config` hasta que existe ese paquete. Es lo esperado en V0, pero conviene tenerlo en cuenta en la tarea de publicación.
+  - **Fecha de las tareas del audit:** son de 2026-10-13. Sus números de línea pueden desplazarse si cambia el código antes de trabajarlas.
+- **Siguiente paso:**
+  1. Commitear esta entrada en la rama de la próxima tarea.
+  2. Ejecutar `/plan-phase v1`. Debe integrar las 6 tareas v1-01 a v1-06 que ya existen, sin renumerarlas, y crear sus issues junto con los del linter.
+  3. Decidir en ese plan la fase de la tarea del resumen de errores internos de ADR-0006.
+  4. Preguntar al usuario si alinea el umbral de cobertura de cli en `04-testing.md` (80 %) o en `vitest.config.ts` (90 %).
+
 ### 2026-10-13 — #19 v0-18-doctor
 
 - **Hecho:**
@@ -617,56 +690,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Revisar que los jobs del PR #30 pasen tras el push del merge con `main`.
   2. Cuando una persona mergee el PR #30, `/parallel --cleanup` en el repo principal para retirar el worktree `atium-11`.
   3. La siguiente tarea de V0 según la regla de `CLAUDE.md` (probablemente #12, v0-11 logger y reloj, que debe usar `createRedactor`).
-
-### 2026-10-12 — #10 v0-09-finding-model
-
-- **Hecho:**
-  - Sesión en el worktree `atium-10`, en paralelo con #11 (redacción, worktree `atium-11`), con `/task 10 en paralelo con #11`.
-  - Rama `feat/10-finding-model` (desde `origin/main` en `86a01a2`). Push hecho por el usuario. PR #31 abierto con `Closes #10`, sin mergear.
-  - Commit `140da6e` `feat(core): add finding model and deterministic order`:
-    - `packages/core/src/findings/finding.ts`:
-      - `FindingSchema` con los campos y las uniones de §22.3, y las constantes `FINDING_SEVERITIES`, `FINDING_CATEGORIES`, `FINDING_SOURCES` y `FINDING_CONFIDENCES` con sus tipos.
-      - `FindingFingerprintSchema`: brand `FindingFingerprint`, distinto del `Fingerprint` de error, con 16 caracteres hex. Reutiliza `HEX_16`, ahora exportado desde `model/ids.ts` pero no desde `index.ts`.
-      - Restricciones del esquema:
-        - Textos no vacíos y `line`/`column` enteros ≥ 1.
-        - `evidence` es `z.record(z.string(), z.json())`.
-        - `docsUrl` solo admite `http` o `https`.
-        - `strictObject` y `exactOptional`.
-        - Sin topes de texto.
-    - `findings/fingerprint-of.ts`: `fingerprintOf(parts: readonly [string, ...string[]])` = `sha1(JSON.stringify(parts)).slice(0, 16)`. Valor fijo calculado con `shasum`: `["E2E001","tests/cart.spec.ts","cart › checkout","0"]` → `5aa9f042a80450f7`.
-    - `findings/compare.ts`: `compareFindings` ordena por `location.file`, `line`, `column`, `ruleId` y `fingerprint`.
-      - Lo ausente va después de lo presente: sin `location` al final y, dentro de un archivo, sin `line` o `column` después.
-      - Compara strings con `<` (unidades UTF-16, sin locale).
-    - `findings/samples.test-support.ts` (`minimalFinding`, `fullFinding`) y tests de los tres módulos, con fast-check y semilla `20261012`.
-    - `src/defaults.ts`: bloque al final con `SEVERITY_WEIGHTS = { info: 0.25, warning: 1, error: 3 }`, que usa `satisfies Record<FindingSeverity, number>` e importa el tipo desde `findings/finding.js`. `defaults.test.ts` fija los valores (y evita que knip lo marque sin uso).
-    - `src/index.ts`: exports nuevos de `findings/`, en orden alfabético. `SEVERITY_WEIGHTS` no se exporta.
-    - Docs:
-      - `14-architecture.md` §22.3: el bloque usa `evidence?: Record<string, JsonValue>` y tres viñetas nuevas explican la codificación del fingerprint, el orden y las reglas del esquema.
-      - `03-linter.md` §11.5 remite a `fingerprintOf`: `|` enumera partes, el índice se pasa con `String(n)` y el `titlePath` se une con `" › "`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` exit 0 con Node 22: 416 tests y 100% de cobertura.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker y design-auditor): sin bloqueantes. Se corrigieron los 5 importantes (§22.3 incompleto, §11.5 sin remisión, `@param` de `compareFindings`, ejemplo del README con `title`, regex duplicada con `HEX_16`) y 3 sugerencias (`suggestion.diff` no vacío, `file` POSIX documentado en §22.3, cita de ADR-0004 en el TSDoc).
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan; escritas en §22.3, §11.5 y el TSDoc:
-    - Codificar las partes con `JSON.stringify` en lugar de unirlas con `|` literal (exigido por el criterio `["a|b"]` ≠ `["a","b"]`). Se aparta de la convención de §9.3 que proponía la entrada de #9 para los fingerprints de Finding; los de error (§13.1) no cambian.
-    - Lo ausente va al final en cada nivel del orden.
-    - `evidence` solo con valores JSON, `docsUrl` solo `http`/`https`, sin topes de texto y brand propio para el fingerprint.
-  - Aprobada en el plan, escrita solo en el TSDoc de `compareFindings` y en el test: dos Findings con la misma ubicación, `ruleId` y `fingerprint` comparan 0 y conservan el orden de entrada. El test property-based genera fingerprints únicos a propósito.
-  - Sin escribir fuera de esta entrada y del PR:
-    - El esquema admite `column` sin `line` (el diseño no lo prohíbe).
-    - No se publica el JSON Schema de Finding: queda para la tarea del reporter JSON.
-    - No se crea un helper compartido para "sha1 recortado a 16" (`identity.ts` y `fingerprint-of.ts`), por la regla de tres.
-    - No se mueve el `runOptions` repetido en 4 tests a `testing/`, para no tocar tests existentes.
-- **Problemas:**
-  - Nada garantiza que los fingerprints sean únicos entre analizadores, y la clave `(run_id, fingerprint)` de `15-storage.md` lo asume. Hay que resolverlo en la tarea del pipeline o de storage, por ejemplo con `analyzer` y `ruleId` entre las partes.
-  - `strictObject` impide que una versión anterior lea un Finding guardado con un campo nuevo; revisarlo cuando se persistan Findings.
-  - El PR #31 tiene unas 620 líneas, más que las 400 de `08-git-workflow.md`; cerca de la mitad son tests. Se dice en el PR.
-  - Conflictos esperados con #11 en `packages/core/src/index.ts`, `defaults.ts`, `docs/progress.md` y `docs/progress-archive.md` (esta entrada archivó la de 2026-10-08 "Preparación del repositorio"). Se resuelven conservando ambos lados (`12-ai-workflow.md`, "Cuando otra tarea se mergea antes").
-  - `knip --production` marca `findings/samples.test-support.ts` como sin uso, igual que `model/samples.test-support.ts` (`pnpm unused` pasa).
-  - Sin cambios: `pnpm verify` necesita `source ~/.nvm/nvm.sh && nvm use 22`, y `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
-- **Siguiente paso:**
-  1. Revisar que la CI del PR #31 pase. El usuario mergea.
-  2. Si #11 se mergea antes, en `feat/10-finding-model`: `git fetch origin && git merge origin/main`, resolver conservando ambos bloques, `/verify` y pedir el push.
-  3. La siguiente tarea de `V0` según la regla de `CLAUDE.md` (el issue abierto más antiguo con dependencias cerradas, sin rama, PR ni worktree).

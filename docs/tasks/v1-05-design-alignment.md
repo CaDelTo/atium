@@ -26,6 +26,7 @@
   6. Si hay varias variables de detección, gana el orden de la tabla (`providers.ts:58`).
   7. Mapeo de env-ci: `build` → `runId`, `job` → `jobId`, `pr` → `prNumber` (`env-ci-fallback.ts:79`).
   8. Redacción: `aws-key` acepta solo mayúsculas y dígitos tras `A3T` (`patterns.ts:49`), y la normalización de nombres trata como dígito cualquier `\p{N}` (`redactor.ts:7`).
+- Umbral de cobertura de `packages/cli`: `vitest.config.ts` exige 90 %, pero `docs/engineering/04-testing.md` pide 80 % para "resto" (handoff de #20). Alinear el estándar o la configuración, según decida el usuario.
 
 ## Decisiones abiertas en esta tarea
 
