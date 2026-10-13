@@ -1,8 +1,9 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import { detectRunContext, readRunFile, runFilePath, writeRunFile } from "@atium/core";
-import type { EnvVars, Result, Run, RunContext } from "@atium/core";
-import { aRun, aTestResult, FakeGitClient, FakeLogger } from "@atium/core/testing";
+import type { EnvVars, Run, RunContext } from "@atium/core";
+import { aRun, aTestResult, FakeGitClient, FakeLogger, unwrap } from "@atium/core/testing";
+import type { GitQuery } from "@atium/core/testing";
 import { openSqliteStorage } from "@atium/storage-sqlite";
 import { describe, expect, it } from "vitest";
 import { useTempDir } from "./temp-dir.js";
@@ -20,15 +21,21 @@ interface Scenario {
   readonly name: string;
   /** Environment of the run; `root` is the repository directory. */
   readonly env: (root: string) => Promise<EnvVars>;
-  readonly git: FakeGitClient;
+  /** A new Git of the repository, for each run of the scenario. */
+  readonly git: () => FakeGitClient;
   readonly expected: RunContext;
+  /** Git is only queried when the CI does not give the commit. */
+  readonly gitQueries: readonly GitQuery[];
 }
 
 const scenarios: readonly Scenario[] = [
   {
     name: "GitHub Actions",
     env: async (root) => {
-      const eventPath = path.join(root, "event.json");
+      // Outside the repository files, as in a real runner.
+      const eventDirectory = path.join(root, "runner");
+      await mkdir(eventDirectory);
+      const eventPath = path.join(eventDirectory, "event.json");
       await writeFile(
         eventPath,
         JSON.stringify({
@@ -48,7 +55,7 @@ const scenarios: readonly Scenario[] = [
         GITHUB_RUN_ATTEMPT: "2",
       };
     },
-    git: new FakeGitClient(),
+    git: () => new FakeGitClient(),
     expected: {
       git: {
         commitSha: MERGE_SHA,
@@ -59,6 +66,7 @@ const scenarios: readonly Scenario[] = [
       },
       ci: { provider: "github", runId: "9876543210", runAttempt: 2, prNumber: 42 },
     },
+    gitQueries: [],
   },
   {
     name: "GitLab CI",
@@ -73,11 +81,12 @@ const scenarios: readonly Scenario[] = [
         CI_PIPELINE_ID: "1122334455",
         CI_JOB_ID: "5566778899",
       }),
-    git: new FakeGitClient(),
+    git: () => new FakeGitClient(),
     expected: {
       git: { commitSha: MERGE_SHA, branch: "feature/login", baseBranch: "main", dirty: false },
       ci: { provider: "gitlab", runId: "1122334455", jobId: "5566778899", prNumber: 15 },
     },
+    gitQueries: [],
   },
   {
     name: "Jenkins",
@@ -91,11 +100,12 @@ const scenarios: readonly Scenario[] = [
         CHANGE_TARGET: "main",
         BUILD_TAG: "jenkins-shop-PR-12-3",
       }),
-    git: new FakeGitClient(),
+    git: () => new FakeGitClient(),
     expected: {
       git: { commitSha: MERGE_SHA, branch: "feature/login", baseBranch: "main", dirty: false },
       ci: { provider: "jenkins", runId: "jenkins-shop-PR-12-3", prNumber: 12 },
     },
+    gitQueries: [],
   },
   {
     name: "CircleCI",
@@ -108,11 +118,12 @@ const scenarios: readonly Scenario[] = [
         CIRCLE_PULL_REQUEST: "https://github.com/acme/shop/pull/31",
         CIRCLE_WORKFLOW_ID: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b",
       }),
-    git: new FakeGitClient(),
+    git: () => new FakeGitClient(),
     expected: {
       git: { commitSha: MERGE_SHA, branch: "feature/login", dirty: false },
       ci: { provider: "circleci", runId: "6f1c2b3a-4d5e-4f60-8a9b-0c1d2e3f4a5b", prNumber: 31 },
     },
+    gitQueries: [],
   },
   {
     name: "Azure Pipelines",
@@ -127,31 +138,24 @@ const scenarios: readonly Scenario[] = [
         SYSTEM_PULLREQUEST_PULLREQUESTID: "57",
         BUILD_BUILDID: "4321",
       }),
-    git: new FakeGitClient(),
+    git: () => new FakeGitClient(),
     expected: {
       git: { commitSha: MERGE_SHA, branch: "feature/login", baseBranch: "main", dirty: false },
       ci: { provider: "azure", runId: "4321", prNumber: 57 },
     },
+    gitQueries: [],
   },
   {
     name: "a local run",
     env: () => Promise.resolve({}),
-    git: new FakeGitClient({ commitSha: LOCAL_SHA, branch: "feature/login", dirty: true }),
+    git: () => new FakeGitClient({ commitSha: LOCAL_SHA, branch: "feature/login", dirty: true }),
     expected: {
       git: { commitSha: LOCAL_SHA, branch: "feature/login", dirty: true },
       ci: { provider: "local" },
     },
+    gitQueries: ["headCommit", "currentBranch", "isDirty"],
   },
 ];
-
-function unwrap<T>(result: Result<T>): T {
-  if (!result.ok) {
-    throw new Error(`Expected ok, got ${result.error.code}: ${result.error.message}`, {
-      cause: result.error,
-    });
-  }
-  return result.value;
-}
 
 /** Writes the run to a new SQLite database and reads it back on a second connection. */
 async function roundTripThroughSqlite(
@@ -178,7 +182,8 @@ describe("V0 acceptance: a run built with the builders", () => {
 
   it.each(scenarios)(
     "is stored in SQLite and in a run file and read back unchanged on $name",
-    async ({ env, git, expected }) => {
+    async ({ env, git: newGit, expected, gitQueries }) => {
+      const git = newGit();
       const logger = new FakeLogger();
       const context = await detectRunContext({ env: await env(root()), cwd: root(), git, logger });
       const run = aRun()
@@ -194,9 +199,10 @@ describe("V0 acceptance: a run built with the builders", () => {
       const fromSqlite = await roundTripThroughSqlite(run, root(), logger);
 
       expect(context).toEqual(expected);
+      expect(git.queries).toEqual(gitQueries);
       expect(file).toBe(runFilePath(root(), run.id));
-      expect(fromFile).toEqual(run);
-      expect(fromSqlite).toEqual(run);
+      expect(fromFile).toStrictEqual(run);
+      expect(fromSqlite).toStrictEqual(run);
       expect(logger.entries.filter((entry) => entry.level !== "debug")).toEqual([]);
     },
   );
