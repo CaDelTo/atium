@@ -133,18 +133,30 @@ describe("openSqliteStorage", () => {
     expect((await stat(join(root, "atium.db"))).isFile()).toBe(true);
   });
 
-  it.runIf(onPosix)("rejects a directory that a symlink takes outside the repository", async () => {
+  it("rejects a directory that a symlink takes outside the repository", async () => {
     const root = await newRepository();
     const outside = await newRepository();
-    await symlink(outside, join(root, ".atium"));
+    // A junction is the directory link Windows lets anyone create.
+    await symlink(outside, join(root, ".atium"), onPosix ? "dir" : "junction");
 
     expect(codeOf(await openSqliteStorage({ rootDir: root, logger }))).toBe("MODEL_INVALID");
   });
 
-  it.runIf(onPosix)("rejects a database file that is a symlink", async () => {
+  it("rejects a database file that is a symlink", async ({ skip }) => {
     const root = await newRepository();
     await mkdir(join(root, ".atium"));
-    await symlink(join(root, "elsewhere.db"), join(root, SQLITE_DATABASE_PATH));
+    await writeFile(join(root, "elsewhere.db"), "");
+    let linked = true;
+    try {
+      await symlink(join(root, "elsewhere.db"), join(root, SQLITE_DATABASE_PATH));
+    } catch (error) {
+      // Windows only lets administrators and developer mode create file symlinks.
+      if (onPosix) {
+        throw error;
+      }
+      linked = false;
+    }
+    skip(!linked, "This Windows account cannot create file symlinks.");
 
     expect(codeOf(await openSqliteStorage({ rootDir: root, logger }))).toBe("MODEL_INVALID");
   });
@@ -277,6 +289,41 @@ describe("SQLite storage", () => {
       const result = await storage.writeRun(
         runAt(1, 0, aTestResult("checkout").failedAllAttempts(1)),
       );
+
+      expect(codeOf(result)).toBe("STORAGE_UNAVAILABLE");
+      expect(result.ok ? undefined : result.error.cause).toBeInstanceOf(Error);
+    });
+  });
+
+  describe("getRun and listRuns", () => {
+    it("lists runs written after the same query ran before", async () => {
+      unwrap(await storage.writeRun(runAt(1, 0)));
+      const before = unwrap(await storage.listRuns({ since: runAt(1, 0).startedAt, limit: 10 }));
+      unwrap(await storage.writeRun(runAt(2, 1_000)));
+
+      const after = unwrap(await storage.listRuns({ since: runAt(1, 0).startedAt, limit: 10 }));
+
+      expect([before.length, after.length]).toEqual([1, 2]);
+    });
+
+    it("reads back a result without attempts", async () => {
+      const built = runAt(1, 0, aTestResult("checkout").passed());
+      const run: Run = {
+        ...built,
+        results: built.results.map((result) => ({ ...result, attempts: [] })),
+      };
+
+      unwrap(await storage.writeRun(run));
+
+      expect(unwrap(await storage.getRun(run.id))).toStrictEqual(run);
+    });
+
+    it("returns STORAGE_UNAVAILABLE when the database cannot be read", async () => {
+      const run = runAt(1, 0, aTestResult("checkout").passed());
+      unwrap(await storage.writeRun(run));
+      execute("PRAGMA foreign_keys = OFF; DROP TABLE attempts");
+
+      const result = await storage.getRun(run.id);
 
       expect(codeOf(result)).toBe("STORAGE_UNAVAILABLE");
       expect(result.ok ? undefined : result.error.cause).toBeInstanceOf(Error);
