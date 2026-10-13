@@ -22,7 +22,8 @@ For redaction it provides `createRedactor` with its `Redactor` type,
 For configuration it provides `defineConfig`, `loadConfig` with
 `LoadConfigOptions`, `LoadedConfig`, `ConfigFlags` and `ConfigEnv`, and
 `AtiumConfigSchema` with `AtiumConfig`, `AtiumConfigInput`,
-`QUARANTINE_MODES` and `QuarantineMode`.
+`QUARANTINE_MODES` and `QuarantineMode`, and `CONFIG_FILE_NAMES`, the
+config file names searched for.
 For the Git and CI context of a run it provides `detectRunContext` with
 `DetectRunContextOptions`, `RunContext` and `EnvVars` (the type of
 `process.env`, also used by `ConfigEnv`), and the `GitClient`

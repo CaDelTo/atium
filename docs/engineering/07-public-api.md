@@ -48,5 +48,5 @@ Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core
 
 ## Paquetes correctos
 
-- Cada paquete declara `exports`, `types`, `engines` y `files`.
+- Cada paquete declara `exports`, `types`, `engines` y `files`. Excepción: `@atium/cli` no tiene API programática ni `src/index.ts`; su API pública son el binario `atium` (`bin`), sus comandos, flags y códigos de salida, y `exports` solo expone `./package.json`.
 - `publint` y `@arethetypeswrong/cli` verifican que la publicación ESM/CJS y los tipos funcionan para los consumidores.
