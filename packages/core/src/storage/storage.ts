@@ -16,7 +16,7 @@ export interface ListRunsQuery {
    * time zone.
    */
   readonly since?: string;
-  /** Maximum number of runs returned. An integer of at least 1. */
+  /** Maximum number of runs returned. An integer from 1 to `Number.MAX_SAFE_INTEGER`. */
   readonly limit: number;
 }
 
@@ -33,8 +33,10 @@ export interface StorageReader {
    * Reads one run.
    *
    * @param id - Id of the run.
-   * @returns The run, `ok(undefined)` if no run has that id, or
-   *   `STORAGE_UNAVAILABLE` if the storage cannot be read or was closed.
+   * @returns The run, `ok(undefined)` if no run has that id,
+   *   `STORAGE_UNAVAILABLE` if the storage cannot be read or was closed, or,
+   *   in a backend that validates what it reads, `MODEL_INVALID` if the
+   *   stored run no longer matches `RunSchema`.
    */
   getRun(id: RunId): Promise<Result<Run | undefined>>;
   /**
@@ -43,11 +45,14 @@ export interface StorageReader {
    * instant.
    *
    * @param query - Filters and the maximum number of runs.
-   * @returns At most `query.limit` runs, or `STORAGE_UNAVAILABLE` if the
-   *   storage cannot be read or was closed.
-   * @throws `RangeError` if `query.limit` is not an integer of at least 1 or
-   *   `query.since` is not a date-time with a zone: both are bugs in the
-   *   caller. The query is checked first, so this happens even after `close`.
+   * @returns At most `query.limit` runs, `STORAGE_UNAVAILABLE` if the
+   *   storage cannot be read or was closed, or, in a backend that validates
+   *   what it reads, `MODEL_INVALID` if a matching run no longer matches
+   *   `RunSchema`.
+   * @throws `RangeError` if `query.limit` is not an integer from 1 to
+   *   `Number.MAX_SAFE_INTEGER` or `query.since` is not a date-time with a
+   *   zone: both are bugs in the caller. The query is checked first, so this
+   *   happens even after `close`.
    */
   listRuns(query: ListRunsQuery): Promise<Result<readonly Run[]>>;
 }
@@ -59,8 +64,11 @@ export interface StorageWriter {
    *
    * @param run - The run to store.
    * @returns `ok` once the run can be read back, `STORAGE_CONFLICT` if a run
-   *   with the same id already exists (the stored one is kept), or
-   *   `STORAGE_UNAVAILABLE` if the storage cannot be written or was closed.
+   *   with the same id already exists (the stored one is kept),
+   *   `STORAGE_UNAVAILABLE` if the storage cannot be written or was closed,
+   *   or, in a backend that validates what it writes, `MODEL_INVALID` if the
+   *   run does not match `RunSchema` or the backend cannot store it as it is
+   *   (nothing is stored).
    */
   writeRun(run: Run): Promise<Result<void>>;
 }

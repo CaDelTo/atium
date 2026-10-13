@@ -17,7 +17,7 @@ Cambiar cualquiera de estos elementos afecta a usuarios:
 
 Todo lo que no está en esta lista es interno y puede cambiar sin aviso.
 
-Excepción: el subpath `@atium/core/testing` (builders y fakes) es interno aunque esté en `exports`. Solo lo usan los tests de los paquetes de Atium y puede cambiar sin aviso ni changeset.
+Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core/test-contracts` (suites de contrato) son internos aunque estén en `exports`. Solo los usan los tests de los paquetes de Atium y pueden cambiar sin aviso ni changeset. `test-contracts` es solo ESM porque importa Vitest, y `attw` lo excluye.
 
 ## Versionado
 

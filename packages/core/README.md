@@ -31,7 +31,10 @@ For run files it provides `writeRunFile` with `WriteRunFileOptions`,
 `runFilePath`, `readRunFile`, and `readRunFileEntries` with `RunFileEntry`
 and `RunHeader`.
 For storage backends it provides the `StorageReader`, `StorageWriter` and
-`Storage` interfaces with `ListRunsQuery`.
+`Storage` interfaces with `ListRunsQuery`, and `parseListRunsQuery` with
+`ParsedListRunsQuery`. For error messages, `describeIssues` summarizes Zod
+issues and `quoteForMessage` quotes a path or a value from data, escaped and
+capped.
 The analysis pipeline and error fingerprinting are planned.
 
 ## Installation
@@ -340,6 +343,28 @@ async function recentOnMain(storage: StorageReader, logger: Logger): Promise<rea
 `2026-10-01T00:00:00Z`; one without a zone throws `RangeError`, like a
 `limit` that is not an integer of at least 1.
 
+A backend checks the query with `parseListRunsQuery` before doing anything
+else, so every backend rejects the same queries. It returns `since` as
+`sinceMs`, an instant in milliseconds:
+
+```ts
+import { parseListRunsQuery } from "@atium/core";
+
+const { branch, sinceMs, limit } = parseListRunsQuery(query); // throws RangeError if invalid
+```
+
+`describeIssues` turns the issues of a failed `safeParse` into a bounded,
+escaped summary for an error message, so a message never dumps run data:
+
+```ts
+import { AtiumError, describeIssues, RunSchema } from "@atium/core";
+
+const parsed = RunSchema.safeParse(run);
+if (!parsed.success) {
+  throw new AtiumError("MODEL_INVALID", `Invalid run (${describeIssues(parsed.error.issues)}).`);
+}
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -359,6 +384,8 @@ Atium's own tests:
 - `InMemoryStorage`: a `Storage` that keeps runs in memory. Every backend,
   this one included, passes the contract suite in
   `test-contracts/storage.contract.ts`.
+- `FIXED_START` and `fixedTimePlus(ms)`: the start time of every built run,
+  and an instant that many milliseconds after it.
 - `thrownAtiumError(action)` and `rejectedAtiumError(promise)`: return the
   `AtiumError` thrown or rejected with, and fail the test on anything else.
 
@@ -369,6 +396,16 @@ const run = aRun()
   .onCommit("abc123")
   .withResult(aTestResult("checkout").failedThenPassed())
   .build();
+```
+
+The `@atium/core/test-contracts` entry point exposes that suite as
+`storageContract` to the tests of other packages. It is ESM only, because it
+imports Vitest, and internal like `@atium/core/testing`:
+
+```ts
+import { storageContract } from "@atium/core/test-contracts";
+
+storageContract(async () => createMyStorage());
 ```
 
 ## Configuration

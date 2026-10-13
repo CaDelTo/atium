@@ -27,6 +27,12 @@
         "default": "./dist/testing/index.cjs"
       }
     },
+    "./test-contracts": {
+      "import": {
+        "types": "./dist/test-contracts/index.d.ts",
+        "default": "./dist/test-contracts/index.js"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -41,7 +47,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "bench": "vitest bench --run",
-    "pkg:check": "publint && attw --pack . --profile node16",
+    "pkg:check": "publint && attw --pack . --profile node16 --exclude-entrypoints ./test-contracts",
     "schema:export": "vitest run src/model/json-schema.test.ts --update"
   },
   "dependencies": {

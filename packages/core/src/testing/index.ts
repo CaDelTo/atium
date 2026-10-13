@@ -11,6 +11,7 @@ export { anAttempt } from "./attempt-builder.js";
 export type { AttemptBuilder } from "./attempt-builder.js";
 export { anError } from "./error-builder.js";
 export type { ErrorBuilder } from "./error-builder.js";
+export { FIXED_START, fixedTimePlus } from "./deterministic.js";
 export { FakeGitClient } from "./fake-git-client.js";
 export type { FakeGitState, GitQuery } from "./fake-git-client.js";
 export { FakeLogger } from "./fake-logger.js";
