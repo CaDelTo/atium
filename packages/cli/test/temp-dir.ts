@@ -18,7 +18,9 @@ export function useTempDir(prefix: string): () => string {
   afterEach(async () => {
     if (directory !== undefined) {
       await chmod(directory, 0o700);
-      await rm(directory, { recursive: true, force: true });
+      // On Windows a process that has just exited can still hold the
+      // directory for a moment (EBUSY), so the removal is retried.
+      await rm(directory, { recursive: true, force: true, maxRetries: 10 });
       directory = undefined;
     }
   });

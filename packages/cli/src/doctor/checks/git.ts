@@ -28,10 +28,10 @@ export interface CheckGitOptions {
  */
 export async function checkGit(options: CheckGitOptions): Promise<DoctorCheckOf<"git">> {
   try {
-    const [commit, branch] = await Promise.all([
-      options.git.headCommit(),
-      options.git.currentBranch(),
-    ]);
+    // One after the other: if the first fails, no other `git` process is
+    // left running in the directory (on Windows it would keep it locked).
+    const commit = await options.git.headCommit();
+    const branch = await options.git.currentBranch();
     return {
       id: "git",
       status: "pass",
