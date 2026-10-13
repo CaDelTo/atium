@@ -227,6 +227,9 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
     devDependencies:
+      '@atium/storage-sqlite':
+        specifier: workspace:*
+        version: link:../storage/sqlite
       '@types/node':
         specifier: 22.20.4
         version: 22.20.4
