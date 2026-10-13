@@ -10,6 +10,7 @@
 
 - Diseño: docs/design/17-tech-stack.md, 02-data-model.md §10.1, 15-storage.md §23, 20-security-privacy.md
 - ADRs: 0018
+- Estándares: docs/engineering/README.md (Definition of Done: diseño actualizado)
 
 ## Hacer
 
@@ -17,7 +18,7 @@
 - 02-data-model.md:187: la tabla pone `CI_JOB_ID` en la columna "intento", pero §10.1 y el código (`providers.ts:81`) lo usan como `jobId`. Corregir la tabla.
 - `packages/cli/src/defaults.ts:5`: la cita "03-errors-logging.md" no lleva el prefijo `engineering/`.
 - Escribir en el diseño, tras confirmarlas, las decisiones que hoy solo están en el código:
-  1. Endpoints con fallos ordenados entre sí por `count` (`cap-run.ts:101`); ADR-0018:65 no lo dice.
+  1. Los endpoints con fallos también se ordenan entre sí por `count` (`cap-run.ts:101`). ADR-0018:65 fija "primero los que tienen fallos, después los de mayor `count`", pero no dice si el orden por `count` se aplica dentro del grupo con fallos.
   2. Una clave de `statuses` ≥ 400 con conteo 0 cuenta como fallo (`cap-run.ts:95`).
   3. Límites exactos: el lector acepta una línea de exactamente 1 MiB (`line-reader.ts:125`) y la garantía final usa `<=` (`fit-line.ts:135`), mientras ADR-0018:89 dice "por debajo".
   4. "2 KB" y "8 KB" se interpretaron como KiB (`defaults.ts:40,42`).

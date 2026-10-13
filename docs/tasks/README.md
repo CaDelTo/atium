@@ -9,9 +9,11 @@ Una tarea debe poder completarse en una sesión y en un PR de menos de 400 líne
 ```markdown
 # <Título>
 
+- ID: v0-03-model
 - Fase: V0
 - Paquete: packages/core
 - Depende de: v0-02-config (o "ninguna")
+- Origen: (opcional) de dónde sale la tarea si no es del roadmap, como un `/audit`
 
 ## Contexto
 
@@ -22,6 +24,10 @@ Estándares: docs/engineering/01-typescript.md, 04-testing.md
 ## Hacer
 
 - ...
+
+## Decisiones abiertas en esta tarea
+
+(Opcional) Valores o comportamientos que el diseño no define y que hay que proponer en el plan.
 
 ## Criterios de aceptación
 

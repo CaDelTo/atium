@@ -10,12 +10,13 @@
 
 - Diseño: docs/design/02-data-model.md §10.1
 - ADRs: 0006 (fail-open)
+- Estándares: docs/engineering/04-testing.md, docs/engineering/03-errors-logging.md
 - Antecedente: el commit 518c2b2 hizo secuenciales las consultas de Git en `atium doctor` porque, en Windows, procesos `git` que seguían vivos bloqueaban el directorio.
 
 ## Hacer
 
 - `detect-run-context.ts:128` lanza `headCommit`, `currentBranch` e `isDirty` con `Promise.all`. Si `headCommit` falla, los otros procesos siguen vivos. El check `ci` de `doctor` llama a `detectRunContext`, así que el problema sigue ahí. Hacer las consultas en serie, como `checkGit`.
-- `headSha` del payload de GitHub: `github-event.ts:23` no lo limita, y uno por encima del tope de bytes del modelo hace que `detectRunContext` lance `MODEL_INVALID` (`detect-run-context.ts:83`). §10.1 paso 3 pide un aviso para un `pull_request` inválido, pero los casos límite de §10.1 dicen que un valor que no cabe da `MODEL_INVALID`. Resolver la contradicción en el diseño y ajustar el código.
+- `headSha` del payload de GitHub: `github-event.ts:23` no lo limita, y uno por encima del tope de bytes del modelo hace que `detectRunContext` lance `MODEL_INVALID` (la llamada a `validated(RunGitSchema, ...)` en `detect-run-context.ts:83`). El paso 3 de §10.1 (02-data-model.md:219) pide un aviso para un `pull_request` inválido, pero los casos límite de §10.1 (02-data-model.md:232) dicen que un valor que no cabe da `MODEL_INVALID`. Resolver la contradicción en el diseño y ajustar el código.
 
 ## Decisiones abiertas en esta tarea
 

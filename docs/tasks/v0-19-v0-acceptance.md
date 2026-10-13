@@ -18,7 +18,7 @@
 
 ## Criterios de aceptación
 
-- El test de integración pasa en los 6 entornos de CI.
+- El test de integración pasa en los 6 entornos de la matriz de CI (ubuntu, macos y windows, con Node 22 y 24). Cubre los 5 proveedores de 22-roadmap.md §30 y el run local.
 - `/audit` sin hallazgos bloqueantes abiertos.
 - Cobertura sobre los umbrales en todos los paquetes.
 - `pnpm verify` pasa
