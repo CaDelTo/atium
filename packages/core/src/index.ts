@@ -9,6 +9,7 @@ export { loadConfig } from "./config/load-config.js";
 export type { LoadConfigOptions, LoadedConfig } from "./config/load-config.js";
 export type { ConfigEnv, ConfigFlags } from "./config/resolve-config.js";
 export { AtiumConfigSchema, defineConfig, QUARANTINE_MODES } from "./config/schema.js";
+export { CONFIG_FILE_NAMES } from "./defaults.js";
 export type { AtiumConfig, AtiumConfigInput, QuarantineMode } from "./config/schema.js";
 export type { EnvVars } from "./env.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
