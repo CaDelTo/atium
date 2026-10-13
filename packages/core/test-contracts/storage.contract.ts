@@ -6,6 +6,7 @@ import type { Storage } from "../src/storage/storage.js";
 import { fixedTimePlus } from "../src/testing/deterministic.js";
 import { aRun } from "../src/testing/run-builder.js";
 import { aTestResult } from "../src/testing/test-result-builder.js";
+import { unwrap } from "../src/testing/unwrap.js";
 
 const CONCURRENT_WRITERS = 50;
 const SAME_ID_WRITERS = 10;
@@ -13,15 +14,6 @@ const ANY_LIMIT = 10;
 
 /** Gives each `describe` block the storage of the running test. */
 type CurrentStorage = () => Storage;
-
-function unwrap<T>(result: Result<T>): T {
-  if (!result.ok) {
-    throw new Error(`Expected ok, got ${result.error.code}: ${result.error.message}`, {
-      cause: result.error,
-    });
-  }
-  return result.value;
-}
 
 async function readStored(storage: Storage, id: RunId): Promise<Run> {
   const run = unwrap(await storage.getRun(id));

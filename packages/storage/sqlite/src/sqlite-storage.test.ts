@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Result, Run, Storage } from "@atium/core";
-import { aTestResult, anError, FakeLogger } from "@atium/core/testing";
+import { aTestResult, anError, FakeLogger, unwrap } from "@atium/core/testing";
 import { storageContract } from "@atium/core/test-contracts";
 import Database from "better-sqlite3";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -27,15 +27,6 @@ async function newRepository(): Promise<string> {
   const root = join(tempRoot, `repo-${String(repositories)}`);
   await mkdir(root);
   return root;
-}
-
-function unwrap<T>(result: Result<T>): T {
-  if (!result.ok) {
-    throw new Error(`Expected ok, got ${result.error.code}: ${result.error.message}`, {
-      cause: result.error,
-    });
-  }
-  return result.value;
 }
 
 function codeOf(result: Result<unknown>): string {

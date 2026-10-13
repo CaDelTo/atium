@@ -389,6 +389,8 @@ Atium's own tests:
   and an instant that many milliseconds after it.
 - `thrownAtiumError(action)` and `rejectedAtiumError(promise)`: return the
   `AtiumError` thrown or rejected with, and fail the test on anything else.
+- `unwrap(result)`: returns the value of an `ok` `Result`, and fails the test
+  with the code and message of the error otherwise.
 
 ```ts
 import { aRun, aTestResult } from "@atium/core/testing";
