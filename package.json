@@ -9,7 +9,7 @@
     "build": "turbo run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "turbo run build && eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test -- --coverage",

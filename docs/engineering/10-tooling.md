@@ -30,7 +30,7 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
     "build": "turbo run build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "turbo run build && eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:coverage": "turbo run test -- --coverage",
@@ -43,6 +43,8 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
   }
 }
 ```
+
+`lint` y `deps:check` construyen antes los paquetes: los demás paquetes importan `@atium/core` por nombre, que resuelve a su `dist/`, y sin él typescript-eslint no ve sus tipos y los trata como `any`. Turborepo reutiliza el build si no cambió nada.
 
 En cada paquete publicable: `"pkg:check": "publint && attw --pack . --profile node16"`. Se ejecuta en CI antes de publicar. El perfil `node16` omite la resolución `node10`, que no aplica con Node ≥ 22 y no resuelve subpaths como `./testing`.
 
