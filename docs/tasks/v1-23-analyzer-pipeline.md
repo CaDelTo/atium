@@ -8,14 +8,14 @@
 ## Contexto
 
 - Diseño: docs/design/14-architecture.md §22.1 y §22.2, docs/design/01-requirements.md §7
-- ADRs: 0006 (fail-open) y el de v1-07 (contexto de los analizadores estáticos)
+- ADRs: 0006 (fail-open) y 0023 (contexto de los analizadores estáticos)
 - Estándares: docs/engineering/02-code-design.md, 03-errors-logging.md, 04-testing.md, 07-public-api.md
 
 `analyzers/lint-crossfile` (v1-32) es el primer analizador. Los de V3 en adelante usan la misma interfaz.
 
 ## Hacer
 
-- Tipos `Analyzer`, `AnalysisContext`, `Capability` y `ResolvedProject` (§22.2), con los cambios que decida v1-07.
+- Tipos `Analyzer`, `AnalysisContext`, `Capability` y `ResolvedProject` (§22.2), con los cambios de ADR-0023.
 - `runAnalyzers(analyzers, context)`:
   - omite con motivo los analizadores cuyas `requires` no están disponibles;
   - ejecuta en paralelo los independientes, con p-limit;

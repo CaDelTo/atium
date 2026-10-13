@@ -18,7 +18,11 @@
 - Agrupar por archivo, en el orden de `compareFindings`.
 - Colores con picocolors; sin color con `NO_COLOR` o si la salida no es una terminal (inyectado).
 - Escapar los caracteres de control de los textos, como en el CLI (§26.2).
-- Marcar los hallazgos en baseline, o no mostrarlos, según lo que decida v1-07 para `atium lint`.
+- Marcar los hallazgos en baseline, o no mostrarlos, según se decida en esta tarea.
+
+## Decisiones abiertas en esta tarea
+
+- Si los hallazgos que ya están en el baseline se muestran marcados o se ocultan. ADR-0023 solo decide que el código de salida de `atium lint` cuenta los nuevos.
 
 ## Criterios de aceptación
 

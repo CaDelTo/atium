@@ -64,7 +64,7 @@ atium/
 │   ├── playwright-demo/         app + tests con problemas deliberados
 │   └── cypress-demo/
 ├── fixtures/                    reportes reales por versión de framework, historiales sintéticos
-├── docs/                        sitio de documentación (una página por regla)
+├── docs/                        documentación interna y futuro sitio; rules/ tiene una página por regla
 └── .changeset/
 ```
 

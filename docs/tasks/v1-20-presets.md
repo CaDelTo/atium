@@ -8,19 +8,19 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.1 y §11.7, docs/design/17-tech-stack.md
-- ADRs: 0005 y el de v1-07
+- ADRs: 0005 y 0023
 - Estándares: docs/engineering/07-public-api.md, 09-documentation.md
 
 ## Hacer
 
 - Exponer `configs.recommended` y `configs.strict` para flat config:
   - `strict` incluye todas las reglas propias por archivo;
-  - `recommended` incluye las que el catálogo de v1-07 marca como de baja tasa de falsos positivos.
+  - `recommended` incluye las que el catálogo de 03-linter.md §11.8 (ADR-0023) marca como de baja tasa de falsos positivos.
 - **Integración con eslint-plugin-playwright y eslint-plugin-cypress:**
   - `recommended` incluye sus reglas relevantes;
   - cuando el plugin externo ya cubre el mismo caso, desactiva la regla propia;
   - cada preset aplica el bloque del framework que corresponde (`files` o detección).
-- Página de documentación con la **tabla de equivalencias** entre reglas propias y externas.
+- Página `docs/rules/presets.md` con la **tabla de equivalencias** entre reglas propias y externas (03-linter.md §11.9). La misma tabla, en código, la usa `atium lint` para convertir los mensajes de las reglas externas (§11.10).
 - Añadir eslint-plugin-playwright y eslint-plugin-cypress a 17-tech-stack.md: §11.1 los usa, pero la tabla del stack no los lista.
 - README del paquete con el uso mínimo: `export default [atium.configs.recommended]`.
 

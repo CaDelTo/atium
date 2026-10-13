@@ -2,13 +2,13 @@
 
 - ID: v1-09-e2e-syntax
 - Fase: V1
-- Paquete: packages/eslint-plugin (subpath de sintaxis compartida, según v1-07)
+- Paquete: packages/eslint-plugin (subpath `@atium/eslint-plugin/syntax`, ADR-0023)
 - Depende de: v1-08
 
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.1 y §11.3 (E2E001, E2E004, E2E005, E2E006, E2E009, E2E010), docs/design/02-data-model.md §9.3 (`titlePath`)
-- ADRs: 0005 y el de v1-07
+- ADRs: 0005 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md
 
 Lo usan casi todas las reglas por archivo y `suite-index` (v1-29), así que va en su propia tarea, antes que ellas.

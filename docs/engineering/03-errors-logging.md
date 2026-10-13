@@ -100,7 +100,7 @@ Cada mensaje dice **qué pasó, por qué y cómo arreglarlo**.
 ✗ Invalid config
 
 ✓ Invalid config in atium.config.ts: "analyzers.flaky.windowDays" must be a positive integer (received -5).
-  Hint: use a value between 1 and 365. See https://atium.dev/config#flaky
+  Hint: use a value between 1 and 365.
 ```
 
 ## Validación en los bordes

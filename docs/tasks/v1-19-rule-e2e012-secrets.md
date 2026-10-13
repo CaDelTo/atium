@@ -8,16 +8,16 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.2 y §11.3 (E2E012)
-- ADRs: 0005, 0019, 0020 y el de v1-07
+- ADRs: 0005, 0019, 0020 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, 09-documentation.md
 
 ## Hacer
 
 - Detectar literales asignados a identificadores del tipo `password`, `token`, `secret` o `apiKey` (en variables, propiedades y argumentos) con entropía de Shannon ≥ 3.5 bits/char (§11.3, en `defaults.ts`).
-- Detectar patrones conocidos (JWT y claves de nube), reutilizando los patrones de `core/redact` según las capas de v1-07.
+- Detectar patrones conocidos (JWT y claves de nube), reutilizando los patrones de `core/redact` según las capas de ADR-0023.
 - No detectar valores obviamente ficticios (`"password123"`, `"test"`).
 - El mensaje nunca incluye el valor: solo el identificador y el tipo de patrón.
-- Severidad, categoría y nombre en ESLint según el catálogo de v1-07; constante `RULE_*` con el código.
+- Severidad, categoría y nombre en ESLint según el catálogo de 03-linter.md §11.8 (ADR-0023); constante `RULE_*` con el código.
 - `meta.messages` en inglés (ADR-0019).
 - Página de documentación de la regla en inglés (ADR-0020), con las 5 secciones de 09-documentation.md.
 

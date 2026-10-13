@@ -46,7 +46,7 @@ interface Analyzer<C = unknown> {
 interface AnalysisContext<C> {
   config: C;
   project: ResolvedProject;            // raíz, frameworks detectados, CODEOWNERS
-  storage: StorageReader;
+  storage?: StorageReader;            // solo si la capacidad "history" está disponible
   git?: GitContext;                    // diff, renombres, commits
   currentRun?: LogicalRun;
   logger: Logger;
@@ -59,6 +59,11 @@ El orquestador:
 - Ejecuta solo los analizadores cuyas `requires` están disponibles; el resto se reporta como omitido con el motivo.
 - Ejecuta analizadores independientes en paralelo.
 - Aplica un timeout por analizador; si se excede, se omite con aviso (fail-open).
+
+Datos de entrada ([ADR-0023](../adr/0023-arquitectura-linter.md)):
+
+- `storage` solo está presente cuando la capacidad `history` está disponible. Un analizador que la necesita la declara en `requires`; si no está disponible, el orquestador lo omite con el motivo y nunca lo ejecuta sin `storage`.
+- El índice de la suite (§11.4) no viaja en el `AnalysisContext`, porque `core` no conoce su forma. El CLI construye el índice (I/O en el borde) y crea el analizador con él: `createLintCrossfileAnalyzer({ index })`. Si el índice no se puede construir, el CLI no registra el analizador y lo reporta como omitido con el motivo.
 
 ### 22.3 Finding unificado
 

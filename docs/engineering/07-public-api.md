@@ -12,12 +12,13 @@ Cambiar cualquiera de estos elementos afecta a usuarios:
 | Esquema de archivos de run | `schemaVersion` |
 | Esquema del reporte JSON y de `Finding` | JSON Schema publicado |
 | IDs de reglas | `E2E001`, `BDD001`, etc. |
+| Nombres de reglas en ESLint | `atium/no-hard-wait`, etc. ([03-linter.md §11.8](../design/03-linter.md#118-catálogo-de-reglas)) |
 | Códigos de error | `ErrorCode` |
 | Variables de entorno | `ATIUM_*` |
 
 Todo lo que no está en esta lista es interno y puede cambiar sin aviso; por ejemplo, el JSON de `atium doctor --format json` en V0.
 
-Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core/test-contracts` (suites de contrato) son internos aunque estén en `exports`. Solo los usan los tests de los paquetes de Atium y pueden cambiar sin aviso ni changeset. `test-contracts` es solo ESM porque importa Vitest, y `attw` lo excluye.
+Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core/test-contracts` (suites de contrato) son internos aunque estén en `exports`. Solo los usan los tests de los paquetes de Atium y pueden cambiar sin aviso ni changeset. Lo mismo vale para `@atium/core/pure` y `@atium/eslint-plugin/syntax` ([ADR-0023](../adr/0023-arquitectura-linter.md)): solo los usan otros paquetes de Atium, que se publican con versiones coherentes. `test-contracts` es solo ESM porque importa Vitest, y `attw` lo excluye.
 
 ## Versionado
 
@@ -30,6 +31,7 @@ Excepción: los subpaths `@atium/core/testing` (builders y fakes) y `@atium/core
 - Un elemento público se marca como deprecado al menos una versión minor antes de eliminarlo.
 - Una clave de configuración renombrada conserva la anterior como alias, con aviso al usarla.
 - Un flag del CLI renombrado conserva el anterior como alias, con aviso.
+- Una regla de ESLint renombrada conserva el nombre anterior como alias deprecado ([ADR-0023](../adr/0023-arquitectura-linter.md)).
 - Los IDs de reglas y códigos de error nunca se reutilizan para otra cosa.
 
 ## Esquemas versionados

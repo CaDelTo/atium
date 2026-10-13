@@ -8,7 +8,7 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.2 y §11.3 (E2E004)
-- ADRs: 0005, 0019, 0020 y el de v1-07
+- ADRs: 0005, 0019, 0020 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, 09-documentation.md
 
 ## Hacer
@@ -16,7 +16,7 @@
 - Detectar `.nth(n)` con n > 0, y `.first()` o `.last()` encadenados a locators no únicos.
 - No detectar `.nth()` sobre `getByRole` con nombre.
 - Umbral configurable como opción de la regla, con su default en `defaults.ts`.
-- Severidad, categoría y nombre en ESLint según el catálogo de v1-07; constante `RULE_*` con el código.
+- Severidad, categoría y nombre en ESLint según el catálogo de 03-linter.md §11.8 (ADR-0023); constante `RULE_*` con el código.
 - `meta.messages` en inglés (ADR-0019).
 - Página de documentación de la regla en inglés (ADR-0020), con las 5 secciones de 09-documentation.md.
 

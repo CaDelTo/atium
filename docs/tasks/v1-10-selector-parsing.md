@@ -2,13 +2,13 @@
 
 - ID: v1-10-selector-parsing
 - Fase: V1
-- Paquete: packages/eslint-plugin (subpath de sintaxis compartida, según v1-07)
+- Paquete: packages/eslint-plugin (subpath `@atium/eslint-plugin/syntax`, ADR-0023)
 - Depende de: v1-08
 
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.3 (E2E002, E2E003) y §11.4 (E2E007, E2E013), docs/design/06-selector-advisor.md §14.1
-- ADRs: 0005, 0009 y el de v1-07
+- ADRs: 0005, 0009 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, docs/design/17-tech-stack.md (parsel-js)
 
 Lo usan E2E002, E2E003, E2E007 y E2E013, y más adelante el Selector Advisor (V5).
