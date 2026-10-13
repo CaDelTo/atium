@@ -1,0 +1,55 @@
+{
+  "name": "@atium/storage-sqlite",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Local SQLite storage backend for Atium.",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "drizzle"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "bench": "vitest bench --run",
+    "pkg:check": "publint && attw --pack . --profile node16",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "@atium/core": "workspace:*",
+    "better-sqlite3": "13.0.3",
+    "drizzle-orm": "0.45.3",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.2",
+    "drizzle-kit": "0.31.11",
+    "fast-check": "4.10.2",
+    "publint": "0.3.24",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}
