@@ -11,6 +11,7 @@ atium/
 ├── packages/
 │   ├── core/                    @atium/core
 │   │   ├── schemas/             JSON Schema publicado (generado desde model/)
+│   │   ├── test-contracts/      suites de contrato que pasa cada implementación
 │   │   └── src/
 │   │       ├── model/           esquemas Zod y tipos
 │   │       ├── config/          defineConfig, carga y validación

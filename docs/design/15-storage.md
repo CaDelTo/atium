@@ -59,6 +59,26 @@ El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-ar
   - El mensaje muestra como mucho los 5 primeros problemas de Zod (`ZOD_ISSUES_SHOWN`), con la ruta y el texto escapados y recortados, porque una ruta puede contener una clave del archivo.
   - Ni el `ZodError` ni el error de `JSON.parse` van como `cause`: el primero lista todos los problemas y el segundo cita parte de la línea, y los loggers imprimen la causa. Los errores de E/S y de gzip sí van como `cause`.
 
+#### 23.2.2 Interfaces
+
+`@atium/core` define las interfaces; los backends viven en `packages/storage/*` y el fake `InMemoryStorage` en `@atium/core/testing`.
+
+- `StorageReader`: `getRun(id)` y `listRuns({ branch?, since?, limit })`. Es lo único que reciben los analizadores ([14-architecture.md §22.2](14-architecture.md#222-interfaz-de-analizador)).
+- `StorageWriter`: `writeRun(run)`.
+- `Storage`: los dos lados más `close()`. Solo lo tiene quien abre el storage (el CLI o un reporter), así que quien recibe un lado no puede cerrarlo.
+- **Resultados:** las tres operaciones devuelven `Result`.
+  - Un run inexistente es `ok(undefined)`, no un error.
+  - Un `id` repetido da `STORAGE_CONFLICT` y el run guardado queda intacto (ADR-0007).
+  - Un storage inaccesible o ya cerrado da `STORAGE_UNAVAILABLE`.
+- **`listRuns`:**
+  - Orden: `startedAt` descendente (el más reciente primero) y, en empate, `id` descendente. Así `limit` devuelve los últimos N runs.
+  - `branch`: coincidencia exacta con `git.branch`. Los runs sin rama no coinciden con ningún filtro de rama.
+  - `since`: fecha y hora ISO 8601 con `Z` o un offset, inclusiva (`startedAt >= since`). Se compara como instante, no como texto. Una fecha y hora sin zona se rechaza, porque `Date.parse` la leería en la zona horaria de la máquina y el resultado cambiaría entre CI y local.
+  - `limit`: obligatorio, entero ≥ 1 y como mucho `Number.MAX_SAFE_INTEGER`.
+  - Un `limit` o un `since` inválidos son un bug del llamador: `RangeError`, no `Result`. Se comprueban antes que nada, así que también se lanza con el storage cerrado.
+- **`close`:** es idempotente. Después de cerrar, toda operación con argumentos válidos devuelve `STORAGE_UNAVAILABLE`.
+- **Contrato:** todo backend pasa la suite `packages/core/test-contracts/storage.contract.ts`, que cubre lo anterior y las escrituras concurrentes: N runs distintos escritos a la vez se leen todos, y de varias escrituras simultáneas del mismo `id` gana exactamente una. La suite usa runs dentro de los topes de ADR-0018, porque un backend de archivos los aplica al escribir.
+
 ### 23.3 Niveles de datos y retención
 
 | Nivel | Contenido | Retención por defecto |

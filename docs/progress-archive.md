@@ -4,6 +4,54 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-11 — #5 v0-04-ci-pipeline
+
+- **Hecho:**
+  - Rama `ci/5-ci-pipeline` (desde `main` en `3204c6b`); commit `6fbf88d` `ci(repo): add verify workflow, Renovate config and PR template`. Push hecho por el usuario. PR #22 abierto con `Closes #5`, sin mergear.
+  - `.github/workflows/verify.yml`:
+    - Job `verify`: `pnpm install --frozen-lockfile` y `pnpm verify` en Node 22/24 × ubuntu/macos/windows-latest, con `fail-fast: false` y `cache: pnpm`.
+    - Job `audit`: `pnpm audit --audit-level high`.
+    - `permissions: contents: read`; `concurrency` por PR, que solo cancela en `pull_request`; `timeout-minutes: 30` por job; `persist-credentials: false`.
+  - SHA de las Actions resueltos con `gh api` desde los tags de las releases oficiales (los tags anotados, desreferenciados). Se usó la última release estable con al menos 14 días:
+    - `actions/checkout` v7.0.1 `3d3c42e5aac5ba805825da76410c181273ba90b1`
+    - `actions/setup-node` v7.0.0 `820762786026740c76f36085b0efc47a31fe5020`. La v7.1.0, del 2026-10-08, se descartó por tener menos de 14 días.
+    - `pnpm/action-setup` v6.1.0 `ea17c68df8912ef543352723c149a84f56e3d413`
+  - `renovate.json`: el de `10-tooling.md`, más la regla `typescript` `allowedVersions: "<7"` (ADR-0021).
+  - `.github/pull_request_template.md`: idéntica a `08-git-workflow.md`.
+  - `.gitattributes`: `* text=auto eol=lf` y `fixtures/** -text`.
+  - Docs:
+    - `10-tooling.md`: fila CI en el resumen, ejemplo de Renovate actualizado, nueva sección "CI" y política LF en la sección de Prettier.
+    - `06-security.md`: nivel de audit y formato del pin por SHA.
+    - `08-git-workflow.md`: ubicación de la plantilla de PR.
+  - Verificado:
+    - `pnpm verify` pasa en local con Node 22.23.3.
+    - `/review` sin bloqueantes; se corrigieron los 4 importantes y las sugerencias de timeout, `fixtures/` y ubicación de la plantilla.
+    - En el PR #22, los 6 jobs `verify` pasan (run `38194643302`).
+- **En curso:** el job `audit` del PR #22 falla, como se esperaba. `pnpm audit --audit-level high` encuentra:
+  - `shell-quote@1.10.0` (critical, GHSA-pqg4-j6r4-53mv, vía `@changesets/cli>launch-editor`). Parche 1.11.0, publicado el 2026-09-29T02:34Z.
+  - `source-map-js@1.2.1` (high, GHSA-68fv-2mgg-jv7q, vía `vitest>vite>postcss` y `magicast`). Parche 1.2.2, publicado el 2026-09-30T14:08Z.
+
+  `minimumReleaseAge: 20160` impide resolver esos parches hasta el 2026-10-13T02:34Z y el 2026-10-14T14:08Z (UTC). Los rangos de los padres (`launch-editor` `^1.10.0` y `postcss`) ya los admiten, así que no hacen falta overrides.
+- **Decisiones:**
+  - Decisiones del usuario:
+    - `pnpm audit --audit-level high` y bloqueante (escrito en `06-security.md`).
+    - Esperar a que los parches cumplan los 14 días en lugar de excepciones o `ignoreGhsas` (escrito en `06-security.md` como regla general; la fecha concreta solo está aquí y en el PR #22).
+  - Decisiones de esta sesión:
+    - `.gitattributes` con LF, que añade un archivo fuera de la lista de la tarea (escrito en `10-tooling.md`).
+    - `timeout-minutes: 30`. El valor lo propuso el agente y el usuario aceptó "los que consideres". Está escrito en `10-tooling.md` pero no en el diseño.
+    - Rama con tipo `ci`.
+- **Problemas:**
+  - Node local por defecto 23.1.0: dependency-cruiser lo rechaza y `deps:check` falla. Hay que usar `nvm use` (22).
+  - No se aplicaron estas sugerencias de `/review`:
+    - `config:recommended` no fija por SHA una Action nueva añadida por tag (haría falta `helpers:pinGitHubActionDigests`).
+    - `internalChecksFilter: "strict"` en Renovate.
+  - La dimensión "3 últimas menores de Playwright" de §29 queda para cuando existan los adapters.
+  - `CLAUDE.md` sigue diciendo "El repositorio todavía no tiene código".
+- **Siguiente paso:**
+  1. Hacer commit de esta entrada en `ci/5-ci-pipeline`, en la línea de `docs(repo): add handoff entry for #4`. Quedó sin commitear porque el usuario no lo pidió. Si se cambia de rama antes, la entrada se mueve con el working tree.
+  2. `/task 6` (v0-05-errors-result-failopen). Solo depende de v0-02 (Hecha), no de #5, y es el issue abierto más antiguo de `V0` después de #5. Su rama sale de `main`, que todavía no tiene `verify.yml`: hasta que se mergee el PR #22 no habrá CI en su PR; se verifica con `pnpm verify` en local, o rebaseando cuando #22 entre. Si #6 añade dependencias, `pnpm-lock.yaml` chocará con la actualización de #5; se regenera en la rama que se mergee después.
+  3. A partir del 2026-10-14T14:08Z, en `ci/5-ci-pipeline`, con `nvm use`: `pnpm update --depth Infinity shell-quote source-map-js`. Comprobar en `pnpm-lock.yaml` que quedan `shell-quote@1.11.0` y `source-map-js@1.2.2` y que no cambió nada más. Después, `pnpm audit --audit-level high` y `pnpm verify`; commit `build(repo): bump shell-quote and source-map-js to patched versions`; pedir el push al usuario y confirmar que el PR #22 queda en verde. Hasta entonces, no mergear el PR #22.
+
 ### 2026-10-11 — #4 Seguimiento de tareas con GitHub Issues
 
 - **Hecho:**

@@ -30,8 +30,9 @@ interface with `createGitClient` and `CreateGitClientOptions`.
 For run files it provides `writeRunFile` with `WriteRunFileOptions`,
 `runFilePath`, `readRunFile`, and `readRunFileEntries` with `RunFileEntry`
 and `RunHeader`.
-The analysis pipeline, error fingerprinting and storage interfaces are
-planned.
+For storage backends it provides the `StorageReader`, `StorageWriter` and
+`Storage` interfaces with `ListRunsQuery`.
+The analysis pipeline and error fingerprinting are planned.
 
 ## Installation
 
@@ -315,6 +316,30 @@ for await (const entry of readRunFileEntries(file)) {
 }
 ```
 
+A storage backend implements `Storage`: `writeRun`, `getRun`, `listRuns` and
+`close`. Analyzers receive only a `StorageReader`. The operations return a
+`Result`: a missing run is `ok(undefined)`, a repeated id is
+`STORAGE_CONFLICT` and an unreachable or closed storage is
+`STORAGE_UNAVAILABLE`. `listRuns` returns the most recent runs first, filtered
+by `branch` (exact match) and `since` (inclusive), up to `limit`:
+
+```ts
+import type { Logger, Run, StorageReader } from "@atium/core";
+
+async function recentOnMain(storage: StorageReader, logger: Logger): Promise<readonly Run[]> {
+  const result = await storage.listRuns({ branch: "main", limit: 50 });
+  if (!result.ok) {
+    logger.warn("History not available; analyzing without it", { error: result.error });
+    return [];
+  }
+  return result.value;
+}
+```
+
+`since` must be an ISO 8601 date-time with `Z` or an offset, such as
+`2026-10-01T00:00:00Z`; one without a zone throws `RangeError`, like a
+`limit` that is not an integer of at least 1.
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -331,6 +356,9 @@ Atium's own tests:
   and records every query as a `GitQuery`; `new FakeGitClient("unavailable")`
   throws `GIT_UNAVAILABLE`.
 - `fixedClock(ms)`: a `Clock` that always returns the same time.
+- `InMemoryStorage`: a `Storage` that keeps runs in memory. Every backend,
+  this one included, passes the contract suite in
+  `test-contracts/storage.contract.ts`.
 - `thrownAtiumError(action)` and `rejectedAtiumError(promise)`: return the
   `AtiumError` thrown or rejected with, and fail the test on anything else.
 
