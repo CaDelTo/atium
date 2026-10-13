@@ -21,6 +21,8 @@ the `atium` binary, as an ES module.
 ```sh
 atium init            # create atium.config.ts and detect Playwright or Cypress
 atium init --force    # replace an existing atium.config.ts
+atium doctor          # check that Atium can run in this project
+atium doctor --format json
 ```
 
 `atium init` reads the `package.json` of the working directory (a regular
@@ -44,6 +46,25 @@ directory, or with `--config`: it always creates the file in the working
 directory. `--force` replaces the file atomically, so a failed write keeps the
 old one.
 
+`atium doctor` runs six checks and prints a table, or a JSON object with
+`--format json`, to stdout:
+
+| Check | Fails when | Warns when |
+|---|---|---|
+| `node` | Node.js is older than 22.12.0 | — |
+| `config` | the config cannot be loaded or is invalid | there is no config file |
+| `git` | Git is missing or this is not a repository with a commit, and the commit must come from Git | the same, but the commit comes from `ATIUM_COMMIT_SHA` or the CI provider |
+| `ci` | the commit must come from Git and Git cannot give it, or a CI variable holds a value a run cannot store | — |
+| `storage` | `.atium/` (or, if it does not exist yet, the working directory) cannot be written, or `.atium` is a symlink that is broken or leads outside the working directory | — |
+| `frameworks` | — | `package.json` has no Playwright or Cypress dependency, or cannot be read |
+
+Like every command, it loads the config, so it runs the project's
+`atium.config.*`. `.atium/` is looked for in the working directory, the root
+of the project for the CLI. Every check that does not pass comes with a hint,
+and every text of the output, JSON included, is redacted. It exits with code 2 if any
+check fails and 0 otherwise; warnings do not change the exit code. The JSON
+output is not a stable API yet.
+
 Global options, accepted before or after the command name:
 
 | Option | Effect |
@@ -64,7 +85,7 @@ Results go to stdout and logs to stderr, so the output can be redirected.
 |---|---|
 | 0 | OK, or an internal error without `--strict` (logged as an error) |
 | 1 | Gate failed (`atium gate`, in a later phase; no command returns it yet) |
-| 2 | Configuration or usage error |
+| 2 | Configuration or usage error, or a failed check of `atium doctor` |
 | 3 | Internal error, with `--strict` |
 
 An internal error never blocks the pipeline unless `--strict` is given

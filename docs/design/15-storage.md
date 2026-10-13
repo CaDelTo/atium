@@ -27,7 +27,7 @@ Los runners de CI son efímeros y varios jobs escriben a la vez (shards, PRs par
 
 El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-archivos-run.md); aquí solo se describe cómo los aplica `@atium/core` (`writeRunFile`, `readRunFile` y `readRunFileEntries`).
 
-- **Ruta:** `.atium/runs/<runId>.ndjson.gz`, relativa a la raíz del repo (`RUNS_DIRECTORY`). Los backends remotos usan el layout de 23.2.
+- **Ruta:** `.atium/runs/<runId>.ndjson.gz`, relativa a la raíz del repo (`RUNS_DIRECTORY`); en el CLI, la raíz es el directorio de trabajo ([18-cli-config.md §26.1](18-cli-config.md#261-comandos)). Los backends remotos usan el layout de 23.2.
 - **Escritura atómica** (ADR-0018):
   - El archivo se escribe en un directorio temporal `.tmp-*` dentro de `.atium/runs/` y se publica con `rename`.
   - `rename` reemplaza en silencio un archivo existente, así que antes se comprueba el nombre: un `runId` repetido da `STORAGE_CONFLICT` y el archivo existente queda intacto (ADR-0007). Con `runId` uuid v7 no se espera que dos escrituras compitan entre la comprobación y el `rename`.

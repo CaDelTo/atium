@@ -33,7 +33,7 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
     "lint": "turbo run build && eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:coverage": "turbo run test -- --coverage",
+    "test:coverage": "turbo run test",
     "deps:check": "turbo run build && depcruise packages --config .dependency-cruiser.cjs",
     "unused": "knip",
     "dupes": "jscpd packages",
@@ -43,6 +43,8 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
   }
 }
 ```
+
+El `test` de cada paquete ya es `vitest run --coverage`, con los umbrales de cobertura, así que `test:coverage` es un alias de `test`: pasarle `-- --coverage` repetía la opción y Vitest fallaba (`Expected a single value for option "--coverage"`).
 
 `lint` y `deps:check` construyen antes los paquetes: los demás paquetes importan `@atium/core` por nombre, que resuelve a su `dist/`, y sin él typescript-eslint no ve sus tipos y los trata como `any`. Turborepo reutiliza el build si no cambió nada.
 

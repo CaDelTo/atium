@@ -1,7 +1,8 @@
 import { lstat, mkdtemp, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 
-// The file system work of `atium init`, apart from its decisions in run-init.ts.
+// The file system work of `atium init` and `atium doctor`, apart from their
+// decisions in run-init.ts and doctor/.
 
 /** What is at a path, without following a symlink: a symlink counts as a file. */
 export type EntryKind = "none" | "file" | "directory";

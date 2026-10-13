@@ -12,7 +12,7 @@
     "lint": "turbo run build && eslint .",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "test:coverage": "turbo run test -- --coverage",
+    "test:coverage": "turbo run test",
     "deps:check": "turbo run build && depcruise packages --config .dependency-cruiser.cjs",
     "unused": "knip",
     "dupes": "jscpd packages",

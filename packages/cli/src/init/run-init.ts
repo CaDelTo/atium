@@ -1,29 +1,19 @@
 import * as path from "node:path";
-import { assertNever, CONFIG_FILE_NAMES, quoteForMessage } from "@atium/core";
+import { CONFIG_FILE_NAMES, quoteForMessage } from "@atium/core";
 import type { CommandContext } from "../command-context.js";
-import { INIT_CONFIG_FILE, MANIFEST_MAX_BYTES } from "../defaults.js";
+import { INIT_CONFIG_FILE } from "../defaults.js";
 import { ERRORS, INIT } from "../messages.js";
+import type { DetectedProject } from "../project/detect-frameworks.js";
+import { manifestProblem, readProjectManifest } from "../project/manifest.js";
+import { createFile, entryKind, isRegularFile, replaceFile } from "../project/project-files.js";
 import { UsageError } from "../usage-error.js";
 import { configTemplate } from "./config-template.js";
-import { detectFrameworks } from "./detect-frameworks.js";
-import type { DetectedProject } from "./detect-frameworks.js";
-import type { CappedRead } from "./project-files.js";
-import {
-  createFile,
-  entryKind,
-  errnoCode,
-  isRegularFile,
-  readCapped,
-  replaceFile,
-} from "./project-files.js";
 
 /** Options of `atium init`. */
 export interface InitOptions {
   /** `--force`: replace an existing `atium.config.ts`. */
   readonly force: boolean;
 }
-
-const MANIFEST_FILE = "package.json";
 
 /** Detected when there is no usable `package.json`. */
 const NOTHING_DETECTED: DetectedProject = Object.freeze({
@@ -92,66 +82,20 @@ function warnAboutConfigVariable(context: CommandContext): void {
 }
 
 async function detectProject(context: CommandContext): Promise<DetectedProject> {
-  const text = await readManifest(context);
-  if (text === undefined) {
-    return NOTHING_DETECTED;
+  const read = await readProjectManifest(context.cwd);
+  if (read.kind === "detected") {
+    if (!read.project.hasConfigPackage) {
+      context.logger.warn(INIT.missingCore);
+    }
+    return read.project;
   }
-  let manifest: unknown;
-  try {
-    manifest = JSON.parse(text);
-  } catch (error) {
-    warnUnreadable(context, error);
-    return NOTHING_DETECTED;
+  // The warning names only the error code; `--verbose` shows the error itself.
+  const { message, code, error } = manifestProblem(read);
+  context.logger.warn(message, code === undefined ? undefined : { code });
+  if (error !== undefined) {
+    context.logger.debug(ERRORS.details, { error });
   }
-  const detected = detectFrameworks(manifest);
-  if (detected === undefined) {
-    context.logger.warn(INIT.unreadableManifest(quoteForMessage(MANIFEST_FILE)));
-    return NOTHING_DETECTED;
-  }
-  if (!detected.hasConfigPackage) {
-    context.logger.warn(INIT.missingCore);
-  }
-  return detected;
-}
-
-/** The text of `package.json`, or `undefined`, with a warning, if it was not read. */
-async function readManifest(context: CommandContext): Promise<string | undefined> {
-  const file = quoteForMessage(MANIFEST_FILE);
-  let read: CappedRead;
-  try {
-    read = await readCapped(path.join(context.cwd, MANIFEST_FILE), MANIFEST_MAX_BYTES);
-  } catch (error) {
-    warnUnreadable(context, error);
-    return undefined;
-  }
-  switch (read.kind) {
-    case "text":
-      return read.text;
-    case "missing":
-      context.logger.warn(INIT.noManifest(file));
-      return undefined;
-    case "not-a-file":
-      context.logger.warn(INIT.manifestNotAFile(file));
-      return undefined;
-    case "too-large":
-      context.logger.warn(INIT.manifestTooLarge(file, MANIFEST_MAX_BYTES));
-      return undefined;
-    default:
-      return assertNever(read);
-  }
-}
-
-/**
- * The warning names only the error code: the message of a read or parse error
- * carries the absolute path or a piece of the file. `--verbose` shows it all.
- */
-function warnUnreadable(context: CommandContext, error: unknown): void {
-  const code = errnoCode(error);
-  context.logger.warn(
-    INIT.unreadableManifest(quoteForMessage(MANIFEST_FILE)),
-    code === undefined ? undefined : { code },
-  );
-  context.logger.debug(ERRORS.details, { error });
+  return NOTHING_DETECTED;
 }
 
 function existsError(): UsageError {
