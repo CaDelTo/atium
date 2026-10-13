@@ -5,8 +5,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useTempDir } from "../../../test/temp-dir.js";
 import { checkStorage } from "./storage.js";
 
+const onWindows = process.platform === "win32";
 // Permissions do not apply to root, and chmod does not restrict directories on Windows.
-const canRestrict = process.platform !== "win32" && process.getuid?.() !== 0;
+const canRestrict = !onWindows && process.getuid?.() !== 0;
+// A junction is the directory link Windows lets anyone create; it needs an absolute target.
+const directoryLink = onWindows ? "junction" : "dir";
+
+async function linkAtium(target: string): Promise<void> {
+  await symlink(target, path.join(cwd, ".atium"), directoryLink);
+}
 
 const workDir = useTempDir("atium-doctor-storage-");
 let cwd: string;
@@ -90,10 +97,23 @@ describe("checkStorage", () => {
     expect(check.details).toEqual({ directory: ".atium", exists: null });
   });
 
-  describe.skipIf(process.platform === "win32")("when .atium is a symlink", () => {
+  it("fails without .atium when the working directory does not exist", async () => {
+    const check = await checkStorage(path.join(cwd, "missing"));
+
+    expect(check).toEqual({
+      id: "storage",
+      status: "fail",
+      message:
+        'The working directory cannot be written (ENOENT), so Atium cannot keep its local files in ".atium".',
+      hint: "Give the current user write permission on it, or run Atium from a directory it can write to.",
+      details: { directory: ".atium", exists: false },
+    });
+  });
+
+  describe("when .atium is a symlink", () => {
     it("passes and probes the target when it leads to a directory inside the working directory", async () => {
       await mkdir(path.join(cwd, "data"));
-      await symlink("data", path.join(cwd, ".atium"));
+      await linkAtium(path.join(cwd, "data"));
 
       expect(await checkStorage(cwd)).toEqual({
         id: "storage",
@@ -105,7 +125,7 @@ describe("checkStorage", () => {
     });
 
     it("fails when the symlink is broken", async () => {
-      await symlink("missing", path.join(cwd, ".atium"));
+      await linkAtium(path.join(cwd, "missing"));
 
       expect(await checkStorage(cwd)).toEqual({
         id: "storage",
@@ -120,7 +140,7 @@ describe("checkStorage", () => {
     it("fails without writing there when it leads outside the working directory", async () => {
       const outside = await mkdtemp(path.join(tmpdir(), "atium-doctor-outside-"));
       try {
-        await symlink(outside, path.join(cwd, ".atium"));
+        await linkAtium(outside);
 
         const check = await checkStorage(cwd);
 
@@ -135,12 +155,13 @@ describe("checkStorage", () => {
     });
 
     it("fails when it leads to the working directory itself", async () => {
-      await symlink(".", path.join(cwd, ".atium"));
+      await linkAtium(cwd);
 
       expect((await checkStorage(cwd)).status).toBe("fail");
     });
 
-    it("fails when it leads to a file", async () => {
+    // Windows only lets administrators link to a file.
+    it.skipIf(onWindows)("fails when it leads to a file", async () => {
       await writeFile(path.join(cwd, "data"), "");
       await symlink("data", path.join(cwd, ".atium"));
 
