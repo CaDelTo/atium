@@ -8,18 +8,18 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.4 (E2E007) y §11.5
-- ADRs: 0004, 0005, 0019, 0020 y el de v1-07
+- ADRs: 0004, 0005, 0019, 0020 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, 09-documentation.md
 
 ## Hacer
 
 - Crear `packages/analyzers/lint-crossfile` (`@atium/analyzer-lint-crossfile`), con sus capas en `.dependency-cruiser.cjs`:
   - el `Analyzer` de v1-23, con `kind: "static"`;
-  - su `configSchema` con los umbrales cross-file, en la clave decidida en v1-07;
-  - obtiene el `SuiteIndex` según v1-07.
+  - su `configSchema` con los umbrales cross-file, en `analyzers["lint-crossfile"]` (ADR-0023), y `rules` (código a `"on"` u `"off"`, con los valores por defecto del catálogo, 03-linter.md §11.8 y §11.10);
+  - obtiene el `SuiteIndex` según ADR-0023.
 - Estructura de una regla cross-file: una función pura de `SuiteIndex` y config a Findings. Las reglas se registran en el analizador.
 - E2E007: el mismo selector normalizado (v1-10) en N archivos o más fuera de `pageObjectDirs`. Por defecto N = 3, en `defaults.ts` (§11.4).
-- Severidad, categoría y confianza según el catálogo de v1-07. Fingerprint con `lintFingerprint` (v1-22).
+- Severidad, categoría y confianza según el catálogo de 03-linter.md §11.8 (ADR-0023). Fingerprint con `lintFingerprint` (v1-22).
 - Mensajes en inglés (ADR-0019) y página de documentación de la regla (ADR-0020).
 
 ## Criterios de aceptación

@@ -8,7 +8,7 @@
 ## Contexto
 
 - Diseño: docs/design/22-roadmap.md §30 (criterio de V1), docs/design/24-adoption.md §32, docs/design/21-testing-strategy.md §29 (integración: recall y precisión), docs/design/03-linter.md §11.3 y §11.4
-- ADRs: 0005 y el de v1-07
+- ADRs: 0005 y 0023
 - Estándares: docs/engineering/04-testing.md
 
 ## Hacer

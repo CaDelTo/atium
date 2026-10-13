@@ -8,12 +8,12 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.4, docs/design/16-repository-structure.md §24
-- ADRs: 0005 y el de v1-07 (capas)
+- ADRs: 0005 y 0023 (capas)
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, 05-performance.md
 
 ## Hacer
 
-- Crear `packages/suite-index` (`@atium/suite-index`), con sus capas en `.dependency-cruiser.cjs` y 02-code-design.md, según v1-07.
+- Crear `packages/suite-index` (`@atium/suite-index`), con sus capas en `.dependency-cruiser.cjs` y 02-code-design.md, según ADR-0023.
 - Esquema Zod de `FileIndex`. Es interno y versionado, porque se cachea en v1-31. Contiene:
   - tests, con su `titlePath`, rango, secuencia de acciones normalizada (acción + nivel de selector, §11.4 E2E013) y assertions;
   - locators, con el selector normalizado y su nivel (v1-10);

@@ -8,23 +8,29 @@
 ## Contexto
 
 - Diseño: docs/design/18-cli-config.md §26.1 y §26.2, docs/design/03-linter.md §11.1, §11.5 y §11.6
-- ADRs: 0005, 0006, 0012, 0019 y el de v1-07 (cómo funciona `atium lint`)
+- ADRs: 0005, 0006, 0012, 0019 y 0023 (cómo funciona `atium lint`)
 - Estándares: docs/engineering/02-code-design.md, 03-errors-logging.md, 05-performance.md (arranque del CLI), 06-security.md
 
 ## Hacer
 
 - Definición ligera de `lint` en `src/commands/`. La implementación, ESLint y los reporters se importan de forma diferida.
-- Ejecutar ESLint con su API de Node sobre los archivos y la config que decidió v1-07.
+- Ejecutar ESLint con su API de Node sobre los archivos y la config que decidió ADR-0023 (03-linter.md §11.10).
+- Sección `lint` (`include`, `exclude`) en el esquema de config de `@atium/core`, con sus defaults (18-cli-config.md §26.3), y argumentos `atium lint [paths...]`.
 - **Convertir cada mensaje de ESLint de una regla de Atium en un Finding:**
   - `titlePath` y código del nodo con `extractFileIndex` (v1-29) y el rango del mensaje;
   - fingerprint con `lintFingerprint` (v1-22);
   - `location` POSIX relativa;
-  - severidad, categoría y `docsUrl` del catálogo.
-  - Los mensajes de reglas externas y los errores de parseo se tratan según v1-07.
+  - severidad, categoría, confianza y fuente del catálogo (03-linter.md §11.8), y `docsUrl` con `ruleDocsUrl(code)`.
+  - Los mensajes de reglas externas equivalentes se convierten con la tabla de equivalencias de v1-20; los de las demás reglas se ignoran; los errores de parseo se avisan por stderr y no son Findings (ADR-0023).
+- **Config de ESLint (03-linter.md §11.10):**
+  - la del usuario si ESLint encuentra un `eslint.config.*`;
+  - si no, el preset interno `recommended` con `overrideConfigFile`, y un aviso por stderr;
+  - un aviso por stderr si la config no activa ninguna regla de Atium;
+  - los `ignores` de ESLint se aplican además de `lint.exclude`.
 - Construir el reporte (v1-24) y escribirlo:
   - `--format` (`console` por defecto, `json`, `sarif`; otro valor es un error de uso);
   - `--output`, que escribe en un archivo en lugar de stdout.
-- Código de salida según v1-07, y fail-open ante errores internos (§26.2).
+- Código de salida según ADR-0023, y fail-open ante errores internos (§26.2). Actualizar la descripción de `gateFailed` en `packages/cli/src/exit-codes.ts`, que solo menciona `atium gate`.
 - Textos en `messages.ts` y valores en `defaults.ts`. Actualizar §26.1 con el comando.
 
 ## Criterios de aceptación

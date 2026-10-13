@@ -63,7 +63,7 @@ El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-ar
 
 `@atium/core` define las interfaces; los backends viven en `packages/storage/*` y el fake `InMemoryStorage` en `@atium/core/testing`.
 
-- `StorageReader`: `getRun(id)` y `listRuns({ branch?, since?, limit })`. Es lo único que reciben los analizadores ([14-architecture.md §22.2](14-architecture.md#222-interfaz-de-analizador)).
+- `StorageReader`: `getRun(id)` y `listRuns({ branch?, since?, limit })`. Es lo único del storage que reciben los analizadores, y solo cuando la capacidad `history` está disponible ([14-architecture.md §22.2](14-architecture.md#222-interfaz-de-analizador), [ADR-0023](../adr/0023-arquitectura-linter.md)).
 - `StorageWriter`: `writeRun(run)`.
 - `Storage`: los dos lados más `close()`. Solo lo tiene quien abre el storage (el CLI o un reporter), así que quien recibe un lado no puede cerrarlo.
 - **Resultados:** las tres operaciones devuelven `Result`.

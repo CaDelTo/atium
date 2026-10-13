@@ -8,14 +8,14 @@
 ## Contexto
 
 - Diseño: docs/design/03-linter.md §11.4 (E2E006b) y §11.5
-- ADRs: 0004, 0005, 0019, 0020 y el de v1-07
+- ADRs: 0004, 0005, 0019, 0020 y 0023
 - Estándares: docs/engineering/02-code-design.md, 04-testing.md, 09-documentation.md
 
 ## Hacer
 
 - Igual que E2E006 (v1-18), pero resolviendo los helpers importados hasta 2 niveles con el índice (v1-30).
 - Evitar que un test aparezca dos veces: si E2E006 ya lo reporta y E2E006b concluye lo mismo, decidir cuál queda.
-- Severidad, categoría y confianza según el catálogo de v1-07. Fingerprint con `lintFingerprint` (v1-22).
+- Severidad, categoría y confianza según el catálogo de 03-linter.md §11.8 (ADR-0023). Fingerprint con `lintFingerprint` (v1-22).
 - Mensajes en inglés (ADR-0019) y página de documentación de la regla (ADR-0020).
 
 ## Decisiones abiertas en esta tarea

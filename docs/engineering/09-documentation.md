@@ -37,6 +37,8 @@ Cada regla (lint, triage, BDD) tiene una página con:
 
 Una regla nueva no se mergea sin su página.
 
+Las páginas de las reglas de lint están en inglés ([ADR-0020](../adr/0020-idioma-documentacion-publica.md)), en `docs/rules/<código en minúsculas>.md`, por ejemplo `docs/rules/e2e001.md`, y la URL la construye `ruleDocsUrl(code)` ([03-linter.md §11.9](../design/03-linter.md#119-páginas-de-documentación), [ADR-0023](../adr/0023-arquitectura-linter.md)).
+
 ## Diseño y decisiones
 
 - `docs/design/` es la fuente de verdad del comportamiento. Si el código cambia un comportamiento descrito, el diseño se actualiza en el mismo PR.

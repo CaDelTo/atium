@@ -78,11 +78,11 @@ Logs propios: van a stderr; stdout queda solo para resultados. `--verbose` o `DE
 | Código | Significado |
 |---|---|
 | 0 | OK |
-| 1 | Gate fallido: Findings nuevos sobre el umbral o tests fallidos fuera de cuarentena |
+| 1 | Gate fallido: Findings nuevos sobre el umbral o tests fallidos fuera de cuarentena. En `atium lint`, algún Finding nuevo con severidad `error` |
 | 2 | Error de configuración o de uso |
 | 3 | Error interno, solo con `--strict` |
 
-Una verificación fallida de `atium doctor` también sale con 2: es un problema del entorno o de la config que el usuario debe arreglar; el 1 queda reservado para `gate`.
+Una verificación fallida de `atium doctor` también sale con 2: es un problema del entorno o de la config que el usuario debe arreglar; el 1 queda reservado para `gate` y para `atium lint`, que con Findings nuevos de severidad `error` es un gate sobre los hallazgos de lint ([ADR-0023](../adr/0023-arquitectura-linter.md), [03-linter.md §11.10](03-linter.md#1110-atium-lint)). Con solo `warning` o `info`, `atium lint` sale con 0.
 
 Son errores de configuración o de uso (código 2) los de Commander (opción o comando desconocidos, argumentos de más, opciones incompatibles), los errores de uso propios de un comando y los `AtiumError` con `CONFIG_INVALID` o `CONFIG_NOT_FOUND`: su mensaje y, en la línea siguiente, `  Hint: <hint>` se escriben en stderr con la redacción por defecto (§28.1) y con los caracteres de control escapados como `\uXXXX` (también DEL, los C1 y los de dirección bidireccional), salvo los saltos de línea y los tabs. Con `--verbose` se registran además la causa y el stack. Los errores que escribe Commander, que repiten lo que se tecleó, se escapan igual. Cualquier otro error, incluido un `AtiumError` con otro código, es interno.
 
@@ -108,7 +108,8 @@ Lo implementa `loadConfig` de `@atium/core` (`packages/core/src/config`, [ADR-00
   - Nivel superior estricto. `quarantine` y `redact` también son estrictos.
   - `adapters` y `plugins` son listas de nombres.
   - `storage`, `network`, `gate`, `llm` (salvo `enabled`) y cada `analyzers.<nombre>` son objetos abiertos hasta que la fase de cada uno defina su esquema.
-  - Defaults: `quarantine.mode` es `run-and-ignore` ([07-flaky.md](07-flaky.md)), `llm.enabled` es `false` y `redact` toma los de §28.1. El resto no tiene default.
+  - `lint` es estricto: `include` (por defecto `["."]`) y `exclude` (por defecto `[]`), listas de rutas o globs relativos a la raíz con los archivos que analiza `atium lint` ([03-linter.md §11.10](03-linter.md#1110-atium-lint), [ADR-0023](../adr/0023-arquitectura-linter.md)). Los umbrales de las reglas cross-file van en `analyzers["lint-crossfile"]`.
+  - Defaults: `quarantine.mode` es `run-and-ignore` ([07-flaky.md](07-flaky.md)), `llm.enabled` es `false`, `lint` toma los de arriba y `redact` toma los de §28.1. El resto no tiene default.
 - **Precedencia en V0:**
 
   | Valor | Flag | Variable | Archivo | Default |
@@ -136,6 +137,8 @@ export default defineConfig({
   adapters: ["playwright"],
   plugins: ["@atium/analyzer-gaps"],
 
+  lint: { include: ["tests"], exclude: ["tests/fixtures/**"] },
+
   storage: {
     type: "s3",
     bucket: "my-atium-history",
@@ -149,6 +152,7 @@ export default defineConfig({
   },
 
   analyzers: {
+    "lint-crossfile": { rules: { E2E011: "on" } }, // reglas y umbrales cross-file (03-linter.md §11.10)
     flaky: { windowDays: 30, minAttempts: 10 },
     triage: { networkWindowSeconds: 30 },
     gaps: { openapi: "./openapi.yaml", routes: ["/", "/cart", "/checkout"] },

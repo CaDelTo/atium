@@ -5,11 +5,11 @@
 | Paquete | Puede depender de | No puede depender de |
 |---|---|---|
 | `core` | Solo librerías externas | Ningún otro paquete interno |
-| `suite-index` | `core` | Adapters, analizadores, CLI |
-| `eslint-plugin` | `core/model` (tipos y constantes) | Storage, adapters, CLI |
+| `suite-index` | `core`, `@atium/eslint-plugin/syntax` | Adapters, analizadores, el resto de `eslint-plugin`, CLI |
+| `eslint-plugin` | `@atium/core/pure` (módulos sin I/O) | La raíz de `@atium/core`, storage, adapters, CLI |
 | `adapters/*` | `core` | Analizadores, otros adapters, CLI |
 | `storage/*` | `core` | Analizadores, adapters, CLI |
-| `analyzers/*` | `core`, `suite-index` | Otros analizadores, adapters, storage concreto, CLI |
+| `analyzers/*` | `core`, `suite-index`, `@atium/eslint-plugin/syntax` | Otros analizadores, adapters, storage concreto, el resto de `eslint-plugin`, CLI |
 | `reporters/*` | `core` | Analizadores, adapters, storage |
 | `bdd` | `core` | Analizadores, CLI |
 | `cli` | Todos | — |
@@ -18,6 +18,12 @@
 Sin dependencias circulares. Lo verifica dependency-cruiser en `pnpm verify` ([10-tooling.md](10-tooling.md)).
 
 Si un analizador necesita algo de otro, ese algo pertenece a `core` (por ejemplo, el fingerprinting lo usan triage y flaky, por eso vive en `core`).
+
+Entradas compartidas del linter ([ADR-0023](../adr/0023-arquitectura-linter.md)):
+
+- `@atium/core/pure` reexporta solo módulos de `core` sin I/O (`model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never`). dependency-cruiser comprueba que su grafo no llega a módulos con I/O.
+- `@atium/eslint-plugin/syntax` contiene la lógica E2E que comparten las reglas, `suite-index` y `analyzers/lint-crossfile`: framework, estructura de tests, `titlePath`, acciones, assertions, locators y selectores. Son funciones puras sobre el AST de typescript-eslint; `src/syntax/` no importa las reglas ni ESLint en runtime.
+- Las reglas de `.dependency-cruiser.cjs` para cada paquete de la tabla se añaden en la tarea que crea ese paquete.
 
 ## Núcleo funcional, borde imperativo
 
@@ -75,6 +81,7 @@ export function isBroken(results: readonly RunOutcome[], policy: BrokenPolicy): 
 | Constantes verdaderas | UPPER_SNAKE_CASE | `DEFAULT_WINDOW_DAYS` |
 | Unidades | Sufijo en el nombre | `timeoutMs`, `maxSizeBytes` |
 | IDs de reglas | Constantes exportadas | `RULE_HARD_WAIT = "E2E001"` |
+| Nombres de reglas en ESLint | kebab-case descriptivo, catálogo en [03-linter.md §11.8](../design/03-linter.md#118-catálogo-de-reglas) | `atium/no-hard-wait` |
 | Tests | Mismo nombre que el archivo + `.test.ts` | `wilson-interval.test.ts` |
 
 Sin abreviaturas salvo las universales en este dominio: `id`, `url`, `ci`, `pr`, `dom`, `api`, `har`.
