@@ -92,7 +92,18 @@ v0-07, v0-08 y v0-09 se pueden hacer en paralelo (por ejemplo, en worktrees de G
 
 ### V1 — Linter (pendiente de detallar)
 
-Se detallan al cerrar V0, para incorporar lo aprendido:
+Del `/audit` de cierre de V0 (#20). Sin issue todavía; `/plan-phase v1` los crea junto con los del linter:
+
+| Tarea | Título | Depende de | Issue |
+|---|---|---|---|
+| [v1-01-dependency-security-bump](v1-01-dependency-security-bump.md) | Actualizar dependencias con avisos de seguridad | ninguna | — |
+| [v1-02-shared-fs-and-path-helpers](v1-02-shared-fs-and-path-helpers.md) | Helpers compartidos de errores de archivo y rutas | ninguna | — |
+| [v1-03-run-file-defaults](v1-03-run-file-defaults.md) | Valores de los archivos de run en `defaults.ts` | ninguna | — |
+| [v1-04-run-context-robustness](v1-04-run-context-robustness.md) | Robustez de `detectRunContext` | ninguna | — |
+| [v1-05-design-alignment](v1-05-design-alignment.md) | Alinear el diseño con lo implementado en V0 | ninguna | — |
+| [v1-06-core-api-docs](v1-06-core-api-docs.md) | Documentación de la API de core | ninguna | — |
+
+El resto se detalla al cerrar V0, para incorporar lo aprendido:
 
 - Esqueleto de `@atium/eslint-plugin`, `RuleTester` y plantilla de página de documentación por regla
 - Reglas por archivo, una por tarea: E2E010, E2E001, E2E002, E2E003, E2E004, E2E009, E2E005, E2E006, E2E012
