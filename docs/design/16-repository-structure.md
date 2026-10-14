@@ -61,7 +61,7 @@ atium/
 │   └── github-action/           atium/action
 │
 ├── examples/
-│   ├── playwright-demo/         app + tests con problemas deliberados
+│   ├── playwright-demo/         tests con problemas deliberados, expected-findings.json y verify/; la app llega en V2
 │   └── cypress-demo/
 ├── fixtures/                    reportes reales por versión de framework, historiales sintéticos
 ├── docs/                        documentación interna y futuro sitio; rules/ tiene una página por regla

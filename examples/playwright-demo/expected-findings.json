@@ -1,0 +1,106 @@
+{
+  "findings": [
+    {
+      "ruleId": "E2E013",
+      "file": "tests/cart.spec.ts",
+      "line": 12,
+      "titlePath": ["Cart", "adds a pen to the cart"]
+    },
+    {
+      "ruleId": "E2E003",
+      "file": "tests/checkout.spec.ts",
+      "line": 11,
+      "titlePath": ["Checkout", "pays with a saved card"]
+    },
+    {
+      "ruleId": "E2E004",
+      "file": "tests/checkout.spec.ts",
+      "line": 18,
+      "titlePath": ["Checkout", "adds the third recommended product"]
+    },
+    {
+      "ruleId": "E2E007",
+      "file": "tests/checkout.spec.ts",
+      "line": 20,
+      "titlePath": ["Checkout", "adds the third recommended product"]
+    },
+    {
+      "ruleId": "E2E012",
+      "file": "tests/checkout.spec.ts",
+      "line": 24,
+      "titlePath": ["Checkout", "applies a partner discount"]
+    },
+    {
+      "ruleId": "E2E011",
+      "file": "tests/helpers/navigation.ts",
+      "line": 8,
+      "titlePath": []
+    },
+    {
+      "ruleId": "E2E001",
+      "file": "tests/login.spec.ts",
+      "line": 20,
+      "titlePath": ["Login", "shows an error for a wrong password"]
+    },
+    {
+      "ruleId": "E2E009",
+      "file": "tests/login.spec.ts",
+      "line": 21,
+      "titlePath": ["Login", "shows an error for a wrong password"]
+    },
+    {
+      "ruleId": "E2E007",
+      "file": "tests/login.spec.ts",
+      "line": 22,
+      "titlePath": ["Login", "shows an error for a wrong password"]
+    },
+    {
+      "ruleId": "E2E008",
+      "file": "tests/orders.spec.ts",
+      "line": 4,
+      "titlePath": []
+    },
+    {
+      "ruleId": "E2E006b",
+      "file": "tests/orders.spec.ts",
+      "line": 11,
+      "titlePath": ["Orders", "downloads an invoice"]
+    },
+    {
+      "ruleId": "E2E002",
+      "file": "tests/pages/login-page.ts",
+      "line": 12,
+      "titlePath": []
+    },
+    {
+      "ruleId": "E2E011",
+      "file": "tests/pages/login-page.ts",
+      "line": 26,
+      "titlePath": []
+    },
+    {
+      "ruleId": "E2E005",
+      "file": "tests/profile.spec.ts",
+      "line": 8,
+      "titlePath": ["Profile", "updates every profile field"]
+    },
+    {
+      "ruleId": "E2E007",
+      "file": "tests/profile.spec.ts",
+      "line": 43,
+      "titlePath": ["Profile", "saves notification preferences"]
+    },
+    {
+      "ruleId": "E2E006",
+      "file": "tests/profile.spec.ts",
+      "line": 46,
+      "titlePath": ["Profile", "opens the avatar editor"]
+    },
+    {
+      "ruleId": "E2E010",
+      "file": "tests/search.spec.ts",
+      "line": 4,
+      "titlePath": ["Search", "finds a book by its title"]
+    }
+  ]
+}
