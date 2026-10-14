@@ -69,7 +69,17 @@ import prettier from "eslint-config-prettier";
 import sonarjs from "eslint-plugin-sonarjs";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/coverage/**", "fixtures/**", ".claude/**"] },
+  {
+    ignores: [
+      "**/dist/**",
+      "**/coverage/**",
+      "fixtures/**",
+      ".claude/**",
+      // Demo repos have seeded problems; only their verify/ checks are repo code.
+      "examples/*/*",
+      "!examples/*/verify/",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
@@ -280,9 +290,11 @@ Archivo `.jscpd.json` (la carpeta `reports/` va en `.gitignore`):
 ```json
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": [".claude/**"]
+  "ignore": [".claude/**", "examples/*/tests/**"]
 }
 ```
+
+El código de los repos demo (`examples/*/tests/`) tiene problemas sembrados a propósito, como exports sin usar para E2E011. Por eso ESLint y knip lo excluyen, y solo analizan las comprobaciones de `verify/`, que son código del repositorio. jscpd excluye `examples/**` entero, `verify/` incluido. En `turbo.json`, el `test` de cada demo tiene su propia tarea con `"outputs": []`, porque no mide cobertura y no genera `coverage/`: `"@atium/example-playwright-demo#test": { "dependsOn": ["^build"], "outputs": [] }`.
 
 ## commitlint
 
@@ -355,7 +367,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    projects: ["packages/*/vitest.config.ts", "packages/*/*/vitest.config.ts"],
+    projects: [
+      "packages/*/vitest.config.ts",
+      "packages/*/*/vitest.config.ts",
+      "examples/*/verify/vitest.config.ts",
+    ],
   },
 });
 ```

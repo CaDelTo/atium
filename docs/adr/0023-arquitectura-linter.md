@@ -21,7 +21,7 @@ El usuario aprobó todas las recomendaciones en el plan de v1-07 (#47).
 
 ### 1. Capas
 
-- `@atium/core` añade una entrada `@atium/core/pure` que reexporta solo módulos sin I/O: `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors` (`AtiumError`), `result` y `assert-never`. Es interna, como `@atium/core/testing`: solo la usan paquetes de Atium.
+- `@atium/core` añade una entrada `@atium/core/pure` que reexporta solo módulos sin I/O: `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors` (`AtiumError`), `result`, `assert-never` y `zod-issues` (`describeIssues`, para los mensajes de error de `settings.atium`). Es interna, como `@atium/core/testing`: solo la usan paquetes de Atium.
 - `eslint-plugin` solo importa `@atium/core/pure`, nunca la raíz de `@atium/core`, que arrastra `config/`, `ci/` y `storage/`. dependency-cruiser comprueba que el grafo de `@atium/core/pure` no llega a ningún módulo con I/O.
 - La lógica E2E compartida (framework, estructura de tests, `titlePath`, acciones, assertions, locators, selectores) se exporta en `@atium/eslint-plugin/syntax`, también interna. Son funciones puras sobre el AST ESTree de typescript-eslint.
 - `suite-index` y `analyzers/*` pueden importar `@atium/eslint-plugin/syntax`, y nada más del plugin. Dentro del plugin, `src/syntax/` no importa las reglas ni ESLint en runtime.

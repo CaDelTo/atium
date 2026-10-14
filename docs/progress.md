@@ -8,6 +8,69 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #61 v1-21-playwright-demo
+
+- **Hecho:**
+  - **Rama, commit y PR:**
+    - `/task 61 en paralelo con #48 #63`, en el worktree `atium-61`.
+    - Rama `feat/61-playwright-demo`, creada desde `origin/main` en `15abdf6`.
+    - Commit `861e997` `feat(repo): add the Playwright demo with seeded problems`. El push lo hizo el usuario.
+    - PR #85 con `Closes #61`, sin mergear. Su CI estaba `pending` al cerrar la sesión.
+  - **`examples/playwright-demo`** (`@atium/example-playwright-demo`, privado):
+    - `tests/*.spec.ts`, Page Objects en `tests/pages/` (`pageObjectDirs`) y helpers en `tests/helpers/`.
+    - `tsconfig.json` autónomo, con `moduleResolution: Bundler`, para el project service.
+    - 17 hallazgos sembrados que cubren las 14 reglas, más casos "no detecta" y archivos limpios (`home.spec.ts`, `pages/cart-page.ts`, `helpers/assertions.ts`).
+    - `expected-findings.json` con `{ findings: [{ ruleId, file, line, titlePath }] }`. `file` es relativo al demo y el orden es `file`, `line`, `ruleId`.
+    - README en inglés: problema por archivo, casos que no deben reportarse, configuración supuesta, convenciones y cómo ejecutar los scripts.
+  - **`verify/`**, código del repo dentro del demo:
+    - `expected-findings.test.ts` (15 tests) comprueba:
+      - el formato, con un esquema Zod y casos negativos;
+      - que están exactamente las 14 reglas;
+      - el orden y que no hay duplicados;
+      - que el archivo existe y la línea no está vacía;
+      - que el `titlePath` es el del `test(` más cercano antes de la línea y que los `test.describe` previos existen.
+    - `tsconfig.json`, que extiende `tsconfig.base.json`.
+    - `vitest.config.ts`, con `root: import.meta.dirname` para no recoger los `*.spec.ts` de Playwright.
+  - **Configuración raíz:**
+    - `eslint.config.js` ignora `examples/*/*` salvo `!examples/*/verify/`.
+    - `knip.json` ignora `examples/*/tests/**`.
+    - `vitest.config.ts` añade `examples/*/verify/vitest.config.ts` a `projects`.
+    - `turbo.json` añade `@atium/example-playwright-demo#test` con `outputs: []`.
+  - **Dependencias del demo:** `@playwright/test` 1.63.0, `@types/node`, `typescript`, `vitest` y `zod`, con las mismas versiones que el resto del repo.
+  - **Docs:** `10-tooling.md` (exclusiones y override de turbo), `04-testing.md` (fila End-to-end), `16-repository-structure.md` §24 (la app llega en V2, `verify/`) y la tarea v1-21 (sección "Decisiones tomadas en esta tarea").
+  - **Verificado:**
+    - `pnpm verify` pasa en Node 22: core 907 tests, cli 220, storage-sqlite 61 y demo 15.
+    - Mutaciones del JSON (línea, título, describe o archivo inexistente) hacen fallar el test con el hallazgo nombrado.
+    - Una pasada de `eslint` sin la exclusión mostró que las reglas de sonarjs detectan varios problemas sembrados.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker) sin bloqueantes. Se corrigieron los 2 importantes:
+      - `login.spec.ts` "signs in with valid credentials" ahora solo tiene el assert en un helper importado a 2 niveles;
+      - `CartPage.checkout` pasó a `private`.
+      También se corrigieron las 8 sugerencias.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan:
+    - `@playwright/test` como devDependency exacta.
+    - Los casos de Cypress, en `examples/cypress-demo` (V6).
+    - El demo no trae `eslint.config.js` ni `atium.config`: los crea v1-38 con preset `strict`, `pageObjectDirs: ["tests/pages/**"]` y `E2E011`/`E2E013` en `"on"`.
+    Están en `docs/tasks/v1-21-playwright-demo.md` y en el README del demo.
+  - Convenciones de `expected-findings.json` que el diseño no fija, también aprobadas. Solo están en el README del demo y en la tarea, no en el diseño:
+    - `line` es la del nodo, o la del `test(` en las reglas de test (E2E005, E2E006, E2E006b, E2E013).
+    - `titlePath` es `[]` fuera de un test (v1-22 lo tiene abierto).
+    - E2E007 genera un hallazgo por uso.
+    - E2E013 se reporta en el segundo test del par.
+    - Un test cuyos asserts solo están en helpers importados lo decide E2E006b, no E2E006 (v1-33 lo tiene abierto).
+    Las tareas v1-22, v1-32, v1-33, v1-35 y v1-36 deben actualizar el JSON y el README si deciden otra cosa.
+  - Sin decisión del usuario: el override de `turbo.json` y la estructura `verify/` dentro del demo. Quedaron en `10-tooling.md` y `16-repository-structure.md`.
+- **Problemas:**
+  - El CI del PR #85 estaba `pending` al cerrar. `audit` fallará como en `main`, por `shell-quote` y `source-map-js` (v1-01).
+  - El hook de pre-commit lanza ESLint sobre los archivos en stage y da avisos "File ignored" con los archivos del demo. No falla. Se arregla con `--no-warn-ignored` en `lefthook.yml`; no se hizo porque está fuera de alcance.
+  - jscpd reporta un clon `core/vitest.config.ts` ↔ `storage/sqlite/vitest.config.ts`. No es de esta tarea y no hace fallar `verify`.
+  - Conflictos esperados con #48 y #63, que van en paralelo: `pnpm-lock.yaml`, `knip.json` y `docs/progress.md`/`docs/progress-archive.md`.
+- **Siguiente paso:**
+  1. Revisar `gh pr checks 85` y corregir lo que falle, salvo `audit`.
+  2. Si otra tarea paralela se mergea antes: `git fetch origin && git merge origin/main`, resolver según 12-ai-workflow.md "Cuando otra tarea se mergea antes" y luego `/verify`.
+  3. Cuando el PR #85 esté mergeado: `/parallel --cleanup` en el repo principal y `/task` con el siguiente issue de V1 según CLAUDE.md.
+
 ### 2026-10-13 — #47 v1-07-linter-architecture
 
 - **Hecho:**
@@ -662,60 +725,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Revisar el CI del PR #33 (`gh pr checks 33`) y corregir lo que falle, salvo `audit`, que es el problema conocido.
   2. Cuando el PR #33 esté mergeado: `/task` con el siguiente issue Pendiente de V0. El CLI (v0-17) debe traducir `--quiet` y `--verbose` a `flags.logLevel` y crear el logger con `createRedactor(config.redact)` y `level: logLevel`.
   3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js`. Antes, preguntar al usuario la rama y el issue.
-
-### 2026-10-12 — #12 v0-11-logger-clock
-
-- **Hecho:**
-  - Rama `feat/12-logger-clock` (desde `main` en `7b57e6e`). El push lo hizo el usuario. PR #32 abierto con `Closes #12`, sin mergear.
-  - Commit `25d3c48` `docs(adr): propose logger and clock implementations in core`: ADR-0022 en estado **Propuesta** y fila en `docs/adr/README.md`.
-  - Commit `2a4c953` `feat(core): add stderr logger and clock`, en `packages/core/src/`:
-    - `stderr-logger.ts`: `createStderrLogger({ stream, env, redactor, namespace, verbose? })`, exportado con `StderrLoggerOptions` y `LogStream` (`{ write(chunk: string): unknown; isTTY?: boolean }`).
-      - Una línea por entrada: `<namespace> <nivel> <mensaje> <contexto JSON>`.
-      - `error`, `warn` e `info` se escriben siempre. `debug` solo con `verbose` o si `DEBUG` habilita el namespace.
-      - El mensaje pasa por `redactor.redact`. Se escapan los caracteres de control salvo el tab: `\n`, `\r`, ANSI, C1 y U+2028/2029.
-      - Color solo si `stream.isTTY === true` y `NO_COLOR` no está definida o está vacía (`picocolors.createColors`).
-      - Nunca lanza: si el formato falla escribe `<namespace> <nivel> [unformattable log entry]`; si `stream.write` lanza, la entrada se descarta. Es el único `catch` vacío, documentado en 03-errors-logging.
-      - `namespace` es obligatorio, por ejemplo `"atium:cli"`. Es una desviación menor del plan, que lo tenía opcional con default `"atium"`, porque `DEBUG=atium:*` no coincide con `"atium"`.
-    - `serialize-context.ts` (interno):
-      - Los `Error` pasan a `{ name, message, code?, hint?, stack?, cause? }`, con el stack solo cuando debug está activo.
-      - bigint, symbol y function se convierten en strings, y se usa `toJSON` si existe.
-      - Cada objeto se escribe una vez: si reaparece se escribe `"[Repeated]"` y si se contiene a sí mismo `"[Circular]"`. Así el coste es lineal.
-      - Después de convertirlo aplica `redactFields`. Si algo lanza devuelve `"[unserializable context]"`.
-      - `Map`, `Set` y `AggregateError.errors` se pierden; está documentado en el TSDoc.
-    - `debug-namespaces.ts` (interno): `isDebugEnabled(debugEnv, namespace)` con la sintaxis del paquete debug (comas o espacios, `*`, exclusiones `-` que siempre ganan) y sin regex construida desde el entorno.
-    - `clock.ts`: `Clock { now(): number }` y `systemClock` (congelado), exportados desde `@atium/core`.
-    - `testing/fixed-clock.ts`: `fixedClock(ms)`, que lanza `RangeError` si `ms` no es finito, en `@atium/core/testing`.
-    - Dependencia nueva de runtime en core: `picocolors` 1.1.1 exacta.
-    - Docs:
-      - `02-code-design.md`: fila SOLID con la excepción.
-      - `03-errors-logging.md`: implementación, formato, sintaxis de `DEBUG`, excepción del `catch` vacío y viñetas de niveles unidas.
-      - `17-tech-stack.md`: fila de `debug`.
-      - `18-cli-config.md` §26: párrafo de logs, y `ATIUM_LOG_LEVEL` y `--quiet` marcados como aplazados a v0-12/v0-17.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` exit 0 con Node 22: 619 tests y 99.5 % de cobertura en core. Solo queda sin cubrir el `default: assertNever` de `stderr-logger.ts`.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker) sin bloqueantes restantes. Bloqueantes corregidos: copia exponencial de referencias compartidas (opción A, `[Repeated]`, elegida por el usuario) y `catch` vacío no cubierto por la regla escrita. También se corrigieron los importantes y las sugerencias 7, 10 y 11.
-    - CI del PR #32 (run `38220108855`): los 6 jobs `verify` pasan. `audit` falla (ver Problemas).
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan:
-    - La implementación vive en core.
-    - No se usa el paquete `debug`; `DEBUG` se interpreta con código propio.
-    - `picocolors` con `createColors`.
-    - Niveles visibles por defecto: `error`, `warn` e `info`.
-    - Formato de línea y stacks solo con debug.
-    - `fixedClock` en `testing`.
-  - Las de capas y `debug` quedaron en ADR-0022. Se marcó como Aceptada al cerrar la sesión, porque el PR #32 ya estaba mergeado en `main` (`f714562`). Ese cambio está sin commitear en `main`, junto con esta entrada.
-  - El resto está en `03-errors-logging.md` y en el TSDoc.
-  - Hallazgos de `/review` que el usuario decidió no corregir. Solo están en esta entrada y en el TSDoc:
-    - Si el mensaje no es string, se escribe el marcador en lugar de `String(message)`.
-    - `Map`, `Set` y `AggregateError.errors` se pierden.
-    - `fixedClock` lanza `RangeError` y no `AtiumError`.
-- **Problemas:**
-  - `audit` falla en el PR #32 por `shell-quote` (crítico) y `source-map-js`. Sin cambios desde #6: el bump se puede hacer desde el 2026-10-14T14:08Z.
-  - Sigue igual: el Node por defecto del shell es 23.1.0, así que hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
-  - Sigue igual: `CLAUDE.md` dice "El repositorio todavía no tiene código".
-- **Siguiente paso:**
-  1. Hay cambios sin commitear en `main`: esta entrada, el archivo de progreso y ADR-0022 marcado como Aceptada (en el ADR y en `docs/adr/README.md`). El usuario decidió que van en la rama de #13: al crearla con `/task 13`, hacer primero estos commits: `docs(adr): accept ADR-0022` y `docs(repo): add handoff entry for #12`.
-  2. El PR #32 ya está mergeado: `/task 13` (v0-12 configuración, depende de v0-11). Debe resolver `ATIUM_LOG_LEVEL` y conectar `redact` de la config con `createRedactor` para el logger. Ningún otro issue abierto de V0 tiene sus dependencias cerradas antes de #12.
-  3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js` (entrada de #6, ya en `progress-archive.md`). Antes, preguntar al usuario la rama y el issue.

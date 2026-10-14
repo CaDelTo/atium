@@ -10,14 +10,14 @@
 | Monorepo | pnpm workspaces + Turborepo | Builds incrementales y caché |
 | Build | tsup | ESM + CJS para adapters |
 | Versionado y publicación | Changesets | Versiones independientes por paquete |
-| Tests | Vitest; `RuleTester` de ESLint | Rápido, compatible con TS |
+| Tests | Vitest; `RuleTester` de ESLint (`@typescript-eslint/rule-tester`, que acepta los tipos de las reglas creadas con typescript-eslint) | Rápido, compatible con TS |
 | Validación | Zod (con exportación a JSON Schema) | Config y modelo con tipos derivados y esquema publicable |
 | Carga de config | jiti ([ADR-0017](../adr/0017-carga-config-jiti.md)) | Soporta `atium.config.ts`; precedencia y validación propias |
 | CLI | Commander | Los plugins van en la config; no hace falta oclif |
 | Terminal | picocolors, cli-table3; respeta `NO_COLOR` | Ligeros |
 | Logs de depuración | Sintaxis de `DEBUG` del paquete debug (`DEBUG=atium:*`), leída por el logger de core sin la dependencia | Estándar en Node; el paquete usa estado global y escribe solo en stderr, sin redacción ni stream inyectado ([ADR-0022](../adr/0022-logger-reloj-en-core.md)) |
 | Detección de CI | env-ci + reglas propias | Cubre los proveedores comunes |
-| Linter | ESLint 9 + typescript-eslint (project service) | Editor, autofix, resolución entre archivos |
+| Linter | ESLint 9 + typescript-eslint (project service); reglas con `RuleCreator` de `@typescript-eslint/utils` | Editor, autofix, resolución entre archivos |
 | Parser CSS | parsel-js | Analiza selectores CSS para E2E002 |
 | Similitud | fastest-levenshtein | Renombres y duplicados |
 | Archivos | tinyglobby | Búsqueda rápida de tests |

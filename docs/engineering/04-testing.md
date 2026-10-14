@@ -10,7 +10,7 @@ Complementa la estrategia por niveles del diseño ([21-testing-strategy.md](../d
 | Reglas de ESLint | `src/rules/<regla>.test.ts` | `RuleTester` |
 | Integración | `packages/<paquete>/test/` | Vitest |
 | Contrato | `packages/core/test-contracts/` (reutilizados por cada implementación) | Vitest |
-| End-to-end | `examples/*` con `expected-findings.json` | Script de verificación |
+| End-to-end | `examples/*` con `expected-findings.json`: `examples/*/verify/` comprueba su formato, y el test de integración de `atium lint` (v1-38), que se cumple | Vitest |
 | Benchmarks | `packages/<paquete>/bench/` | Vitest bench |
 
 ## Cómo se escribe un test

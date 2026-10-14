@@ -30,6 +30,15 @@ settings: {
 }
 ```
 
+Los valores por defecto viven en `packages/eslint-plugin/src/defaults.ts`:
+
+- `framework`: no tiene default. Se detecta por los imports de cada archivo y solo acepta `"playwright"` o `"cypress"`; `undefined` cuenta como ausente.
+- `pageObjectDirs`: `[]`, ningún archivo es Page Object si no se configura.
+- `assertFunctionNames`: `[]`, solo cuentan las assertions del framework.
+- `i18n`: `false`.
+
+`settings.atium` se valida con Zod cuando una regla lo lee. El esquema es estricto: una clave desconocida, un tipo incorrecto o una cadena vacía en las listas detienen ESLint con `CONFIG_INVALID`. El mensaje, en inglés, nombra cada clave con su ruta completa (`settings.atium.i18n`), también las desconocidas, y el hint lista las claves válidas.
+
 ### 11.2 Formato de un hallazgo
 
 Cada regla incluye explicación, ejemplo antes/después, autofix o sugerencia cuando es seguro, y página de documentación.

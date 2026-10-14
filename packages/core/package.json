@@ -17,6 +17,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./pure": {
+      "import": {
+        "types": "./dist/pure/index.d.ts",
+        "default": "./dist/pure/index.js"
+      },
+      "require": {
+        "types": "./dist/pure/index.d.cts",
+        "default": "./dist/pure/index.cjs"
+      }
+    },
     "./testing": {
       "import": {
         "types": "./dist/testing/index.d.ts",

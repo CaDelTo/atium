@@ -17,6 +17,7 @@ export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
 export type { FailOpenOptions } from "./fail-open.js";
 export { compareFindings } from "./findings/compare.js";
+export { ruleDocsUrl } from "./findings/docs-url.js";
 export {
   FINDING_CATEGORIES,
   FINDING_CONFIDENCES,
