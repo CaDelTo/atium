@@ -8,6 +8,96 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - `/task 48 en paralelo con #63 #61`, en el worktree `atium-48`.
+    - Rama `feat/48-eslint-plugin-skeleton`, creada desde `origin/main` en `15abdf6`.
+    - Commit `e0c0691` `feat(core): add the pure entry point and ruleDocsUrl`.
+    - Commit `e83322c` `feat(eslint-plugin): add the plugin skeleton`.
+    - Merge de `origin/main` (`e4475e3`), que trae #61 ya mergeado (PR #85). No hubo conflictos.
+    - Los dos push los hizo el usuario.
+    - PR #86 con `Closes #48`. El usuario lo mergeó (`402f6b1`, 2026-10-14T03:41Z) y el issue #48 está cerrado.
+  - **`@atium/core`:**
+    - `src/pure/index.ts`: entrada interna `@atium/core/pure`.
+      - Reexporta `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never` y `zod-issues`.
+      - Tiene su entrada en `tsup.config.ts` y el export `./pure` en `package.json`.
+      - `src/pure/index.test.ts` comprueba que cada export de `pure` existe en la raíz con el mismo valor.
+    - `src/findings/docs-url.ts`: `ruleDocsUrl(code)` = `RULE_DOCS_BASE_URL` + código en minúsculas + `.md`, sin codificar.
+      - `RULE_DOCS_BASE_URL` está en un bloque al final de `defaults.ts`.
+      - Se exporta desde la raíz y desde `pure`.
+    - `samples.test-support.ts` usa `ruleDocsUrl("E2E001")` en lugar de `atium.dev`.
+  - **`packages/eslint-plugin`** (`@atium/eslint-plugin`, privado):
+    - Dependencias: peer `eslint ^9.0.0` y `typescript >=4.8.4 <6.1.0`, este último igual que `@typescript-eslint/utils`.
+    - El build es tsup en ESM y CJS, con `cjsInterop: true` y `splitting: true` para que `require()` devuelva el objeto del plugin.
+    - `src/settings.ts`: `readSettings(context.settings)`.
+      - Zod con `strictObject`.
+      - `framework` es `"playwright" | "cypress"` y opcional; `undefined` cuenta como ausente.
+      - Cada problema sale con su ruta completa (`settings.atium.<clave>`), también cada clave desconocida.
+      - Un valor inválido lanza `AtiumError("CONFIG_INVALID")` con un hint que lista las claves válidas.
+    - `src/defaults.ts`: `SETTINGS_DEFAULTS` = `pageObjectDirs: []`, `assertFunctionNames: []`, `i18n: false`.
+    - `src/create-rule.ts`: `createRule`, con `ESLintUtils.RuleCreator`.
+      - Fija `meta.docs.url = ruleDocsUrl(meta.docs.code)`.
+      - `AtiumRuleDocs` exige `code`.
+    - `src/plugin.ts`: `createPlugin(rules)` y `plugin`, con `{ meta: { name, version }, rules, configs: {} }`.
+      - Las reglas se exponen como `Rule.RuleModule` de ESLint mediante `toEslintRule`, el único cast `as unknown as`, documentado.
+      - `src/index.ts` hace `export default plugin`, con `eslint-disable-next-line no-restricted-syntax` y su motivo.
+    - `src/rules/index.ts`: `rules = {}`.
+    - `src/rules/rule-docs.test.ts` comprueba en cada regla:
+      - que tiene página en `docs/rules/<código>.md`, con el nombre de archivo sacado de la URL;
+      - que la página tiene las 5 secciones;
+      - que `meta.docs.url` y `meta.messages` son correctos.
+      El comprobador se prueba con reglas ficticias.
+    - `test/rule-tester.ts`: `createRuleTester(settings)`, sobre `@typescript-eslint/rule-tester` y conectado a Vitest.
+    - README en inglés.
+  - **Raíz y docs:**
+    - `.dependency-cruiser.cjs`:
+      - regla `core-pure-has-no-io`, con `reachable`, que excluye los `.test.ts`;
+      - regla `eslint-plugin-only-core-pure`, cuyos tests pueden usar `@atium/core/testing`;
+      - la constante `TEST_FILE`, que también usa ahora `no-test-code-in-src`.
+    - `docs/rules/_template.md`: tabla con nombre, severidad, categoría, confianza, `Source` y presets, más las 5 secciones en inglés.
+    - Diseño actualizado:
+      - `03-linter.md` §11.1: defaults y validación;
+      - `16-repository-structure.md`: `core/src/pure/`, el subárbol de `eslint-plugin/` y la plantilla;
+      - `17-tech-stack.md`: `@typescript-eslint/rule-tester` y `RuleCreator`;
+      - ADR-0023 §1 y `02-code-design.md`: `zod-issues` en `pure`;
+      - README de core.
+  - **Verificado:**
+    - `pnpm verify` en verde después del merge con `main` (Node 22): core 912 tests, eslint-plugin 25 (100 % de cobertura), cli 220, sqlite 61 y demo 15.
+    - `pnpm pkg:check` en verde: 8 de 8 tareas, con publint y attw.
+    - Las dos reglas de dependency-cruiser fallan con imports temporales de `node:fs`, `stderr-logger`, `config/` y la raíz de `@atium/core`. Esos imports ya se quitaron.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor):
+      - Se descartó un bloqueante: el export de `ruleDocsUrl` en la raíz es un añadido y v1-37 lo necesita.
+      - Se corrigieron el importante (16-repository-structure) y las sugerencias 1 a 8 y 10.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan** ("si"):
+    - los defaults de `settings.atium`;
+    - el esquema estricto;
+    - `describeIssues` en `pure`, con ADR-0023 enmendado;
+    - `export default plugin`;
+    - reutilizar `CONFIG_INVALID`.
+  - **Tomadas por mí tras "Corrige todo lo que puedas"**, escritas en 03-linter.md §11.1:
+    - `framework: undefined` cuenta como ausente;
+    - las claves desconocidas salen cada una con su ruta;
+    - `ruleDocsUrl` sin `encodeURIComponent`, como en §11.9.
+  - **Solo en el código, en los comentarios de `plugin.ts` y `tsup.config.ts`, y en este PR:**
+    - usar `@typescript-eslint/rule-tester` en lugar del `RuleTester` de ESLint (también en 17-tech-stack);
+    - el cast en el borde hacia `Rule.RuleModule`;
+    - `cjsInterop` + `splitting`.
+  - **Sin escribir en ningún documento:** `readSettings` no tiene caché. Cada regla validará en cada archivo; si cuesta, se medirá en las tareas de reglas.
+- **Problemas:**
+  - **CI del PR #86:** estaba `pending` al mergear y no se comprobó. `audit` sigue en rojo en `main`, por `shell-quote` y `source-map-js` (v1-01).
+  - **Umbral de cobertura del plugin:** está en 90 % y `04-testing.md` pide al menos 85 %. Sigue ligado a la decisión abierta sobre el umbral de cli.
+  - **`settings.atium` inválido:** no se detecta hasta que exista una regla que llame a `readSettings`, desde v1-09.
+  - **`@atium/core/pure`:** reexporta símbolos que todavía nadie consume; está previsto en ADR-0023.
+- **Siguiente paso:**
+  1. `/parallel --cleanup` desde el repo principal, para retirar el worktree `atium-48` (PR #86 y el PR de esta entrada mergeados).
+  2. `git fetch origin` y `/task` con el siguiente issue de V1 cuyas dependencias estén cerradas. v1-09 (`@atium/eslint-plugin/syntax`) ya está desbloqueado.
+     - Al crear `src/syntax/`, añadir en `.dependency-cruiser.cjs` la regla de ADR-0023: `syntax` no importa las reglas ni ESLint en runtime.
+     - Exportar `./syntax` en `package.json` y en `tsup.config.ts`.
+
 ### 2026-10-13 — #61 v1-21-playwright-demo
 
 - **Hecho:**
@@ -650,78 +740,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
     - Significado de omitir `quarantine.auto` sin definir.
   - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
 - **Siguiente paso:** commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea, como se hizo con #12 y #13. Cuando una persona mergee el PR #34, empezar la siguiente tarea con `/task` (el issue Pendiente más antiguo del milestone V0; previsiblemente #15, v0-14-run-files).
-
-### 2026-10-12 — #13 v0-12-config
-
-- **Hecho:**
-  - Rama `feat/13-config`, creada desde `origin/main` en `f714562`. El push lo hizo el usuario; la sesión tiene `git push` denegado. PR #33 abierto con `Closes #13`, sin mergear.
-  - Commits pendientes del handoff de #12: `d26e55a` `docs(adr): accept ADR-0022` y `c34b49e` `docs(repo): add handoff entry for #12`.
-  - Commit `b88a2b6` `feat(core): load and validate the config with precedence`, en `packages/core/src/`:
-    - `config/schema.ts`: `AtiumConfigSchema`, `AtiumConfig`, `AtiumConfigInput`, `QUARANTINE_MODES` (`run-and-ignore`, `skip`) y `defineConfig`, que devuelve lo mismo que recibe pero con tipos.
-      - Estrictos: el nivel superior, `quarantine` (`mode`, `auto`) y `redact` (el `RedactConfigSchema` existente).
-      - Abiertos: `storage`, `network`, `gate`, cada `analyzers.<nombre>` y `llm` salvo `enabled`.
-      - `adapters` y `plugins` son listas de strings no vacíos.
-      - Defaults: `quarantine.mode` y `llm.enabled` mediante `.default`; `quarantine`, `redact` y `llm` mediante `.prefault({})`.
-    - `config/config-file.ts`: es el único I/O de core.
-      - `findConfigFile`: la ruta explícita se resuelve contra `cwd`, se comprueba primero la extensión y luego que exista y sea archivo. Si no hay ruta explícita, se busca entre los 5 nombres de `cwd`. Más de uno da `CONFIG_INVALID`; un error de `stat` distinto de ENOENT/ENOTDIR da `CONFIG_NOT_FOUND`.
-      - `loadConfigFile`: `await import("jiti")` con `moduleCache: false` y `fsCache: false`. Usa `.default` del módulo; jiti también lo da para `.json`.
-    - `config/resolve-config.ts`: `explicitConfigFile` (`--config` > `ATIUM_CONFIG`; una variable vacía cuenta como no definida) y `resolveConfig`, que es puro (nivel: flag > `ATIUM_LOG_LEVEL` > `info`; luego valida el archivo).
-    - `config/load-config.ts`: `loadConfig({ cwd, env, flags })` devuelve `{ config, logLevel, configPath }`. El archivo se muestra en los mensajes relativo a `cwd`, entre comillas.
-    - `config/issues.ts`: `configInvalidError`.
-      - Una línea por issue: `"ruta" must be a/an <tipo> (received …)`, o el mensaje de Zod para el resto de códigos.
-      - El hint cubre todas las claves desconocidas: sugerencia para las que la tienen y "Remove … or use a key valid …" para las demás.
-      - Recorre el esquema (optional, default, prefault, readonly, record, array) para saber qué claves son válidas en cada objeto.
-    - `config/suggest.ts`: `suggestKey` (fastest-levenshtein, comparación en minúsculas, distancia ≤ 2, en empate gana la primera) y `didYouMean`.
-    - `config/quote-received.ts`: `createReceivedQuoter`, que redacta con los patrones por defecto y luego cita con `quoteForMessage`.
-    - `quote.ts`: `quoteForMessage` (sale de `paths.ts`) y `quoteList`.
-    - `logger.ts`: `LOG_LEVELS`.
-    - `stderr-logger.ts`: opción `level`, por defecto `info`. `debug` se activa con `level: "debug"`, con `verbose` o con `DEBUG`, sea cual sea el nivel.
-    - `defaults.ts`: `CONFIG_FILE_NAMES`, `CONFIG_SUGGESTION_MAX_DISTANCE = 2`, `DEFAULT_LOG_LEVEL = "info"`, `QUARANTINE_DEFAULTS` y `LLM_DEFAULTS`.
-    - `testing/thrown-error.ts`: `thrownAtiumError` y `rejectedAtiumError`, exportados en `@atium/core/testing`.
-    - Dependencias nuevas de core, con versión exacta: `jiti` 2.7.0 y `fastest-levenshtein` 1.0.16.
-    - Docs:
-      - `18-cli-config.md` §26.3: búsqueda, carga, esquema, tabla de precedencia de V0, `ATIUM_LOG_LEVEL`, formato del error y casos límite.
-      - `02-code-design.md`: core/config como único I/O de core.
-      - `03-errors-logging.md`: `level` y `LOG_LEVELS`.
-      - ADR-0022:32: nota de que v0-12 resolvió `ATIUM_LOG_LEVEL`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` sale con 0 con Node 22: 714 tests y 99.65 % de cobertura en core. `src/config` cubre el 100 % de las líneas; quedan dos ramas inalcanzables en `issues.ts`.
-    - Prueba de punta a punta con el build CJS: un `.ts` con `storgae` da `Did you mean "storage"?`. jiti solo se importa de forma diferida, tanto en ESM como en CJS.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor): sin bloqueantes. El usuario pidió "Arregla todo lo que puedas": se corrigieron los 4 importantes y las sugerencias 5, 6, 8, 9, 10, 11 y 12.
-    - CI del PR #33: sin revisar al cerrar la sesión.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan ("Aprueba"):
-    - Umbral de sugerencia: Levenshtein ≤ 2 en minúsculas.
-    - Más de un archivo de configuración en la raíz da error.
-    - Valor recibido: redactado y recortado a 200 bytes; los contenedores se describen por su tipo.
-    - `ATIUM_LOG_LEVEL` acepta valores exactos, y vacía cuenta como no definida.
-    - Opción `level` en el logger.
-    - jiti también para `.json`.
-    - Secciones sin esquema en el diseño: objetos abiertos.
-  - Tomadas por el agente al implementar o al corregir la revisión:
-    - Una ruta explícita con extensión no soportada da `CONFIG_INVALID`.
-    - Con un flag de nivel, `ATIUM_LOG_LEVEL` no se lee.
-    - `--config ""` da error.
-    - Las claves y las rutas también se redactan.
-    - Formato del hint con varias claves.
-    - El nivel del logger no tiene clave en el archivo, porque el esquema no la define.
-  - Todas quedaron escritas en `18-cli-config.md` §26.3. No hay ADR nuevo.
-  - El conflicto "I/O solo en los bordes" frente a ADR-0017 se resolvió a favor del ADR, actualizando `02-code-design.md`.
-  - Sin changeset porque `@atium/core` es `private`; solo consta aquí y en el PR.
-- **Problemas:**
-  - Sin aplicar, porque el diseño no da el valor: tope de líneas del mensaje de `CONFIG_INVALID`. Hoy se listan todos los issues, y §26.3 lo dice. Hay que preguntar N al usuario si se quiere un tope.
-  - Abierto para la fase de cuarentena: `quarantine.auto` no tiene default y nadie ha definido qué significa omitirla.
-  - `paths.test.ts` sigue con su helper `thrownBy` propio. No se tocó porque es un test existente fuera del alcance; podría usar `thrownAtiumError`.
-  - El PR #33 tiene unas 1.970 líneas, frente a las 400 de `08-git-workflow.md`: 852 son tests, 208 documentación y unas 900 código, sobre todo TSDoc. Está explicado en el PR.
-  - Sin cambios desde sesiones anteriores:
-    - `audit` falla por `shell-quote` y `source-map-js`; el bump se puede hacer desde el 2026-10-14T14:08Z.
-    - Hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
-    - `CLAUDE.md` dice que el repositorio no tiene código.
-    - Contradicción sobre changesets entre `11-code-review.md:70` y el DoD.
-  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
-- **Siguiente paso:**
-  1. Revisar el CI del PR #33 (`gh pr checks 33`) y corregir lo que falle, salvo `audit`, que es el problema conocido.
-  2. Cuando el PR #33 esté mergeado: `/task` con el siguiente issue Pendiente de V0. El CLI (v0-17) debe traducir `--quiet` y `--verbose` a `flags.logLevel` y crear el logger con `createRedactor(config.redact)` y `level: logLevel`.
-  3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js`. Antes, preguntar al usuario la rama y el issue.
