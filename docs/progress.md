@@ -42,7 +42,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
     - `pnpm verify` en verde antes y después del merge con `main`: core 953 tests, cli 220, sqlite 61 y demo 15.
     - `/review` con code-reviewer, duplication-auditor, docs-checker y design-auditor, sin bloqueantes. Se corrigieron los 4 importantes y las 9 sugerencias.
     - Una segunda pasada de code-reviewer sobre las correcciones no dio bloqueantes ni importantes.
-- **En curso:** nada. Esta entrada no está commiteada.
+- **En curso:** nada.
 - **Decisiones:**
   - **Aprobadas por el usuario en el plan ("Si"):** las tres quedaron en §22.2 y en el TSDoc.
     - Timeout de 60 000 ms y concurrencia 4.
@@ -67,6 +67,96 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - **`test-guard`:** bloqueó la división de `run-analyzers.test.ts` en dos archivos, aunque no se perdía ningún caso. El usuario lo aprobó y copió el archivo él mismo con `!`.
   - **Archivo de progreso:** esta entrada movió a `docs/progress-archive.md` la de #13 (v0-12-config).
 - **Siguiente paso:** revisar la CI del PR #87 y, cuando una persona lo mergee, retirar el worktree con `/parallel --cleanup`. Después, empezar la siguiente tarea Pendiente de V1 con `/task`. v1-32 (`lint-crossfile`) ya puede usar `runAnalyzers`.
+
+### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - `/task 48 en paralelo con #63 #61`, en el worktree `atium-48`.
+    - Rama `feat/48-eslint-plugin-skeleton`, creada desde `origin/main` en `15abdf6`.
+    - Commit `e0c0691` `feat(core): add the pure entry point and ruleDocsUrl`.
+    - Commit `e83322c` `feat(eslint-plugin): add the plugin skeleton`.
+    - Merge de `origin/main` (`e4475e3`), que trae #61 ya mergeado (PR #85). No hubo conflictos.
+    - Los dos push los hizo el usuario.
+    - PR #86 con `Closes #48`. El usuario lo mergeó (`402f6b1`, 2026-10-14T03:41Z) y el issue #48 está cerrado.
+  - **`@atium/core`:**
+    - `src/pure/index.ts`: entrada interna `@atium/core/pure`.
+      - Reexporta `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never` y `zod-issues`.
+      - Tiene su entrada en `tsup.config.ts` y el export `./pure` en `package.json`.
+      - `src/pure/index.test.ts` comprueba que cada export de `pure` existe en la raíz con el mismo valor.
+    - `src/findings/docs-url.ts`: `ruleDocsUrl(code)` = `RULE_DOCS_BASE_URL` + código en minúsculas + `.md`, sin codificar.
+      - `RULE_DOCS_BASE_URL` está en un bloque al final de `defaults.ts`.
+      - Se exporta desde la raíz y desde `pure`.
+    - `samples.test-support.ts` usa `ruleDocsUrl("E2E001")` en lugar de `atium.dev`.
+  - **`packages/eslint-plugin`** (`@atium/eslint-plugin`, privado):
+    - Dependencias: peer `eslint ^9.0.0` y `typescript >=4.8.4 <6.1.0`, este último igual que `@typescript-eslint/utils`.
+    - El build es tsup en ESM y CJS, con `cjsInterop: true` y `splitting: true` para que `require()` devuelva el objeto del plugin.
+    - `src/settings.ts`: `readSettings(context.settings)`.
+      - Zod con `strictObject`.
+      - `framework` es `"playwright" | "cypress"` y opcional; `undefined` cuenta como ausente.
+      - Cada problema sale con su ruta completa (`settings.atium.<clave>`), también cada clave desconocida.
+      - Un valor inválido lanza `AtiumError("CONFIG_INVALID")` con un hint que lista las claves válidas.
+    - `src/defaults.ts`: `SETTINGS_DEFAULTS` = `pageObjectDirs: []`, `assertFunctionNames: []`, `i18n: false`.
+    - `src/create-rule.ts`: `createRule`, con `ESLintUtils.RuleCreator`.
+      - Fija `meta.docs.url = ruleDocsUrl(meta.docs.code)`.
+      - `AtiumRuleDocs` exige `code`.
+    - `src/plugin.ts`: `createPlugin(rules)` y `plugin`, con `{ meta: { name, version }, rules, configs: {} }`.
+      - Las reglas se exponen como `Rule.RuleModule` de ESLint mediante `toEslintRule`, el único cast `as unknown as`, documentado.
+      - `src/index.ts` hace `export default plugin`, con `eslint-disable-next-line no-restricted-syntax` y su motivo.
+    - `src/rules/index.ts`: `rules = {}`.
+    - `src/rules/rule-docs.test.ts` comprueba en cada regla:
+      - que tiene página en `docs/rules/<código>.md`, con el nombre de archivo sacado de la URL;
+      - que la página tiene las 5 secciones;
+      - que `meta.docs.url` y `meta.messages` son correctos.
+      El comprobador se prueba con reglas ficticias.
+    - `test/rule-tester.ts`: `createRuleTester(settings)`, sobre `@typescript-eslint/rule-tester` y conectado a Vitest.
+    - README en inglés.
+  - **Raíz y docs:**
+    - `.dependency-cruiser.cjs`:
+      - regla `core-pure-has-no-io`, con `reachable`, que excluye los `.test.ts`;
+      - regla `eslint-plugin-only-core-pure`, cuyos tests pueden usar `@atium/core/testing`;
+      - la constante `TEST_FILE`, que también usa ahora `no-test-code-in-src`.
+    - `docs/rules/_template.md`: tabla con nombre, severidad, categoría, confianza, `Source` y presets, más las 5 secciones en inglés.
+    - Diseño actualizado:
+      - `03-linter.md` §11.1: defaults y validación;
+      - `16-repository-structure.md`: `core/src/pure/`, el subárbol de `eslint-plugin/` y la plantilla;
+      - `17-tech-stack.md`: `@typescript-eslint/rule-tester` y `RuleCreator`;
+      - ADR-0023 §1 y `02-code-design.md`: `zod-issues` en `pure`;
+      - README de core.
+  - **Verificado:**
+    - `pnpm verify` en verde después del merge con `main` (Node 22): core 912 tests, eslint-plugin 25 (100 % de cobertura), cli 220, sqlite 61 y demo 15.
+    - `pnpm pkg:check` en verde: 8 de 8 tareas, con publint y attw.
+    - Las dos reglas de dependency-cruiser fallan con imports temporales de `node:fs`, `stderr-logger`, `config/` y la raíz de `@atium/core`. Esos imports ya se quitaron.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor):
+      - Se descartó un bloqueante: el export de `ruleDocsUrl` en la raíz es un añadido y v1-37 lo necesita.
+      - Se corrigieron el importante (16-repository-structure) y las sugerencias 1 a 8 y 10.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan** ("si"):
+    - los defaults de `settings.atium`;
+    - el esquema estricto;
+    - `describeIssues` en `pure`, con ADR-0023 enmendado;
+    - `export default plugin`;
+    - reutilizar `CONFIG_INVALID`.
+  - **Tomadas por mí tras "Corrige todo lo que puedas"**, escritas en 03-linter.md §11.1:
+    - `framework: undefined` cuenta como ausente;
+    - las claves desconocidas salen cada una con su ruta;
+    - `ruleDocsUrl` sin `encodeURIComponent`, como en §11.9.
+  - **Solo en el código, en los comentarios de `plugin.ts` y `tsup.config.ts`, y en este PR:**
+    - usar `@typescript-eslint/rule-tester` en lugar del `RuleTester` de ESLint (también en 17-tech-stack);
+    - el cast en el borde hacia `Rule.RuleModule`;
+    - `cjsInterop` + `splitting`.
+  - **Sin escribir en ningún documento:** `readSettings` no tiene caché. Cada regla validará en cada archivo; si cuesta, se medirá en las tareas de reglas.
+- **Problemas:**
+  - **CI del PR #86:** estaba `pending` al mergear y no se comprobó. `audit` sigue en rojo en `main`, por `shell-quote` y `source-map-js` (v1-01).
+  - **Umbral de cobertura del plugin:** está en 90 % y `04-testing.md` pide al menos 85 %. Sigue ligado a la decisión abierta sobre el umbral de cli.
+  - **`settings.atium` inválido:** no se detecta hasta que exista una regla que llame a `readSettings`, desde v1-09.
+  - **`@atium/core/pure`:** reexporta símbolos que todavía nadie consume; está previsto en ADR-0023.
+- **Siguiente paso:**
+  1. `/parallel --cleanup` desde el repo principal, para retirar el worktree `atium-48` (PR #86 y el PR de esta entrada mergeados).
+  2. `git fetch origin` y `/task` con el siguiente issue de V1 cuyas dependencias estén cerradas. v1-09 (`@atium/eslint-plugin/syntax`) ya está desbloqueado.
+     - Al crear `src/syntax/`, añadir en `.dependency-cruiser.cjs` la regla de ADR-0023: `syntax` no importa las reglas ni ESLint en runtime.
+     - Exportar `./syntax` en `package.json` y en `tsup.config.ts`.
 
 ### 2026-10-13 — #61 v1-21-playwright-demo
 
@@ -640,73 +730,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Revisar con `gh pr checks 35` que `verify` pasa en ubuntu y windows. En Windows hay que fijarse en `rename` y en los tests omitidos de `/dev/fd` y del modo.
   2. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
   3. Cuando una persona mergee el PR #35, ejecutar `/task 16` (v0-15-storage-contract, que depende de v0-14). Usar `readRunFile` y `readRunFileEntries` desde el fake o la suite de contrato si hace falta, e ignorar `.tmp-*` al listar.
-
-### 2026-10-12 — #14 v0-13-ci-context
-
-- **Hecho:**
-  - Rama `feat/14-ci-context`, creada desde `origin/main` en `1b417ec`. El push lo hizo el usuario con `! git push`. PR #34 abierto con `Closes #14`, sin mergear.
-  - Commit `acd4e72` `docs(repo): add handoff entry for #13`: el handoff de #13 que estaba sin commitear.
-  - Commit `c643c8a` `feat(core): detect the git and CI context of a run`, en `packages/core/src/`:
-    - `ci/detect-run-context.ts`: `detectRunContext({ env, cwd, git, logger })` devuelve `{ git, ci }`, validados con los subesquemas de `RunSchema`.
-      - Proveedor: primero `detectKnownProvider`; si no hay ninguno y `CI` está definida, `detectWithEnvCi`; si no, `local`.
-      - Se aplican los overrides `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH`.
-      - Git solo se consulta si no hay commit en el entorno, y `dirty` solo en local.
-      - Un valor que no cabe en el `Run` da `MODEL_INVALID`.
-    - `ci/providers.ts`: reglas propias de GitHub, GitLab, Jenkins, CircleCI y Azure, detectados por `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI` y `BUILD_BUILDURI`. También `CiDetection` y `unknownCiDetection`.
-    - `ci/github-event.ts`: `readGitHubPullRequest`. Abre el payload una sola vez, mide su tamaño con el mismo descriptor (tope `GITHUB_EVENT_MAX_BYTES`), lo parsea y lo valida con Zod.
-      - Ilegible, demasiado grande, JSON inválido o `pull_request` inválido: aviso en el logger y se devuelve `undefined`.
-      - Si es JSON inválido, solo se registra el nombre del error.
-    - `ci/env-ci-fallback.ts`: `detectWithEnvCi`, con import diferido de env-ci y resultado validado con Zod. En un PR, `prBranch` es la rama y `branch` la base. La opción `envCi` es inyectable para tests.
-    - `ci/env-ci.d.ts`: declaración del módulo `env-ci`, que no trae tipos. El resultado se tipa como `unknown`.
-    - `ci/git-client.ts`: interfaz `GitClient` (`headCommit`, `currentBranch`, `isDirty`) y `createGitClient({ cwd, env? })` sobre simple-git, con import diferido.
-      - Errores, todos `GIT_UNAVAILABLE` con hint propio: binario ausente (`ENOENT`), no es un repositorio o no hay commits, o una variable bloqueada por la guarda de simple-git. Esto último solo pasa si se pasa `env` explícito.
-    - `ci/env.ts`: `envPositiveInt` y `toPositiveInt`, que solo aceptan decimales sin ceros a la izquierda y enteros seguros.
-    - `env.ts`, nuevo: `EnvVars`, `nonEmpty` y `envValue`, la regla "vacía = no definida". También la usa `config/resolve-config.ts`, donde `ConfigEnv` pasa a ser un alias de `EnvVars`.
-    - `defaults.ts`: `GITHUB_EVENT_MAX_BYTES = 10 MiB`.
-    - `testing/fake-git-client.ts`: `FakeGitClient` (`FakeGitState`, `GitQuery`, `new FakeGitClient("unavailable")`), exportado en `@atium/core/testing`.
-    - Nuevos exports en `index.ts`: `detectRunContext`, `DetectRunContextOptions`, `RunContext`, `EnvVars`, `createGitClient`, `CreateGitClientOptions` y `GitClient`.
-    - Dependencias nuevas de core, con versión exacta: `simple-git` 4.0.2 y `env-ci` 11.2.0. env-ci es solo ESM y depende de `execa` 8.
-    - Docs:
-      - `02-data-model.md` §10.1, nueva: reglas de detección y casos límite.
-      - `02-code-design.md`: `ci/git-client.ts`, `ci/github-event.ts` y `ci/env-ci-fallback.ts` son bordes de I/O de core.
-      - `18-cli-config.md:141`: quién lee `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` sale con 0 con Node 22: 769 tests, 100 % de líneas en `src/ci` y `src/env.ts`.
-    - Tests: uno por proveedor; PR y push de GitHub con payload; payload en el tope y por encima; overrides; `dirty`; Git ausente. Además, `createGitClient` contra git real en repositorios temporales.
-    - `/review` con code-reviewer, duplication-auditor, docs-checker y security-reviewer. Se corrigió el bloqueante (TSDoc de campos), los importantes 2 a 5 y las sugerencias 8, 9 y 10.
-    - CI del PR #34: `verify` pasa en ubuntu, macOS y Windows con Node 22 y 24. `audit` falla, por el problema ya conocido.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan ("Si"):
-    - env-ci solo como respaldo cuando `CI` está definida, porque no coincide con la tabla de §10 y ejecuta `git` por su cuenta.
-    - En CI, `dirty` es `false` y no se consulta git.
-    - `dirty` incluye archivos sin seguimiento (`git status --porcelain`).
-    - En local, `ci` es `{ provider: "local" }` sin `runId`.
-    - GitLab: `CI_PIPELINE_ID` va a `runId` y `CI_JOB_ID` a `jobId`. Jenkins: `BUILD_TAG` va a `runId`.
-    - Un payload ilegible se registra como aviso, sin fallar.
-    - Con `pull_request_target`, `commitSha` sigue siendo `GITHUB_SHA`.
-  - Tomadas por el agente al implementar:
-    - `baseBranch` desde las variables estándar de cada proveedor.
-    - Rama de PR en Jenkins (`CHANGE_BRANCH`) y en Azure (`SYSTEM_PULLREQUEST_SOURCEBRANCH`).
-    - `MODEL_INVALID` para valores fuera de tope.
-    - `logger` obligatorio en `detectRunContext`.
-    - Con `ATIUM_COMMIT_SHA` en local, no se consulta git.
-  - Tomada por el agente con permiso del usuario ("haz lo que consideres"): tope de 10 MiB para el payload del evento.
-  - Todas quedaron escritas en `02-data-model.md` §10.1 y en `defaults.ts`. No hay ADR nuevo.
-  - Sin changeset porque `@atium/core` es `private`.
-- **Problemas:**
-  - Sugerencias de la revisión sin aplicar:
-    - Sacar `prNumber` de `GITHUB_REF` (`refs/pull/<n>/merge`) cuando no hay payload. Es una regla de diseño nueva.
-    - Redactar el stderr de git en los mensajes de `GIT_UNAVAILABLE`. Hoy el riesgo es bajo porque solo hay comandos locales.
-  - Se descartó saltarse env-ci cuando están los dos overrides, porque se perderían el proveedor y el `runId`.
-  - El PR #34 tiene unas 1.880 líneas: 846 de tests, 185 de docs y 139 del lockfile. Está explicado en el PR.
-  - Sin cambios desde sesiones anteriores:
-    - `audit` falla por `shell-quote`, `source-map-js` y `esbuild`; el bump se puede hacer desde el 2026-10-14T14:08Z.
-    - Hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
-    - `CLAUDE.md` dice que el repositorio no tiene código.
-    - Contradicción sobre changesets entre `11-code-review.md:70` y el DoD.
-    - Tope de líneas de `CONFIG_INVALID` sin definir.
-    - Significado de omitir `quarantine.auto` sin definir.
-  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
-- **Siguiente paso:** commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea, como se hizo con #12 y #13. Cuando una persona mergee el PR #34, empezar la siguiente tarea con `/task` (el issue Pendiente más antiguo del milestone V0; previsiblemente #15, v0-14-run-files).
