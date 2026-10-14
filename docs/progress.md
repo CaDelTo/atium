@@ -8,6 +8,66 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #63 v1-23-analyzer-pipeline
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - Rama `feat/63-analyzer-pipeline`, creada desde `origin/main` en `15abdf6`, en el worktree `atium-63`. Se trabajó en paralelo con #48 y #61.
+    - Commit `a0690ee` `feat(core): add the analyzer interface and orchestrator`.
+    - Commit `032924b`: merge de `origin/main` después de #85 (#61) y #86 (#48).
+      - Hubo un solo conflicto, en `packages/core/src/defaults.ts`, entre bloques añadidos al final. Se conservaron los dos: primero `RULE_DOCS_BASE_URL`, luego `ANALYZER_TIMEOUT_MS` y `ANALYZER_CONCURRENCY`.
+    - El push lo hizo el usuario.
+    - PR #87 abierto con `Closes #63`. Sin mergear; al cerrar la sesión, la CI estaba en curso.
+  - **Código en `packages/core`:**
+    - `src/pipeline/analyzer.ts`: `Analyzer<C>`, `AnalysisContext<C>`, `Capability`/`CAPABILITIES`, `AnalyzerKind`/`ANALYZER_KINDS` y `ResolvedProject` (solo `root`).
+      - `analyze` usa sintaxis de método a propósito: su parámetro es bivariante y así un `Analyzer<C>` cabe en `readonly Analyzer[]`.
+    - `src/pipeline/run-analyzers.ts`: `runAnalyzers(analyzers, context)`, con los tipos `RunAnalyzersContext`, `AnalysisResult`, `SkippedAnalyzer` y `SkipReason`. `SkipReason` es una unión: `missing-capabilities`, `duplicate-id`, `invalid-config`, `timeout`, `failed`, `aborted`.
+      - El timer y el listener de abort se arman antes de validar la config. La validación cuenta dentro del timeout.
+      - No usa `failOpen`, porque su fallback fijo y su aviso incondicional no encajan con el timeout. El motivo está en un comentario sobre `runOne`.
+    - `src/scheduler.ts`: `Scheduler` y `systemScheduler`.
+    - `src/testing/manual-scheduler.ts`: `ManualScheduler`, con `advance(ms)`, `elapsed` y `pending`.
+    - `defaults.ts`: `ANALYZER_TIMEOUT_MS = 60_000` y `ANALYZER_CONCURRENCY = 4`.
+    - Dependencia `p-limit` 7.3.3. Es solo ESM, igual que `env-ci`.
+    - Exports añadidos en `src/index.ts` y `src/testing/index.ts`.
+  - **Tests:**
+    - `pipeline/run-analyzers.test.ts`: selección, capacidades, config, ids duplicados, Findings inválidos y `RangeError`.
+    - `pipeline/run-analyzers.resilience.test.ts`: timeout, fail-open, cancelación (incluida la que ocurre mientras se valida la config), concurrencia, y un test property-based de que el orden de terminación no cambia la salida.
+    - `pipeline/run-analyzers.cleanup.test.ts`: liberación del hueco tras un timeout, resultados tardíos ignorados y retirada de los listeners.
+    - Fakes en `pipeline/fakes.test-support.ts`.
+  - **Documentación:**
+    - `docs/design/14-architecture.md` §22.2: subsección "Implementación" y tabla "Valores del orquestador".
+    - `docs/design/01-requirements.md` §8: el "aviso" por capacidades que faltan es la lista de omitidos que muestra el comando.
+    - `packages/core/README.md`.
+  - **Verificado:**
+    - `pnpm verify` en verde antes y después del merge con `main`: core 953 tests, cli 220, sqlite 61 y demo 15.
+    - `/review` con code-reviewer, duplication-auditor, docs-checker y design-auditor, sin bloqueantes. Se corrigieron los 4 importantes y las 9 sugerencias.
+    - Una segunda pasada de code-reviewer sobre las correcciones no dio bloqueantes ni importantes.
+- **En curso:** nada. Esta entrada no está commiteada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan ("Si"):** las tres quedaron en §22.2 y en el TSDoc.
+    - Timeout de 60 000 ms y concurrencia 4.
+    - Un Finding inválido descarta solo ese Finding, con un aviso `MODEL_INVALID` por analizador.
+    - Una config de analizador inválida omite el analizador con aviso y `CONFIG_INVALID`.
+  - **Elegida por el usuario en el review (opción B):** el orquestador no avisa cuando faltan capacidades. El aviso es la lista `skipped` que mostrará el CLI. Escrito en §22.2 y en 01-requirements §8.
+  - **Tomadas por mí:**
+    - `ResolvedProject` solo con `root`. El plan decía `{ root, frameworks }`, pero `FrameworkName` incluye `junit` y `ctrf`, que son formatos de reporte. `git`, `currentRun`, los frameworks y CODEOWNERS los añaden las tareas que los definan. Escrito en §22.2.
+    - Un `Scheduler` nuevo en lugar de ampliar `Clock`.
+    - El tope de `timeoutMs` es 2^31 - 1, el máximo de un timer de Node.
+    - Al vencer el timeout se libera el hueco de p-limit aunque el analizador siga trabajando.
+    - Las dos últimas están escritas en §22.2 y en el TSDoc.
+  - **Sin escribir en ningún lado:** el PR supera la guía de 400 líneas de 08-git-workflow (unas 1 700, de ellas unas 1 060 de tests). Se dejó en un solo PR, como los PRs de features anteriores, y se explica en la descripción de #87.
+- **Problemas y dudas abiertas:**
+  - **Tamaño de los PRs:** conviene que el usuario decida si la guía de 400 líneas sigue vigente para las features (08-git-workflow.md, "Pull requests") o si se ajusta.
+  - **Atribución de Findings:** `Finding.analyzer` no se compara con `analyzer.id`, así que un plugin puede atribuir Findings a otro analizador. Falta decidirlo; no está escrito en ninguna tarea.
+  - **Omitidos del CLI:** ningún `SkipReason` sirve para que el CLI reporte un `lint-crossfile` sin índice (§22.2). Habrá que ampliar la unión, que es API pública, o que el CLI use su propio tipo. Afecta a v1-32 y v1-37.
+  - **Aviso en el CLI:** el CLI tendrá que mostrar `skipped` con su motivo, que es el aviso de 01-requirements §8.
+  - **Límites conocidos, ya documentados en §22.2:**
+    - el timeout no interrumpe bloqueos síncronos;
+    - los avisos propios de cada analizador salen cuando los emite.
+  - **`test-guard`:** bloqueó la división de `run-analyzers.test.ts` en dos archivos, aunque no se perdía ningún caso. El usuario lo aprobó y copió el archivo él mismo con `!`.
+  - **Archivo de progreso:** esta entrada movió a `docs/progress-archive.md` la de #13 (v0-12-config).
+- **Siguiente paso:** revisar la CI del PR #87 y, cuando una persona lo mergee, retirar el worktree con `/parallel --cleanup`. Después, empezar la siguiente tarea Pendiente de V1 con `/task`. v1-32 (`lint-crossfile`) ya puede usar `runAnalyzers`.
+
 ### 2026-10-13 — #61 v1-21-playwright-demo
 
 - **Hecho:**
@@ -650,78 +710,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
     - Significado de omitir `quarantine.auto` sin definir.
   - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
 - **Siguiente paso:** commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea, como se hizo con #12 y #13. Cuando una persona mergee el PR #34, empezar la siguiente tarea con `/task` (el issue Pendiente más antiguo del milestone V0; previsiblemente #15, v0-14-run-files).
-
-### 2026-10-12 — #13 v0-12-config
-
-- **Hecho:**
-  - Rama `feat/13-config`, creada desde `origin/main` en `f714562`. El push lo hizo el usuario; la sesión tiene `git push` denegado. PR #33 abierto con `Closes #13`, sin mergear.
-  - Commits pendientes del handoff de #12: `d26e55a` `docs(adr): accept ADR-0022` y `c34b49e` `docs(repo): add handoff entry for #12`.
-  - Commit `b88a2b6` `feat(core): load and validate the config with precedence`, en `packages/core/src/`:
-    - `config/schema.ts`: `AtiumConfigSchema`, `AtiumConfig`, `AtiumConfigInput`, `QUARANTINE_MODES` (`run-and-ignore`, `skip`) y `defineConfig`, que devuelve lo mismo que recibe pero con tipos.
-      - Estrictos: el nivel superior, `quarantine` (`mode`, `auto`) y `redact` (el `RedactConfigSchema` existente).
-      - Abiertos: `storage`, `network`, `gate`, cada `analyzers.<nombre>` y `llm` salvo `enabled`.
-      - `adapters` y `plugins` son listas de strings no vacíos.
-      - Defaults: `quarantine.mode` y `llm.enabled` mediante `.default`; `quarantine`, `redact` y `llm` mediante `.prefault({})`.
-    - `config/config-file.ts`: es el único I/O de core.
-      - `findConfigFile`: la ruta explícita se resuelve contra `cwd`, se comprueba primero la extensión y luego que exista y sea archivo. Si no hay ruta explícita, se busca entre los 5 nombres de `cwd`. Más de uno da `CONFIG_INVALID`; un error de `stat` distinto de ENOENT/ENOTDIR da `CONFIG_NOT_FOUND`.
-      - `loadConfigFile`: `await import("jiti")` con `moduleCache: false` y `fsCache: false`. Usa `.default` del módulo; jiti también lo da para `.json`.
-    - `config/resolve-config.ts`: `explicitConfigFile` (`--config` > `ATIUM_CONFIG`; una variable vacía cuenta como no definida) y `resolveConfig`, que es puro (nivel: flag > `ATIUM_LOG_LEVEL` > `info`; luego valida el archivo).
-    - `config/load-config.ts`: `loadConfig({ cwd, env, flags })` devuelve `{ config, logLevel, configPath }`. El archivo se muestra en los mensajes relativo a `cwd`, entre comillas.
-    - `config/issues.ts`: `configInvalidError`.
-      - Una línea por issue: `"ruta" must be a/an <tipo> (received …)`, o el mensaje de Zod para el resto de códigos.
-      - El hint cubre todas las claves desconocidas: sugerencia para las que la tienen y "Remove … or use a key valid …" para las demás.
-      - Recorre el esquema (optional, default, prefault, readonly, record, array) para saber qué claves son válidas en cada objeto.
-    - `config/suggest.ts`: `suggestKey` (fastest-levenshtein, comparación en minúsculas, distancia ≤ 2, en empate gana la primera) y `didYouMean`.
-    - `config/quote-received.ts`: `createReceivedQuoter`, que redacta con los patrones por defecto y luego cita con `quoteForMessage`.
-    - `quote.ts`: `quoteForMessage` (sale de `paths.ts`) y `quoteList`.
-    - `logger.ts`: `LOG_LEVELS`.
-    - `stderr-logger.ts`: opción `level`, por defecto `info`. `debug` se activa con `level: "debug"`, con `verbose` o con `DEBUG`, sea cual sea el nivel.
-    - `defaults.ts`: `CONFIG_FILE_NAMES`, `CONFIG_SUGGESTION_MAX_DISTANCE = 2`, `DEFAULT_LOG_LEVEL = "info"`, `QUARANTINE_DEFAULTS` y `LLM_DEFAULTS`.
-    - `testing/thrown-error.ts`: `thrownAtiumError` y `rejectedAtiumError`, exportados en `@atium/core/testing`.
-    - Dependencias nuevas de core, con versión exacta: `jiti` 2.7.0 y `fastest-levenshtein` 1.0.16.
-    - Docs:
-      - `18-cli-config.md` §26.3: búsqueda, carga, esquema, tabla de precedencia de V0, `ATIUM_LOG_LEVEL`, formato del error y casos límite.
-      - `02-code-design.md`: core/config como único I/O de core.
-      - `03-errors-logging.md`: `level` y `LOG_LEVELS`.
-      - ADR-0022:32: nota de que v0-12 resolvió `ATIUM_LOG_LEVEL`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` sale con 0 con Node 22: 714 tests y 99.65 % de cobertura en core. `src/config` cubre el 100 % de las líneas; quedan dos ramas inalcanzables en `issues.ts`.
-    - Prueba de punta a punta con el build CJS: un `.ts` con `storgae` da `Did you mean "storage"?`. jiti solo se importa de forma diferida, tanto en ESM como en CJS.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor): sin bloqueantes. El usuario pidió "Arregla todo lo que puedas": se corrigieron los 4 importantes y las sugerencias 5, 6, 8, 9, 10, 11 y 12.
-    - CI del PR #33: sin revisar al cerrar la sesión.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan ("Aprueba"):
-    - Umbral de sugerencia: Levenshtein ≤ 2 en minúsculas.
-    - Más de un archivo de configuración en la raíz da error.
-    - Valor recibido: redactado y recortado a 200 bytes; los contenedores se describen por su tipo.
-    - `ATIUM_LOG_LEVEL` acepta valores exactos, y vacía cuenta como no definida.
-    - Opción `level` en el logger.
-    - jiti también para `.json`.
-    - Secciones sin esquema en el diseño: objetos abiertos.
-  - Tomadas por el agente al implementar o al corregir la revisión:
-    - Una ruta explícita con extensión no soportada da `CONFIG_INVALID`.
-    - Con un flag de nivel, `ATIUM_LOG_LEVEL` no se lee.
-    - `--config ""` da error.
-    - Las claves y las rutas también se redactan.
-    - Formato del hint con varias claves.
-    - El nivel del logger no tiene clave en el archivo, porque el esquema no la define.
-  - Todas quedaron escritas en `18-cli-config.md` §26.3. No hay ADR nuevo.
-  - El conflicto "I/O solo en los bordes" frente a ADR-0017 se resolvió a favor del ADR, actualizando `02-code-design.md`.
-  - Sin changeset porque `@atium/core` es `private`; solo consta aquí y en el PR.
-- **Problemas:**
-  - Sin aplicar, porque el diseño no da el valor: tope de líneas del mensaje de `CONFIG_INVALID`. Hoy se listan todos los issues, y §26.3 lo dice. Hay que preguntar N al usuario si se quiere un tope.
-  - Abierto para la fase de cuarentena: `quarantine.auto` no tiene default y nadie ha definido qué significa omitirla.
-  - `paths.test.ts` sigue con su helper `thrownBy` propio. No se tocó porque es un test existente fuera del alcance; podría usar `thrownAtiumError`.
-  - El PR #33 tiene unas 1.970 líneas, frente a las 400 de `08-git-workflow.md`: 852 son tests, 208 documentación y unas 900 código, sobre todo TSDoc. Está explicado en el PR.
-  - Sin cambios desde sesiones anteriores:
-    - `audit` falla por `shell-quote` y `source-map-js`; el bump se puede hacer desde el 2026-10-14T14:08Z.
-    - Hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
-    - `CLAUDE.md` dice que el repositorio no tiene código.
-    - Contradicción sobre changesets entre `11-code-review.md:70` y el DoD.
-  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
-- **Siguiente paso:**
-  1. Revisar el CI del PR #33 (`gh pr checks 33`) y corregir lo que falle, salvo `audit`, que es el problema conocido.
-  2. Cuando el PR #33 esté mergeado: `/task` con el siguiente issue Pendiente de V0. El CLI (v0-17) debe traducir `--quiet` y `--verbose` a `flags.logLevel` y crear el logger con `createRedactor(config.redact)` y `level: logLevel`.
-  3. A partir del 2026-10-14T14:08Z, el bump de `shell-quote` y `source-map-js`. Antes, preguntar al usuario la rama y el issue.
