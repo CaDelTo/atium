@@ -39,10 +39,13 @@ Configuración inicial; se ajusta al crear el repositorio en V0.
     "dupes": "jscpd packages",
     "pkg:check": "turbo run pkg:check",
     "bench": "turbo run bench",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm deps:check && pnpm unused && pnpm dupes && pnpm test"
+    "test:claude": "node --test .claude/scripts/push-branch.test.mjs",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm deps:check && pnpm unused && pnpm dupes && pnpm test && pnpm test:claude"
   }
 }
 ```
+
+`test:claude` prueba los scripts de `.claude/scripts/` con el runner de Node (`node --test`): no forman parte de ningún paquete, y `.claude/` está fuera de ESLint y knip. `node:test` no tiene `it.each`, así que las tablas de casos se recorren con un `for` que genera un `it` por fila, fuera del cuerpo de los tests.
 
 El `test` de cada paquete ya es `vitest run --coverage`, con los umbrales de cobertura, así que `test:coverage` es un alias de `test`: pasarle `-- --coverage` repetía la opción y Vitest fallaba (`Expected a single value for option "--coverage"`).
 

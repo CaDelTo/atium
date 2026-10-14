@@ -160,10 +160,10 @@ No se ejecuta `pnpm verify` en un hook: es lento y se ejecuta explícitamente co
 ## Permisos
 
 `.claude/settings.json` define:
-- **Permitido sin preguntar:** comandos de verificación y lectura de git.
-- **Prohibido:** `git push`, publicar paquetes, leer `.env`, editar `fixtures/` (se generan con `pnpm fixtures:generate`), y editar `.claude/settings.json` o `.claude/hooks/` (para que el agente no pueda desactivar sus propios controles; esos archivos los cambia una persona).
+- **Permitido sin preguntar:** comandos de verificación, lectura de git y gh, y el script de push `node .claude/scripts/push-branch.mjs`.
+- **Prohibido:** `git push` (el agente solo empuja con el script), publicar paquetes, leer `.env`, editar `fixtures/` (se generan con `pnpm fixtures:generate`), cerrar issues, mergear o cerrar PRs, y editar `.claude/settings.json`, `.claude/hooks/` o `.claude/scripts/` (para que el agente no pueda desactivar sus propios controles; esos archivos los cambia una persona).
 
-Todo lo demás pide confirmación.
+Todo lo demás pide confirmación. Los permisos se comparan por prefijo del comando y no cubren todas las variantes de un comando: por eso el push pasa por un script que valida la rama y construye el refspec, y la garantía final es el ruleset de `main` en GitHub ([08-git-workflow.md](08-git-workflow.md#ramas)). Ningún permiso aísla la ejecución: el agente ejecuta código del repositorio (tests, scripts de `package.json`, hooks) con las credenciales de la persona.
 
 ## GitHub (`gh`)
 
@@ -172,7 +172,7 @@ El agente usa `gh` para leer y escribir issues y PRs del repo. El formato de los
 - **Lectura:** `gh issue view`, `gh issue list`, `gh label list`, `gh pr view`, `gh pr list`, `gh pr checks`.
 - **Escritura (pide confirmación):** `gh issue create`, `gh issue edit`, `gh issue comment`, `gh label create`, `gh pr create`.
 - **`gh api`:** solo para crear el milestone de una fase (`/plan-phase`, `issue-writer`). No se deniega en los permisos porque `/plan-phase` lo necesita; el límite lo imponen los prompts.
-- **Nunca:** cerrar, borrar o transferir issues, mergear o cerrar PRs, ni hacer `git push`. Lo hace una persona.
+- **Nunca:** cerrar, borrar o transferir issues, mergear o cerrar PRs, ni hacer push fuera de `.claude/scripts/push-branch.mjs`. Mergear y cerrar lo hace una persona.
 - Los cuerpos largos se pasan con `--body-file` desde un directorio temporal fuera del repo.
 
 ## Auditorías periódicas

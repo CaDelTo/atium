@@ -90,7 +90,9 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
   `docs/tasks/<archivo>`).
 - Cada tarea va en una rama `<tipo>/<n>-<nombre>` y su PR incluye `Closes #<n>`
   (formato en docs/engineering/08-git-workflow.md, sección "Issues").
-- Nunca cierres issues ni mergees PRs: lo hace una persona.
+- Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
+  ramas de tarea y solo con `node .claude/scripts/push-branch.mjs <rama>`
+  (ADR-0025).
 - Antes de escribir código en una tarea no trivial, presenta un plan breve
   (archivos a tocar, enfoque, tests) y espera aprobación.
 - Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
