@@ -18,7 +18,7 @@ red, gaps de cobertura y priorización.
   Issues (un issue por tarea, un milestone por fase). La siguiente tarea es el
   issue abierto más antiguo del milestone actual (el milestone abierto de la
   fase más baja) cuyas dependencias estén cerradas o Hechas y que no tenga rama,
-  PR ni worktree.
+  PR, worktree ni la etiqueta `loop:blocked`.
 - Al empezar cada sesión, lee la entrada más reciente de docs/progress.md.
 
 # Documentación
@@ -97,11 +97,14 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
   plan → `plan-reviewer` → aprobación → [TDD] → implementación → `test-writer`
   → `/verify` → `/review` → `/deliver` → `/handoff`.
 - Antes de escribir código, presenta el plan con el veredicto de `plan-reviewer`
-  y espera aprobación.
+  y espera aprobación. Solo en `/dev-loop` aprueba `plan-reviewer`; lo que
+  requiera una decisión humana se detiene igualmente.
 - Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
   fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
 - Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
   `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
+- Para entregar tareas sin intervención, una tras otra: `/loop /dev-loop`
+  (docs/engineering/12-ai-workflow.md, "Loop de desarrollo").
 - TDD cuando la tarea lo permite (docs/engineering/04-testing.md, "TDD"):
   `spec-tester` escribe los tests `AC-n` antes de la implementación y no se
   tocan después. Si no, los tests se escriben junto con el código.

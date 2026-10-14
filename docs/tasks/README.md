@@ -50,6 +50,7 @@ El estado se consulta en GitHub Issues, no en este archivo. Cada fase tiene un m
 | Pendiente | Abierto, sin rama, PR ni worktree, con todas sus dependencias cerradas o Hechas |
 | En curso | Abierto, con rama, PR o worktree `atium-<n>` (creado por `/parallel`) |
 | Bloqueada | Abierto, sin rama, PR ni worktree, con alguna dependencia abierta |
+| Necesita una persona | Abierto, con la etiqueta `loop:blocked` y la pregunta en un comentario (prioridad sobre los demás estados abiertos) |
 | Hecha | Cerrado |
 
 La siguiente tarea es el issue abierto más antiguo del milestone actual cuyas dependencias estén cerradas o Hechas y que no tenga rama, PR ni worktree. Para hacer varias a la vez, `/parallel`. El PR de cada tarea incluye `Closes #<n>`; solo una persona cierra issues y mergea PRs.

@@ -52,6 +52,7 @@ Los subagentes no ven la conversación principal: cada invocación debe incluir 
 |---|---|
 | `/task <n\|archivo> [en paralelo con #M …]` | Lee el issue (número) o el archivo de `docs/tasks/`, comprueba que nadie más la tiene en curso, reúne contexto con `explorer`, presenta el plan con el veredicto de `plan-reviewer` y espera aprobación; después sigue el [pipeline de entrega](#pipeline-de-entrega). Con `en paralelo con #M` aplica las reglas de "Trabajo en paralelo" |
 | `/deliver` | Puerta final: `delivery-auditor`; si aprueba, push de la rama, PR en borrador con `Closes #N` y resumen en el issue |
+| `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes uno tras otro con el pipeline de entrega, aprobando planes con `plan-reviewer`. Se lanza con `/loop /dev-loop` (ver [Loop de desarrollo](#loop-de-desarrollo)) |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |
 | `/review [ref]` | Revisión en paralelo con los agentes de revisión contra `ref` (por defecto `origin/main`); consolida un solo reporte |
 | `/audit` | Auditoría de todo el repo y propuesta de tareas |
@@ -66,7 +67,7 @@ Los subagentes no ven la conversación principal: cada invocación debe incluir 
 inicio de sesión → leer la última entrada de docs/progress.md
    ▼
 siguiente tarea → issue abierto más antiguo del milestone actual
-                  con las dependencias cerradas o Hechas y sin rama, PR ni worktree
+                  con las dependencias cerradas o Hechas y sin rama, PR, worktree ni loop:blocked
    ▼
 /task 25   (o /task docs/tasks/v1-04-hard-wait-rule.md)
    │  gh issue view → explorer reúne contexto → plan → plan-reviewer → aprobación (una persona)
@@ -88,7 +89,7 @@ Cada tarea pasa por estos pasos ([ADR-0025](../adr/0025-pipeline-entrega-loop-au
 
 1. **Plan:** archivos, enfoque, riesgos, la decisión `TDD: sí/no` ([04-testing.md](04-testing.md#tdd)) y el mapa `AC-n → archivo → test previsto` para cada criterio de aceptación del issue.
 2. **Puerta 0, `plan-reviewer`:** `CAMBIOS` → se corrige el plan y se vuelve a pasar (máx. 2 rondas). `REQUIERE PERSONA` → la tarea se detiene.
-3. **Aprobación:** una persona, después de ver el plan y el veredicto. El plan se comenta en el issue bajo `## Plan aprobado`, indicando quién lo aprobó, y el issue recibe la etiqueta `plan:approved`.
+3. **Aprobación:** en `/task`, una persona, después de ver el plan y el veredicto; en `/dev-loop`, el `APROBADO` de `plan-reviewer`. El plan se comenta en el issue bajo `## Plan aprobado`, indicando quién lo aprobó, y el issue recibe la etiqueta `plan:approved`.
 4. **Rama** `<tipo>/<n>-<nombre>` desde `origin/main` y comentario "Tarea iniciada" en el issue.
 5. **Especificación (solo con TDD):**
    1. Stubs de las firmas públicas del plan, con TSDoc, que lanzan `new Error("not implemented")`.
@@ -101,7 +102,43 @@ Cada tarea pasa por estos pasos ([ADR-0025](../adr/0025-pipeline-entrega-loop-au
 9. **Puerta 2, `/review`:** bloqueantes e importantes corregidos o justificados por escrito, y una segunda pasada de `code-reviewer` sobre las correcciones (máx. 2 rondas).
 10. **Puerta 3, `/deliver`:** `delivery-auditor`; un `RECHAZADO` vuelve a la puerta 1 (máx. 2 rondas). Si aprueba: push, PR en borrador y resumen en el issue. Con la CI en verde, el PR pasa a listo para revisión. Después, `/handoff` añade al PR la entrada de `docs/progress.md` en un commit que solo toca ese archivo (y el archivo histórico); no se vuelve a auditar.
 
-La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o hace falta una decisión humana: un valor que el diseño no define, un ADR, un cambio de API pública o de esquema, una dependencia fuera de `17-tech-stack.md`, una decisión abierta de `CLAUDE.md`, un bloqueo de `test-guard`, un test existente que parece incorrecto o un desacuerdo sobre un test `AC-n`. El agente se detiene y pregunta.
+La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o hace falta una decisión humana: un valor que el diseño no define, un ADR, un cambio de API pública o de esquema, una dependencia fuera de `17-tech-stack.md`, una decisión abierta de `CLAUDE.md`, un bloqueo de `test-guard`, un test existente que parece incorrecto o un desacuerdo sobre un test `AC-n`. En `/task` el agente pregunta; en `/dev-loop` el issue recibe `loop:blocked` con la pregunta concreta y el trabajo queda en su rama local, sin push.
+
+## Loop de desarrollo
+
+`/dev-loop` entrega tareas sin intervención humana, una tras otra, con el pipeline de entrega ([ADR-0025](../adr/0025-pipeline-entrega-loop-autonomo.md)). La persona revisa y mergea los PRs. El detalle de cada vuelta está en `.claude/commands/dev-loop.md`.
+
+**Preparación (una vez, la hace la persona):**
+
+1. Un worktree dedicado, para no tocar el checkout de la persona ni sus sesiones: `git worktree add --detach ../atium-loop origin/main` y `pnpm -C ../atium-loop install`.
+2. Un token fine-grained solo para el loop, limitado a este repositorio, con **Contents**, **Issues** y **Pull requests** en lectura y escritura, y **sin** Administration, Workflows ni Secrets. Así el loop no puede modificar el ruleset, la CI ni los secretos aunque lo intente. Guárdalo en el llavero de macOS: `security add-generic-password -s atium-loop -a "$USER" -w`.
+3. Lanzamiento desde el worktree, con los permisos propios del loop (`.claude/loop-settings.json`, que se suman a los del proyecto):
+
+   ```bash
+   cd ../atium-loop && ATIUM_LOOP=1 GH_TOKEN="$(security find-generic-password -s atium-loop -w)" claude --settings .claude/loop-settings.json "/loop /dev-loop V1"
+   ```
+
+   `gh` y el script de push usan `GH_TOKEN`; con `ATIUM_LOOP=1`, el script se niega a empujar sin él. `loop-settings.json` permite los comandos del pipeline (para que el loop no se quede esperando una confirmación), activa `acceptEdits` y deniega `gh api`, los comandos de git que destruyen trabajo o cambian la configuración, y la edición de `.claude/`, `CLAUDE.md`, `.github/` y los archivos de dependencias y hooks de la raíz.
+
+**Funcionamiento:**
+
+- Prioridades en cada vuelta: mantener sus PRs (comentarios de la persona, checks rojos, rama desactualizada, pasar a listo), retomar issues desbloqueados y, por último, empezar el siguiente issue Pendiente.
+- No toma issues con `loop:blocked`, la tarea de aceptación de la fase ni tareas que cambien `.claude/`, `.github/`, `CLAUDE.md` o dependencias (`plan-reviewer` las marca como `REQUIERE PERSONA`).
+- **Límites:** `--max-tasks` (tareas entregadas por ejecución, 3), `--max-open-prs` (PRs del loop sin mergear, 4), `--max-failures` (tareas seguidas que agotan sus intentos, 2; una pregunta a la persona no cuenta), `--max-idle` (vueltas seguidas sin cambios, 8), más los límites de cada puerta del pipeline y de intentos por PR. No hay límite de hora.
+- **Solo atiende a la persona dueña del repositorio:** los comentarios de cualquier otro autor se ignoran. Los suyos empiezan por `🤖 dev-loop:`, porque usa la misma cuenta. Las peticiones de cambio se dejan como comentarios del PR; los comentarios en línea de una revisión no los lee.
+- **Desbloquear un issue:** responder la pregunta en un comentario del issue y quitar la etiqueta `loop:blocked`.
+- **Estado:** vive en GitHub (etiquetas, ramas, PRs, comentarios) y en el registro `.atium-loop/` del worktree, así que sobrevive a la compactación del contexto y a reinicios. Los contadores del registro son un freno, no un control de seguridad.
+- **Al terminar** abre un PR con la entrada de `docs/progress.md` que resume la ejecución.
+- `--dry-run` describe lo que haría sin escribir nada.
+
+**Garantías:** el ruleset de `main`, el token acotado y el script de push son las barreras técnicas. Los permisos por prefijo, los prompts y los agentes revisores son ayudas: reducen errores, pero no sustituyen la revisión humana de cada PR, sobre todo en un repositorio público.
+
+**Riesgos aceptados:**
+
+- El loop escribe código y ejecuta tests, así que puede ejecutar código arbitrario en la máquina (por ejemplo, con `pnpm --filter <paquete> exec`). Ningún permiso lo impide. Lo que limita el daño es el token acotado: lo que el loop puede leer o tocar en GitHub es lo que ese token permite. Para aislarlo de verdad, hay que ejecutarlo en una máquina virtual o con un usuario del sistema aparte.
+- Los permisos por prefijo no ven las opciones que van al final de un comando: `git commit -m x --no-verify` o `gh issue edit N --remove-label loop:blocked` no se pueden denegar. Los hooks locales son una ayuda; la CI y el ruleset son la verificación real.
+- `gh` acepta `--body-file` con cualquier ruta y `--repo`. La regla de secretos de `/deliver` es un control del prompt, no técnico.
+- El loop y la persona usan la misma cuenta de GitHub: la marca `🤖 dev-loop:` y el autor del issue distinguen los mensajes, pero no lo que haga el token.
 
 ## Trabajo en paralelo
 
@@ -190,6 +227,7 @@ El agente usa `gh` para leer y escribir issues y PRs del repo. El formato de los
 - **Escritura (pide confirmación):** `gh issue create`, `gh issue edit`, `gh issue comment`, `gh label create`, `gh pr create`, `gh pr ready`, `gh pr edit`, `gh pr comment`.
 - **`gh api`:** solo para crear el milestone de una fase (`/plan-phase`, `issue-writer`). No se deniega en los permisos porque `/plan-phase` lo necesita; el límite lo imponen los prompts.
 - **Nunca:** cerrar, borrar o transferir issues, mergear o cerrar PRs, ni hacer push fuera de `.claude/scripts/push-branch.mjs`. Mergear y cerrar lo hace una persona.
+- `/dev-loop` no usa `gh api` y lo tiene denegado en `.claude/loop-settings.json`.
 - Los cuerpos largos se pasan con `--body-file` desde un directorio temporal fuera del repo.
 
 ## Auditorías periódicas
