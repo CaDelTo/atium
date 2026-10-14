@@ -33,4 +33,4 @@
 | Sistemas operativos | Linux, macOS, Windows | Rutas normalizadas a formato POSIX relativo a la raíz del repo |
 | Módulos | ESM primero | Adapters y reporters publicados también en CJS por compatibilidad con configs existentes |
 
-Cada analizador declara qué datos requiere. Si el adapter no los provee (por ejemplo, red con ingesta JUnit), el analizador se omite con un aviso en vez de fallar.
+Cada analizador declara qué datos requiere. Si el adapter no los provee (por ejemplo, red con ingesta JUnit), el analizador se omite con un aviso en vez de fallar. El aviso es la lista de analizadores omitidos, con su motivo, que muestra el comando; el orquestador no registra uno propio ([14-architecture.md §22.2](14-architecture.md#222-interfaz-de-analizador)).

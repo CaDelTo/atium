@@ -18,6 +18,7 @@ export { FakeLogger } from "./fake-logger.js";
 export type { LogEntry } from "./fake-logger.js";
 export { fixedClock } from "./fixed-clock.js";
 export { InMemoryStorage } from "./in-memory-storage.js";
+export { ManualScheduler } from "./manual-scheduler.js";
 export { aRun } from "./run-builder.js";
 export type { RunBuilder } from "./run-builder.js";
 export { aTestCase } from "./test-case-builder.js";

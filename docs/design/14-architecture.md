@@ -48,7 +48,7 @@ interface AnalysisContext<C> {
   project: ResolvedProject;            // raíz, frameworks detectados, CODEOWNERS
   storage?: StorageReader;            // solo si la capacidad "history" está disponible
   git?: GitContext;                    // diff, renombres, commits
-  currentRun?: LogicalRun;
+  currentRun?: LogicalRun;             // git y currentRun: pendientes, ver "Implementación"
   logger: Logger;
   signal: AbortSignal;                 // cancelación y timeouts
 }
@@ -64,6 +64,29 @@ Datos de entrada ([ADR-0023](../adr/0023-arquitectura-linter.md)):
 
 - `storage` solo está presente cuando la capacidad `history` está disponible. Un analizador que la necesita la declara en `requires`; si no está disponible, el orquestador lo omite con el motivo y nunca lo ejecuta sin `storage`.
 - El índice de la suite (§11.4) no viaja en el `AnalysisContext`, porque `core` no conoce su forma. El CLI construye el índice (I/O en el borde) y crea el analizador con él: `createLintCrossfileAnalyzer({ index })`. Si el índice no se puede construir, el CLI no registra el analizador y lo reporta como omitido con el motivo.
+
+Implementación (`runAnalyzers` en `packages/core/src/pipeline`):
+
+- `ResolvedProject` solo tiene `root` por ahora. Los frameworks detectados y CODEOWNERS los añaden las tareas que los resuelven. Lo mismo vale para `git` (`GitContext`) y `currentRun` (`LogicalRun`): son campos opcionales del contexto que se añaden con la tarea que defina cada tipo.
+- Orden de comprobaciones:
+  1. Un analizador con el mismo `id` que uno anterior se omite con aviso (`duplicate-id`).
+  2. Si faltan capacidades de `requires`, se omite sin aviso del orquestador (`missing-capabilities`, con la lista de las que faltan). El comando muestra la lista de omitidos con su motivo: ese es el aviso de [01-requirements.md §8](01-requirements.md#8-compatibilidad). `history` está disponible exactamente cuando se pasa `storage`, aunque un llamador la incluya en las capacidades.
+  3. La sección `analyzers.<id>` de la config se valida con `configSchema`, ya dentro del timeout del analizador. Si falta, se valida `{}`, para que el esquema ponga los defaults. Si no es válida, se omite con aviso y `CONFIG_INVALID` (`invalid-config`). Si el esquema lanza en vez de devolver issues, se omite como `failed`.
+- Concurrencia y timeout:
+  - Los analizadores que pasan las comprobaciones se ejecutan con `p-limit`, como máximo `ANALYZER_CONCURRENCY` iniciados a la vez. Al vencer el timeout o cancelarse el análisis, su hueco se libera aunque el analizador ignore su `signal` y siga trabajando; si no, un analizador colgado bloquearía la cola.
+  - Cada uno tiene `ANALYZER_TIMEOUT_MS` desde que empieza, validación de la config incluida. Al excederlo, su `signal` se aborta con un `AtiumError` `ANALYZER_TIMEOUT` y se omite con aviso (`timeout`). Lo que devuelva después, o el error con que rechace, se ignora sin aviso. El timeout no interrumpe un bloqueo síncrono del hilo.
+  - Ambos valores se pueden sobrescribir (`timeoutMs`, `concurrency`); un valor que no es un entero positivo, o un `timeoutMs` mayor que 2^31 - 1 (el máximo de un timer), lanza `RangeError`.
+- Fail-open: un analizador que lanza, o que devuelve algo que no es un array, se omite con aviso (`failed`).
+- Cancelación: si se aborta la señal del orquestador, los analizadores en curso o pendientes, incluidos los que validan su config, se omiten sin aviso (`aborted`).
+- Findings inválidos: se descarta solo el Finding que no cumple `FindingSchema` y se conservan los válidos del mismo analizador. Se emite un aviso por analizador, con el número de descartados y los problemas del primero (`MODEL_INVALID`).
+- Determinismo: los Findings se ordenan con `compareFindings`. Los omitidos y los avisos del orquestador siguen el orden de entrada de los analizadores, no el orden en que terminan. Los avisos que registra cada analizador con su `logger` salen cuando los emite.
+
+Valores del orquestador (`packages/core/src/defaults.ts`):
+
+| Valor | Default | Motivo |
+|---|---|---|
+| `ANALYZER_TIMEOUT_MS` | 60 000 ms | Margen amplio para un analizador sobre una suite grande. Un analizador colgado no bloquea el comando más de un minuto |
+| `ANALYZER_CONCURRENCY` | 4 | Los analizadores comparten un hilo, así que el límite acota I/O concurrente, no CPU. Es el extremo bajo del rango de I/O de red de [05-performance.md](../engineering/05-performance.md) (4 a 8) |
 
 ### 22.3 Finding unificado
 
