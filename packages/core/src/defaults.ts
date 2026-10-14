@@ -248,3 +248,21 @@ export const ZOD_ISSUES_SHOWN = 5;
  * Source: 03-linter.md §11.9 and ADR-0023, section 4.
  */
 export const RULE_DOCS_BASE_URL = "https://github.com/CaDelTo/atium/blob/main/docs/rules/";
+
+/**
+ * Time each analyzer has to return its findings, in milliseconds. Past it, the
+ * orchestrator aborts the analyzer's signal and skips it with a warning and
+ * `ANALYZER_TIMEOUT`.
+ *
+ * Source: 14-architecture.md §22.2, "Valores del orquestador".
+ */
+export const ANALYZER_TIMEOUT_MS = 60_000;
+
+/**
+ * Analyzers the orchestrator runs at the same time. They share one thread, so
+ * the limit bounds concurrent I/O, not CPU; 4 is the low end of the range
+ * 05-performance.md gives for network I/O (4 to 8).
+ *
+ * Source: 14-architecture.md §22.2, "Valores del orquestador".
+ */
+export const ANALYZER_CONCURRENCY = 4;

@@ -8,7 +8,8 @@ Today it provides `assertNever`, the error types (`AtiumError`, `ERROR_CODES`,
 `ErrorCode`, `isAtiumError`), `Result` with `ok` and `err`, the `Logger`
 interface with `LogLevel`, `LOG_LEVELS` and `LogContext`, the stderr logger
 `createStderrLogger` with `StderrLoggerOptions` and `LogStream`, the `Clock`
-interface with `systemClock`, and the `failOpen` helper with its
+interface with `systemClock`, the `Scheduler` interface with
+`systemScheduler`, and the `failOpen` helper with its
 `FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
 `TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
 `NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
@@ -36,7 +37,11 @@ For storage backends it provides the `StorageReader`, `StorageWriter` and
 `ParsedListRunsQuery`. For error messages, `describeIssues` summarizes Zod
 issues and `quoteForMessage` quotes a path or a value from data, escaped and
 capped.
-The analysis pipeline and error fingerprinting are planned.
+For the analysis pipeline it provides the `Analyzer` interface with
+`AnalysisContext`, `ResolvedProject`, `Capability` (`CAPABILITIES`) and
+`AnalyzerKind` (`ANALYZER_KINDS`), and the orchestrator `runAnalyzers` with
+`RunAnalyzersContext`, `AnalysisResult`, `SkippedAnalyzer` and `SkipReason`.
+Error fingerprinting is planned.
 
 ## Installation
 
@@ -366,6 +371,34 @@ if (!parsed.success) {
 }
 ```
 
+`runAnalyzers` runs the analyzers whose `requires` are available, 4 at a time
+by default (`concurrency`), each with a timeout of 60 s by default
+(`timeoutMs`) that also covers validating its config section. A `timeoutMs`
+or `concurrency` that is not a positive integer, or a `timeoutMs` above
+2^31 - 1, throws `RangeError`. It is fail-open: an analyzer that throws, times
+out (`ANALYZER_TIMEOUT`), has an invalid config section (`CONFIG_INVALID`) or
+a `configSchema` that throws is skipped with a warning and does not affect the
+others. A slot is freed when an analyzer times out, even if it ignores its
+signal. Analyzers whose `requires` are missing are skipped without a warning:
+the caller shows `skipped`. Invalid findings are discarded with a warning, and
+the rest come back sorted with `compareFindings`, whatever order the analyzers
+finish in. The `history` capability is available exactly when `storage` is
+given:
+
+```ts
+import { runAnalyzers, systemScheduler } from "@atium/core";
+
+const { findings, skipped } = await runAnalyzers([flaky, triage], {
+  configs: config.analyzers,
+  project: { root: repoRoot },
+  storage,
+  capabilities: ["git"],
+  logger,
+  scheduler: systemScheduler,
+});
+const notRun = skipped.map(({ analyzer, reason }) => `${analyzer} (${reason.kind})`);
+```
+
 The JSON Schema of a run is published in `schemas/run.v1.json`. After changing
 the model, regenerate it with `pnpm --filter @atium/core schema:export`.
 
@@ -382,6 +415,8 @@ Atium's own tests:
   and records every query as a `GitQuery`; `new FakeGitClient("unavailable")`
   throws `GIT_UNAVAILABLE`.
 - `fixedClock(ms)`: a `Clock` that always returns the same time.
+- `ManualScheduler`: a `Scheduler` whose time only moves with `advance(ms)`,
+  which runs the callbacks that become due.
 - `InMemoryStorage`: a `Storage` that keeps runs in memory. Every backend,
   this one included, passes the contract suite in
   `test-contracts/storage.contract.ts`.

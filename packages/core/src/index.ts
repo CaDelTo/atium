@@ -57,6 +57,21 @@ export { TEST_OUTCOMES, TestResultSchema } from "./model/test-result.js";
 export type { TestOutcome, TestResult } from "./model/test-result.js";
 export { truncateUtf8 } from "./model/text.js";
 export { resolveInside, toPosixRelative } from "./paths.js";
+export { ANALYZER_KINDS, CAPABILITIES } from "./pipeline/analyzer.js";
+export type {
+  AnalysisContext,
+  Analyzer,
+  AnalyzerKind,
+  Capability,
+  ResolvedProject,
+} from "./pipeline/analyzer.js";
+export { runAnalyzers } from "./pipeline/run-analyzers.js";
+export type {
+  AnalysisResult,
+  RunAnalyzersContext,
+  SkippedAnalyzer,
+  SkipReason,
+} from "./pipeline/run-analyzers.js";
 export { quoteForMessage } from "./quote.js";
 export { REDACT_PATTERN_IDS } from "./redact/patterns.js";
 export type { RedactPatternId } from "./redact/patterns.js";
@@ -64,6 +79,8 @@ export { createRedactor, RedactConfigSchema } from "./redact/redactor.js";
 export type { HeaderValue, RedactConfig, Redactor } from "./redact/redactor.js";
 export { err, ok } from "./result.js";
 export type { Result } from "./result.js";
+export { systemScheduler } from "./scheduler.js";
+export type { Scheduler } from "./scheduler.js";
 export { createStderrLogger } from "./stderr-logger.js";
 export type { LogStream, StderrLoggerOptions } from "./stderr-logger.js";
 export { parseListRunsQuery } from "./storage/list-runs-query.js";

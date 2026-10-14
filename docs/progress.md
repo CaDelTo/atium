@@ -8,6 +8,66 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-13 — #63 v1-23-analyzer-pipeline
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - Rama `feat/63-analyzer-pipeline`, creada desde `origin/main` en `15abdf6`, en el worktree `atium-63`. Se trabajó en paralelo con #48 y #61.
+    - Commit `a0690ee` `feat(core): add the analyzer interface and orchestrator`.
+    - Commit `032924b`: merge de `origin/main` después de #85 (#61) y #86 (#48).
+      - Hubo un solo conflicto, en `packages/core/src/defaults.ts`, entre bloques añadidos al final. Se conservaron los dos: primero `RULE_DOCS_BASE_URL`, luego `ANALYZER_TIMEOUT_MS` y `ANALYZER_CONCURRENCY`.
+    - El push lo hizo el usuario.
+    - PR #87 abierto con `Closes #63`. Sin mergear; al cerrar la sesión, la CI estaba en curso.
+  - **Código en `packages/core`:**
+    - `src/pipeline/analyzer.ts`: `Analyzer<C>`, `AnalysisContext<C>`, `Capability`/`CAPABILITIES`, `AnalyzerKind`/`ANALYZER_KINDS` y `ResolvedProject` (solo `root`).
+      - `analyze` usa sintaxis de método a propósito: su parámetro es bivariante y así un `Analyzer<C>` cabe en `readonly Analyzer[]`.
+    - `src/pipeline/run-analyzers.ts`: `runAnalyzers(analyzers, context)`, con los tipos `RunAnalyzersContext`, `AnalysisResult`, `SkippedAnalyzer` y `SkipReason`. `SkipReason` es una unión: `missing-capabilities`, `duplicate-id`, `invalid-config`, `timeout`, `failed`, `aborted`.
+      - El timer y el listener de abort se arman antes de validar la config. La validación cuenta dentro del timeout.
+      - No usa `failOpen`, porque su fallback fijo y su aviso incondicional no encajan con el timeout. El motivo está en un comentario sobre `runOne`.
+    - `src/scheduler.ts`: `Scheduler` y `systemScheduler`.
+    - `src/testing/manual-scheduler.ts`: `ManualScheduler`, con `advance(ms)`, `elapsed` y `pending`.
+    - `defaults.ts`: `ANALYZER_TIMEOUT_MS = 60_000` y `ANALYZER_CONCURRENCY = 4`.
+    - Dependencia `p-limit` 7.3.3. Es solo ESM, igual que `env-ci`.
+    - Exports añadidos en `src/index.ts` y `src/testing/index.ts`.
+  - **Tests:**
+    - `pipeline/run-analyzers.test.ts`: selección, capacidades, config, ids duplicados, Findings inválidos y `RangeError`.
+    - `pipeline/run-analyzers.resilience.test.ts`: timeout, fail-open, cancelación (incluida la que ocurre mientras se valida la config), concurrencia, y un test property-based de que el orden de terminación no cambia la salida.
+    - `pipeline/run-analyzers.cleanup.test.ts`: liberación del hueco tras un timeout, resultados tardíos ignorados y retirada de los listeners.
+    - Fakes en `pipeline/fakes.test-support.ts`.
+  - **Documentación:**
+    - `docs/design/14-architecture.md` §22.2: subsección "Implementación" y tabla "Valores del orquestador".
+    - `docs/design/01-requirements.md` §8: el "aviso" por capacidades que faltan es la lista de omitidos que muestra el comando.
+    - `packages/core/README.md`.
+  - **Verificado:**
+    - `pnpm verify` en verde antes y después del merge con `main`: core 953 tests, cli 220, sqlite 61 y demo 15.
+    - `/review` con code-reviewer, duplication-auditor, docs-checker y design-auditor, sin bloqueantes. Se corrigieron los 4 importantes y las 9 sugerencias.
+    - Una segunda pasada de code-reviewer sobre las correcciones no dio bloqueantes ni importantes.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan ("Si"):** las tres quedaron en §22.2 y en el TSDoc.
+    - Timeout de 60 000 ms y concurrencia 4.
+    - Un Finding inválido descarta solo ese Finding, con un aviso `MODEL_INVALID` por analizador.
+    - Una config de analizador inválida omite el analizador con aviso y `CONFIG_INVALID`.
+  - **Elegida por el usuario en el review (opción B):** el orquestador no avisa cuando faltan capacidades. El aviso es la lista `skipped` que mostrará el CLI. Escrito en §22.2 y en 01-requirements §8.
+  - **Tomadas por mí:**
+    - `ResolvedProject` solo con `root`. El plan decía `{ root, frameworks }`, pero `FrameworkName` incluye `junit` y `ctrf`, que son formatos de reporte. `git`, `currentRun`, los frameworks y CODEOWNERS los añaden las tareas que los definan. Escrito en §22.2.
+    - Un `Scheduler` nuevo en lugar de ampliar `Clock`.
+    - El tope de `timeoutMs` es 2^31 - 1, el máximo de un timer de Node.
+    - Al vencer el timeout se libera el hueco de p-limit aunque el analizador siga trabajando.
+    - Las dos últimas están escritas en §22.2 y en el TSDoc.
+  - **Sin escribir en ningún lado:** el PR supera la guía de 400 líneas de 08-git-workflow (unas 1 700, de ellas unas 1 060 de tests). Se dejó en un solo PR, como los PRs de features anteriores, y se explica en la descripción de #87.
+- **Problemas y dudas abiertas:**
+  - **Tamaño de los PRs:** conviene que el usuario decida si la guía de 400 líneas sigue vigente para las features (08-git-workflow.md, "Pull requests") o si se ajusta.
+  - **Atribución de Findings:** `Finding.analyzer` no se compara con `analyzer.id`, así que un plugin puede atribuir Findings a otro analizador. Falta decidirlo; no está escrito en ninguna tarea.
+  - **Omitidos del CLI:** ningún `SkipReason` sirve para que el CLI reporte un `lint-crossfile` sin índice (§22.2). Habrá que ampliar la unión, que es API pública, o que el CLI use su propio tipo. Afecta a v1-32 y v1-37.
+  - **Aviso en el CLI:** el CLI tendrá que mostrar `skipped` con su motivo, que es el aviso de 01-requirements §8.
+  - **Límites conocidos, ya documentados en §22.2:**
+    - el timeout no interrumpe bloqueos síncronos;
+    - los avisos propios de cada analizador salen cuando los emite.
+  - **`test-guard`:** bloqueó la división de `run-analyzers.test.ts` en dos archivos, aunque no se perdía ningún caso. El usuario lo aprobó y copió el archivo él mismo con `!`.
+  - **Archivo de progreso:** esta entrada movió a `docs/progress-archive.md` la de #13 (v0-12-config).
+- **Siguiente paso:** revisar la CI del PR #87 y, cuando una persona lo mergee, retirar el worktree con `/parallel --cleanup`. Después, empezar la siguiente tarea Pendiente de V1 con `/task`. v1-32 (`lint-crossfile`) ya puede usar `runAnalyzers`.
+
 ### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
 
 - **Hecho:**
@@ -670,73 +730,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Revisar con `gh pr checks 35` que `verify` pasa en ubuntu y windows. En Windows hay que fijarse en `rename` y en los tests omitidos de `/dev/fd` y del modo.
   2. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
   3. Cuando una persona mergee el PR #35, ejecutar `/task 16` (v0-15-storage-contract, que depende de v0-14). Usar `readRunFile` y `readRunFileEntries` desde el fake o la suite de contrato si hace falta, e ignorar `.tmp-*` al listar.
-
-### 2026-10-12 — #14 v0-13-ci-context
-
-- **Hecho:**
-  - Rama `feat/14-ci-context`, creada desde `origin/main` en `1b417ec`. El push lo hizo el usuario con `! git push`. PR #34 abierto con `Closes #14`, sin mergear.
-  - Commit `acd4e72` `docs(repo): add handoff entry for #13`: el handoff de #13 que estaba sin commitear.
-  - Commit `c643c8a` `feat(core): detect the git and CI context of a run`, en `packages/core/src/`:
-    - `ci/detect-run-context.ts`: `detectRunContext({ env, cwd, git, logger })` devuelve `{ git, ci }`, validados con los subesquemas de `RunSchema`.
-      - Proveedor: primero `detectKnownProvider`; si no hay ninguno y `CI` está definida, `detectWithEnvCi`; si no, `local`.
-      - Se aplican los overrides `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH`.
-      - Git solo se consulta si no hay commit en el entorno, y `dirty` solo en local.
-      - Un valor que no cabe en el `Run` da `MODEL_INVALID`.
-    - `ci/providers.ts`: reglas propias de GitHub, GitLab, Jenkins, CircleCI y Azure, detectados por `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI` y `BUILD_BUILDURI`. También `CiDetection` y `unknownCiDetection`.
-    - `ci/github-event.ts`: `readGitHubPullRequest`. Abre el payload una sola vez, mide su tamaño con el mismo descriptor (tope `GITHUB_EVENT_MAX_BYTES`), lo parsea y lo valida con Zod.
-      - Ilegible, demasiado grande, JSON inválido o `pull_request` inválido: aviso en el logger y se devuelve `undefined`.
-      - Si es JSON inválido, solo se registra el nombre del error.
-    - `ci/env-ci-fallback.ts`: `detectWithEnvCi`, con import diferido de env-ci y resultado validado con Zod. En un PR, `prBranch` es la rama y `branch` la base. La opción `envCi` es inyectable para tests.
-    - `ci/env-ci.d.ts`: declaración del módulo `env-ci`, que no trae tipos. El resultado se tipa como `unknown`.
-    - `ci/git-client.ts`: interfaz `GitClient` (`headCommit`, `currentBranch`, `isDirty`) y `createGitClient({ cwd, env? })` sobre simple-git, con import diferido.
-      - Errores, todos `GIT_UNAVAILABLE` con hint propio: binario ausente (`ENOENT`), no es un repositorio o no hay commits, o una variable bloqueada por la guarda de simple-git. Esto último solo pasa si se pasa `env` explícito.
-    - `ci/env.ts`: `envPositiveInt` y `toPositiveInt`, que solo aceptan decimales sin ceros a la izquierda y enteros seguros.
-    - `env.ts`, nuevo: `EnvVars`, `nonEmpty` y `envValue`, la regla "vacía = no definida". También la usa `config/resolve-config.ts`, donde `ConfigEnv` pasa a ser un alias de `EnvVars`.
-    - `defaults.ts`: `GITHUB_EVENT_MAX_BYTES = 10 MiB`.
-    - `testing/fake-git-client.ts`: `FakeGitClient` (`FakeGitState`, `GitQuery`, `new FakeGitClient("unavailable")`), exportado en `@atium/core/testing`.
-    - Nuevos exports en `index.ts`: `detectRunContext`, `DetectRunContextOptions`, `RunContext`, `EnvVars`, `createGitClient`, `CreateGitClientOptions` y `GitClient`.
-    - Dependencias nuevas de core, con versión exacta: `simple-git` 4.0.2 y `env-ci` 11.2.0. env-ci es solo ESM y depende de `execa` 8.
-    - Docs:
-      - `02-data-model.md` §10.1, nueva: reglas de detección y casos límite.
-      - `02-code-design.md`: `ci/git-client.ts`, `ci/github-event.ts` y `ci/env-ci-fallback.ts` son bordes de I/O de core.
-      - `18-cli-config.md:141`: quién lee `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` sale con 0 con Node 22: 769 tests, 100 % de líneas en `src/ci` y `src/env.ts`.
-    - Tests: uno por proveedor; PR y push de GitHub con payload; payload en el tope y por encima; overrides; `dirty`; Git ausente. Además, `createGitClient` contra git real en repositorios temporales.
-    - `/review` con code-reviewer, duplication-auditor, docs-checker y security-reviewer. Se corrigió el bloqueante (TSDoc de campos), los importantes 2 a 5 y las sugerencias 8, 9 y 10.
-    - CI del PR #34: `verify` pasa en ubuntu, macOS y Windows con Node 22 y 24. `audit` falla, por el problema ya conocido.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan ("Si"):
-    - env-ci solo como respaldo cuando `CI` está definida, porque no coincide con la tabla de §10 y ejecuta `git` por su cuenta.
-    - En CI, `dirty` es `false` y no se consulta git.
-    - `dirty` incluye archivos sin seguimiento (`git status --porcelain`).
-    - En local, `ci` es `{ provider: "local" }` sin `runId`.
-    - GitLab: `CI_PIPELINE_ID` va a `runId` y `CI_JOB_ID` a `jobId`. Jenkins: `BUILD_TAG` va a `runId`.
-    - Un payload ilegible se registra como aviso, sin fallar.
-    - Con `pull_request_target`, `commitSha` sigue siendo `GITHUB_SHA`.
-  - Tomadas por el agente al implementar:
-    - `baseBranch` desde las variables estándar de cada proveedor.
-    - Rama de PR en Jenkins (`CHANGE_BRANCH`) y en Azure (`SYSTEM_PULLREQUEST_SOURCEBRANCH`).
-    - `MODEL_INVALID` para valores fuera de tope.
-    - `logger` obligatorio en `detectRunContext`.
-    - Con `ATIUM_COMMIT_SHA` en local, no se consulta git.
-  - Tomada por el agente con permiso del usuario ("haz lo que consideres"): tope de 10 MiB para el payload del evento.
-  - Todas quedaron escritas en `02-data-model.md` §10.1 y en `defaults.ts`. No hay ADR nuevo.
-  - Sin changeset porque `@atium/core` es `private`.
-- **Problemas:**
-  - Sugerencias de la revisión sin aplicar:
-    - Sacar `prNumber` de `GITHUB_REF` (`refs/pull/<n>/merge`) cuando no hay payload. Es una regla de diseño nueva.
-    - Redactar el stderr de git en los mensajes de `GIT_UNAVAILABLE`. Hoy el riesgo es bajo porque solo hay comandos locales.
-  - Se descartó saltarse env-ci cuando están los dos overrides, porque se perderían el proveedor y el `runId`.
-  - El PR #34 tiene unas 1.880 líneas: 846 de tests, 185 de docs y 139 del lockfile. Está explicado en el PR.
-  - Sin cambios desde sesiones anteriores:
-    - `audit` falla por `shell-quote`, `source-map-js` y `esbuild`; el bump se puede hacer desde el 2026-10-14T14:08Z.
-    - Hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
-    - `CLAUDE.md` dice que el repositorio no tiene código.
-    - Contradicción sobre changesets entre `11-code-review.md:70` y el DoD.
-    - Tope de líneas de `CONFIG_INVALID` sin definir.
-    - Significado de omitir `quarantine.auto` sin definir.
-  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
-- **Siguiente paso:** commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea, como se hizo con #12 y #13. Cuando una persona mergee el PR #34, empezar la siguiente tarea con `/task` (el issue Pendiente más antiguo del milestone V0; previsiblemente #15, v0-14-run-files).
