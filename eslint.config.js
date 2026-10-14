@@ -4,7 +4,17 @@ import prettier from "eslint-config-prettier";
 import sonarjs from "eslint-plugin-sonarjs";
 
 export default tseslint.config(
-  { ignores: ["**/dist/**", "**/coverage/**", "fixtures/**", ".claude/**"] },
+  {
+    ignores: [
+      "**/dist/**",
+      "**/coverage/**",
+      "fixtures/**",
+      ".claude/**",
+      // Demo repos have seeded problems; only their verify/ checks are repo code.
+      "examples/*/*",
+      "!examples/*/verify/",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,

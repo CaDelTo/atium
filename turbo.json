@@ -29,6 +29,10 @@
     "@atium/cli#bench": {
       "dependsOn": ["^build", "build"],
       "cache": false
+    },
+    "@atium/example-playwright-demo#test": {
+      "dependsOn": ["^build"],
+      "outputs": []
     }
   }
 }
