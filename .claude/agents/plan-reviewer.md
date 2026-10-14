@@ -22,6 +22,8 @@ Comprueba:
 6. **Arquitectura:** capas de docs/engineering/02-code-design.md, I/O solo en los bordes, sin reimplementar algo que ya existe (búscalo con Grep).
 7. **Tamaño:** el cambio cabe en un PR de menos de 400 líneas; si no, propón cómo dividirlo.
 
+Si el plan lo va a ejecutar `/dev-loop`, también requiere una persona cualquier cambio en `.claude/`, `.github/`, `CLAUDE.md`, `package.json` de la raíz, `pnpm-lock.yaml` o dependencias de un paquete: el loop no los toca.
+
 Requiere una persona (no lo resuelvas tú) cuando el plan necesita: un valor que el diseño no define, un ADR nuevo o que contradiga uno existente, un cambio de API pública (docs/engineering/07-public-api.md) o de esquema del modelo, una dependencia fuera de docs/design/17-tech-stack.md, o una de las "Decisiones abiertas" de CLAUDE.md.
 
 Formato de respuesta:

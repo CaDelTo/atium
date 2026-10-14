@@ -39,6 +39,7 @@ Cada commit compila y pasa los tests. La única excepción es el commit de espec
   - `<tipo>` es uno de los tipos de commit (`feat`, `fix`, `chore`, `docs`…).
   - `<n>` es el número del issue.
   - En una tarea, `<nombre>` es el nombre del archivo sin el prefijo `vN-nn-`. Ejemplo: `feat/6-errors-result-failopen` para el issue #6 de `docs/tasks/v0-05-errors-result-failopen.md`.
+  - Excepción: el PR de handoff de `/dev-loop` usa la fecha en lugar del número (`docs/<AAAAMMDD>-dev-loop-handoff-<hhmm>`).
 
 ## Issues
 
@@ -85,18 +86,21 @@ Depende de #N
 | Pendiente | Abierto, sin rama, PR ni worktree, con todas sus dependencias cerradas o Hechas |
 | En curso | Abierto, con rama, PR o worktree `atium-<n>` (creado por `/parallel`) |
 | Bloqueada | Abierto, sin rama, PR ni worktree, con alguna dependencia abierta |
+| Necesita una persona | Abierto, con la etiqueta `loop:blocked` y la pregunta en un comentario. Tiene prioridad sobre los demás estados abiertos: ni `/dev-loop` ni `/parallel` lo toman |
 | Hecha | Cerrado |
 
 La siguiente tarea es el issue Pendiente más antiguo del milestone actual: abierto, con sus dependencias cerradas o Hechas y sin rama, PR ni worktree. El milestone actual es el milestone abierto de la fase más baja. Varias tareas Pendientes se pueden hacer a la vez con `/parallel` (ver "Trabajo en paralelo" en [12-ai-workflow.md](12-ai-workflow.md#trabajo-en-paralelo)).
 
 ### Quién hace qué
 
-- `/task` comenta en el issue el plan aprobado (`## Plan aprobado`) y que la tarea empezó; `/deliver` y `/handoff` comentan el resumen.
+- `/task` y `/dev-loop` comentan en el issue el plan aprobado (`## Plan aprobado`) y que la tarea empezó; `/deliver` y `/handoff` comentan el resumen.
 - Etiquetas de trabajo (las crea con `gh label create` el primer comando que las necesita):
 
   | Etiqueta | Dónde | Quién la pone | Significado |
   |---|---|---|---|
-  | `plan:approved` | Issue | `/task`, tras la aprobación de la persona | El plan comentado en el issue está aprobado |
+  | `plan:approved` | Issue | `/task`, tras la aprobación de la persona; `/dev-loop`, tras el `APROBADO` de `plan-reviewer` | El plan comentado en el issue está aprobado |
+  | `loop:blocked` | Issue | `/dev-loop`; la quita solo la persona, al responder | La tarea necesita una decisión humana |
+  | `loop` | PR | `/deliver --loop`, al crear el PR | PR del loop; cuenta para `--max-open-prs` |
 - El PR de la tarea incluye `Closes #<n>`, y el issue se cierra al mergear.
 - Solo una persona cierra issues y mergea PRs. El agente nunca cierra, borra ni transfiere issues.
 

@@ -8,7 +8,7 @@ Empieza la tarea indicada en `$ARGUMENTS`. El formato de issues y ramas está en
 1. Identifica la tarea y su issue:
    - Con un número (`#N` o `N`): `gh issue view N`. El archivo es el de `docs/tasks/` cuyo nombre empieza por el ID del prefijo `[vN-xx]` del título; búscalo en local, porque el enlace del cuerpo da 404 hasta que el archivo llega a `main`.
    - Con un archivo: lista los issues con `gh issue list --state all --limit 500 --json number,title` y busca el que empieza por el prefijo `[vN-xx]` del ID. Si no hay issue, dilo y sigue solo con el archivo.
-   - Si el issue está cerrado, o alguna dependencia sigue abierta, avisa y pregunta antes de seguir.
+   - Si el issue está cerrado, tiene la etiqueta `loop:blocked` o alguna dependencia sigue abierta, avisa y pregunta antes de seguir.
    - Comprueba que nadie más la tiene en curso: rama `*/<n>-*` local o remota (`git fetch origin` y `git branch -a --list '*/<n>-*'`), PR abierto que la cierre (`gh pr list --state open --limit 200 --json number,headRefName,body`) o un worktree `atium-<n>` distinto del directorio actual (`git worktree list`). Si hay alguno, avisa y detente; si es la rama o el worktree actual, pregunta si es la continuación de esta misma tarea antes de seguir.
    - Si `$ARGUMENTS` incluye `en paralelo con #M` (uno o más números), otra sesión trabaja a la vez en esos issues: aplica las reglas de la sección "Trabajo en paralelo" de docs/engineering/12-ai-workflow.md y lee el archivo de tarea de cada `#M` para conocer su alcance.
 2. Lee la tarea completa.

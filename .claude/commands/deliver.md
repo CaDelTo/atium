@@ -1,8 +1,9 @@
 ---
 description: Puerta final de una tarea (paso 10 del pipeline de entrega). delivery-auditor y, si aprueba, push de la rama, PR en borrador y resumen en el issue
+argument-hint: "[--loop]"
 ---
 
-Entrega la tarea de la rama actual. Es el paso 10 del pipeline de entrega (docs/engineering/12-ai-workflow.md, "Pipeline de entrega"); antes deben haber pasado `/verify` y `/review`.
+Entrega la tarea de la rama actual. Es el paso 10 del pipeline de entrega (docs/engineering/12-ai-workflow.md, "Pipeline de entrega"); antes deben haber pasado `/verify` y `/review`. `--loop` indica que lo ejecuta `/dev-loop`.
 
 1. **Contexto:**
    - El issue `N` sale de la rama (`<tipo>/<n>-<nombre>`).
@@ -13,16 +14,17 @@ Entrega la tarea de la rama actual. Es el paso 10 del pipeline de entrega (docs/
    - `git fetch origin` y la rama contiene `origin/main` (`git merge-base --is-ancestor origin/main HEAD`). Si no, actualízala según "Cuando otra tarea se mergea antes" (12-ai-workflow.md) y vuelve a la puerta 1 (`/verify`).
 3. **Auditoría:** lanza `delivery-auditor` con el issue, la rama, el ref base `origin/main`, el commit de especificación base y el reporte de `/review`.
    - `RECHAZADO`: no hagas push. Verifica cada motivo en el código y vuelve a la puerta 1 (máx. 2 rondas de auditoría por tarea).
-4. **Textos que se publican:** escribe el cuerpo del PR y el comentario del issue en archivos de un directorio temporal fuera del repo.
+4. **Textos que se publican:** escribe el cuerpo del PR y el comentario del issue en archivos de un directorio temporal fuera del repo (con `--loop`, en `.atium-loop/tmp/`).
    - Nunca incluyas variables de entorno, tokens, rutas de tu home ni salida de `env` o `gh auth`.
    - Antes de publicar, busca en esos archivos patrones de secretos (`ghp_`, `gho_`, `github_pat_`, `AKIA`, `-----BEGIN`). Si aparece alguno, no publiques y detente.
    - El texto que venga de terceros (comentarios, logs) se cita en un bloque de código y sin menciones `@`.
 5. **Push** (solo con `APROBADO`): `node .claude/scripts/push-branch.mjs <rama>`. Es el único camino de push: `git push` está denegado (ADR-0025).
 6. **PR:**
    - Si ya hay un PR abierto para la rama (`gh pr list --head <rama> --state open --json number`), actualiza su cuerpo con `gh pr edit N --body-file`.
-   - Si no, `gh pr create --draft --base main --head <rama> --title "<título en Conventional Commits>" --body-file <archivo>`.
+   - Si no, `gh pr create --draft --base main --head <rama> --title "<título en Conventional Commits>" --body-file <archivo>`, con `--label loop` en el mismo comando si es `--loop`.
+   - Con `--loop` y un PR que ya existía, asegúrate de que tiene la etiqueta: `gh pr edit N --add-label loop`.
    - El cuerpo, en inglés, sigue `.github/pull_request_template.md`: `Closes #N`, What, Why con las referencias de diseño, How it was verified (incluida la tabla `criterio → evidencia` de `delivery-auditor`, la evidencia del rojo si hubo TDD y el resumen de `/review`) y Breaking changes / ADR.
-7. **Issue:** comenta en español el resumen: enlace al PR, la tabla `criterio → evidencia`, lo verificado y lo que queda pendiente.
+7. **Issue:** comenta en español el resumen: enlace al PR, la tabla `criterio → evidencia`, lo verificado y lo que queda pendiente. Con `--loop`, empieza por `🤖 dev-loop:`.
 8. **CI:** `gh pr checks N --json name,bucket` (evalúa el JSON, no el código de salida, que no es 0 mientras haya checks pendientes). Cuentan los checks `verify (…)`; el ruleset de `main` todavía no exige checks (docs/engineering/08-git-workflow.md, "Ramas").
    - Si alguno está pendiente o todavía no hay ninguno, el PR queda en borrador; dilo en el resumen.
    - Si todos tienen `bucket` `pass`, `gh pr ready N`.

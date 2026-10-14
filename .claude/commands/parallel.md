@@ -23,6 +23,7 @@ Si `$ARGUMENTS` es `--cleanup`, salta a "Limpieza".
    - Sin rama local ni remota `*/<n>-*` (`git branch -a --list '*/<n>-*'`).
    - Sin PR abierto que lo cierre (`gh pr list --state open --limit 200 --json number,headRefName,body`, buscando `Closes #<n>` o la rama).
    - Sin worktree `atium-<n>` (`git worktree list`).
+   - Sin la etiqueta `loop:blocked`.
    - Si diste números y alguno no es válido, dilo con el motivo.
 6. Para cada candidato válido, lee su archivo en `docs/tasks/` (por el prefijo `[vN-xx]` del título): `Paquete` y `Hacer`. Deduce los módulos que toca y cuáles de los archivos compartidos de 12-ai-workflow.md va a tocar.
 7. Elige el conjunto según "Cuándo conviene" de 12-ai-workflow.md. Si diste números, respeta esos aunque sea uno solo.
