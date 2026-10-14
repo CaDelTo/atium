@@ -132,7 +132,6 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 
 - Nombre definitivo del proyecto
 - Backend de storage remoto recomendado por defecto (S3 o rama git)
-- Licencia (MIT o Apache-2.0)
 - Idioma de los archivos para contribuidores (CONTRIBUTING, plantillas de issues,
   código de conducta). La documentación pública va en inglés (ADR-0020).
 - Versiones mínimas definitivas de Playwright, Cypress y herramientas BDD

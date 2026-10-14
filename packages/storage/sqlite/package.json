@@ -2,6 +2,7 @@
   "name": "@atium/storage-sqlite",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Local SQLite storage backend for Atium.",
   "type": "module",
   "sideEffects": false,

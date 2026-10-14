@@ -2,6 +2,7 @@
   "name": "@atium/eslint-plugin",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "ESLint rules for Playwright and Cypress test suites, from Atium.",
   "type": "module",
   "sideEffects": false,
