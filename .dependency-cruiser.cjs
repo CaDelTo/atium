@@ -1,3 +1,5 @@
+const TEST_FILE = "\\.test\\.ts$";
+
 /** @type {import("dependency-cruiser").IConfiguration} */
 module.exports = {
   forbidden: [
@@ -34,14 +36,38 @@ module.exports = {
       to: { path: "^packages/(analyzers|storage|cli)/" },
     },
     {
+      // ADR-0023: the editor loads `@atium/core/pure`, so its graph never reaches
+      // configuration, CI detection, storage, the logger or Node modules with I/O.
+      name: "core-pure-has-no-io",
+      severity: "error",
+      // Its tests compare it with the root, so they may import it.
+      from: { path: "^packages/core/src/pure/", pathNot: TEST_FILE },
+      to: {
+        reachable: true,
+        path: [
+          "^packages/core/src/(config|ci|storage)/",
+          "^packages/core/src/(stderr-logger|fail-open|env)\\.ts$",
+          "^(node:)?(fs|fs/promises|child_process|net|http|https|zlib|os|worker_threads)$",
+        ],
+      },
+    },
+    {
+      // ADR-0023: the plugin imports only `@atium/core/pure` from other packages;
+      // its tests may also use `@atium/core/testing`.
+      name: "eslint-plugin-only-core-pure",
+      severity: "error",
+      from: { path: "^packages/eslint-plugin/", pathNot: TEST_FILE },
+      to: { path: "^packages/(?!eslint-plugin/)", pathNot: "^packages/core/dist/pure/" },
+    },
+    {
       name: "no-test-code-in-src",
       severity: "error",
       // Covers packages/<name>/src and nested ones such as packages/analyzers/<name>/src.
       from: {
         path: "^packages/([^/]+|(adapters|analyzers|storage|reporters)/[^/]+)/src/",
-        pathNot: "\\.test\\.ts$",
+        pathNot: TEST_FILE,
       },
-      to: { path: "\\.test\\.ts$" },
+      to: { path: TEST_FILE },
     },
   ],
   options: {

@@ -239,3 +239,12 @@ export const ENDPOINT_FAILURE_MIN_STATUS = 400;
  * Source: 15-storage.md §23.2.1.
  */
 export const ZOD_ISSUES_SHOWN = 5;
+
+/**
+ * Base URL of the rule documentation pages; `ruleDocsUrl` appends
+ * `<code in lowercase>.md`. Points at the files on GitHub until the docs site
+ * exists.
+ *
+ * Source: 03-linter.md §11.9 and ADR-0023, section 4.
+ */
+export const RULE_DOCS_BASE_URL = "https://github.com/CaDelTo/atium/blob/main/docs/rules/";

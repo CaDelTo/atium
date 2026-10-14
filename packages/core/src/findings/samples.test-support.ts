@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { ruleDocsUrl } from "./docs-url.js";
 import type { FindingSchema } from "./finding.js";
 
 // Valid `Finding` inputs for the findings tests: a minimal one with only the
@@ -31,7 +32,7 @@ export function fullFinding(): FindingInput {
       description: "Wait for the cart badge instead.",
       diff: "-await page.waitForTimeout(500);\n+await expect(badge).toBeVisible();\n",
     },
-    docsUrl: "https://atium.dev/rules/E2E001",
+    docsUrl: ruleDocsUrl("E2E001"),
     owner: "@team-checkout",
   };
 }

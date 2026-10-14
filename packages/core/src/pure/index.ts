@@ -1,0 +1,61 @@
+/**
+ * Modules of `@atium/core` without I/O, exposed as `@atium/core/pure`.
+ *
+ * The ESLint plugin runs inside the editor and imports only this entry: the
+ * root of `@atium/core` also loads configuration, CI detection and storage.
+ * dependency-cruiser checks that nothing here reaches a module with I/O.
+ * Internal to Atium's own packages: it may change without notice.
+ *
+ * Source: ADR-0023, section 1.
+ *
+ * @packageDocumentation
+ */
+export { assertNever } from "../assert-never.js";
+export { AtiumError, ERROR_CODES, isAtiumError } from "../errors.js";
+export type { ErrorCode } from "../errors.js";
+export { compareFindings } from "../findings/compare.js";
+export { ruleDocsUrl } from "../findings/docs-url.js";
+export {
+  FINDING_CATEGORIES,
+  FINDING_CONFIDENCES,
+  FINDING_SEVERITIES,
+  FINDING_SOURCES,
+  FindingFingerprintSchema,
+  FindingSchema,
+} from "../findings/finding.js";
+export type {
+  Finding,
+  FindingCategory,
+  FindingConfidence,
+  FindingFingerprint,
+  FindingSeverity,
+  FindingSource,
+} from "../findings/finding.js";
+export { fingerprintOf } from "../findings/fingerprint-of.js";
+export { computeTestId, TITLE_PATH_SEPARATOR } from "../identity.js";
+export type { TestIdentity } from "../identity.js";
+export { ATTEMPT_STATUSES, AttemptSchema } from "../model/attempt.js";
+export type { Attempt, AttemptStatus } from "../model/attempt.js";
+export { BddContextSchema } from "../model/bdd.js";
+export type { BddContext } from "../model/bdd.js";
+export { ErrorOccurrenceSchema } from "../model/error-occurrence.js";
+export type { ErrorOccurrence } from "../model/error-occurrence.js";
+export { FingerprintSchema, RunIdSchema, TestIdSchema } from "../model/ids.js";
+export type { Fingerprint, RunId, TestId } from "../model/ids.js";
+export { NetworkCallSchema, NetworkSummarySchema } from "../model/network.js";
+export type { NetworkCall, NetworkSummary } from "../model/network.js";
+export { FRAMEWORK_NAMES, RunSchema, SCHEMA_VERSION } from "../model/run.js";
+export type { FrameworkName, Run } from "../model/run.js";
+export { TestCaseSchema } from "../model/test-case.js";
+export type { TestCase } from "../model/test-case.js";
+export { TEST_OUTCOMES, TestResultSchema } from "../model/test-result.js";
+export type { TestOutcome, TestResult } from "../model/test-result.js";
+export { truncateUtf8 } from "../model/text.js";
+export { resolveInside, toPosixRelative } from "../paths.js";
+export { REDACT_PATTERN_IDS } from "../redact/patterns.js";
+export type { RedactPatternId } from "../redact/patterns.js";
+export { createRedactor, RedactConfigSchema } from "../redact/redactor.js";
+export type { HeaderValue, RedactConfig, Redactor } from "../redact/redactor.js";
+export { err, ok } from "../result.js";
+export type { Result } from "../result.js";
+export { describeIssues } from "../zod-issues.js";
