@@ -18,7 +18,7 @@ Decisiones de diseño ya tomadas. Para cambiar una, se crea un ADR nuevo que la 
 | [0012](0012-cli-commander-plugins-config.md) | Commander para el CLI; plugins declarados en la configuración | Aceptada |
 | [0013](0013-codename-nameless.md) | Codename provisional "nameless" | Reemplazada por 0016 |
 | [0014](0014-estandares-ingenieria.md) | Estándares de ingeniería aplicados por herramientas | Aceptada |
-| [0015](0015-subagentes-y-revision.md) | Subagentes por nivel de modelo y revisión automatizada | Aceptada |
+| [0015](0015-subagentes-y-revision.md) | Subagentes por nivel de modelo y revisión automatizada | Reemplazada parcialmente por 0025 (push) |
 | [0016](0016-codename-atium.md) | Codename provisional "atium" | Aceptada |
 | [0017](0017-carga-config-jiti.md) | Carga del archivo de configuración con jiti | Aceptada |
 | [0018](0018-formato-archivos-run.md) | Formato NDJSON de los archivos de run y límites de tamaño | Aceptada |
@@ -28,5 +28,6 @@ Decisiones de diseño ya tomadas. Para cambiar una, se crea un ADR nuevo que la 
 | [0022](0022-logger-reloj-en-core.md) | Logger y reloj implementados en core, y `DEBUG` leído sin el paquete debug | Aceptada |
 | [0023](0023-arquitectura-linter.md) | Arquitectura del linter: capas, nombres, catálogo, documentación, `atium lint` y contexto de los analizadores | Aceptada |
 | [0024](0024-licencia-apache-2.md) | Licencia Apache-2.0 y repositorio público | Aceptada |
+| [0025](0025-pipeline-entrega-loop-autonomo.md) | Pipeline de entrega con TDD y loop de desarrollo autónomo; push de ramas de tarea por el agente | Aceptada |
 
 Plantilla: [0000-template.md](0000-template.md)

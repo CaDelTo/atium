@@ -1,6 +1,6 @@
 # ADR-0015: Subagentes por nivel de modelo y revisión automatizada
 
-- Estado: Aceptada
+- Estado: Aceptada; la prohibición de push la reemplaza [ADR-0025](0025-pipeline-entrega-loop-autonomo.md)
 - Fecha: 2026-10-08
 - Diseño relacionado: docs/engineering/11-code-review.md, docs/engineering/12-ai-workflow.md
 

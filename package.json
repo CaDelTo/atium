@@ -19,7 +19,8 @@
     "dupes": "jscpd packages",
     "pkg:check": "turbo run pkg:check",
     "bench": "turbo run bench",
-    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm deps:check && pnpm unused && pnpm dupes && pnpm test"
+    "test:claude": "node --test .claude/scripts/push-branch.test.mjs",
+    "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm deps:check && pnpm unused && pnpm dupes && pnpm test && pnpm test:claude"
   },
   "devDependencies": {
     "@changesets/cli": "3.0.3",

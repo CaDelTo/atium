@@ -30,7 +30,11 @@ Cada commit compila y pasa los tests.
 
 ## Ramas
 
-- `main` siempre verde; sin push directo.
+- `main` siempre verde; sin push directo. Lo garantiza el ruleset `protect-main` de GitHub, sin excepciones en su bypass list (el agente usa la cuenta de la persona, así que una excepción para ella también lo sería para él):
+  - bloquea borrados y force push, y exige historial lineal;
+  - exige PR con merge por squash (0 aprobaciones: GitHub no deja aprobar un PR propio);
+  - todavía no exige checks de CI: los `verify (<os>, Node <n>)` fallan también en `main` por causas preexistentes. Cuando `main` vuelva a estar en verde se añadirán como checks requeridos, con la rama al día (y `audit` cuando deje de fallar por avisos preexistentes). Hasta entonces, la persona comprueba la CI de cada PR antes de mergear.
+- El agente solo hace push de ramas de tarea y solo con `node .claude/scripts/push-branch.mjs <rama>`, que valida el nombre y empuja exactamente `refs/heads/<rama>` ([ADR-0025](../adr/0025-pipeline-entrega-loop-autonomo.md)). `git push` sigue denegado en los permisos: así no hay forma de pasarle un refspec a `main`, `--force` o un borrado. El ruleset solo protege `main`: las ramas de tarea aceptan cualquier commit de quien tenga permiso de escritura, y por eso cada PR se revisa antes de mergear.
 - Ramas cortas: `<tipo>/<n>-<nombre>`.
   - `<tipo>` es uno de los tipos de commit (`feat`, `fix`, `chore`, `docs`…).
   - `<n>` es el número del issue.
