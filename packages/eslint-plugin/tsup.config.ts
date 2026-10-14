@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: { index: "src/index.ts" },
+  entry: { index: "src/index.ts", "syntax/index": "src/syntax/index.ts" },
   format: ["esm", "cjs"],
   dts: {
     // tsup forces `baseUrl` in its declaration build, which TypeScript 6

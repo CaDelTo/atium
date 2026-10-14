@@ -190,6 +190,7 @@ Reglas que reflejan la tabla de capas de [02-code-design.md](02-code-design.md).
 - `enhancedResolveOptions` resuelve los imports entre paquetes por sus `exports`, igual que Node, es decir, hacia el `dist/` del paquete. Por eso `deps:check` construye primero, y `dist/` está en `doNotFollow` (entra al grafo como destino, no se recorre) y no en `exclude`.
 - `not-to-unresolvable` hace fallar un import que no resuelve (por ejemplo, sin `dist/`); sin ella, ese import pasaría por encima de todas las reglas de capas.
 - dependency-cruiser rechaza expresiones con cuantificadores anidados, por eso `no-test-code-in-src` enumera las carpetas con paquetes anidados.
+- `exclude` saca `node_modules` del grafo, así que dependency-cruiser no ve los imports de paquetes npm. Una regla que prohíbe un paquete npm va en `no-restricted-imports` de ESLint, como la de `packages/eslint-plugin/src/syntax/**` (ADR-0023).
 
 ```js
 // .dependency-cruiser.cjs

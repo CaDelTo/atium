@@ -22,7 +22,7 @@ Si un analizador necesita algo de otro, ese algo pertenece a `core` (por ejemplo
 Entradas compartidas del linter ([ADR-0023](../adr/0023-arquitectura-linter.md)):
 
 - `@atium/core/pure` reexporta solo módulos de `core` sin I/O (`model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never`, `zod-issues`). dependency-cruiser comprueba que su grafo no llega a módulos con I/O.
-- `@atium/eslint-plugin/syntax` contiene la lógica E2E que comparten las reglas, `suite-index` y `analyzers/lint-crossfile`: framework, estructura de tests, `titlePath`, acciones, assertions, locators y selectores. Son funciones puras sobre el AST de typescript-eslint; `src/syntax/` no importa las reglas ni ESLint en runtime.
+- `@atium/eslint-plugin/syntax` contiene la lógica E2E que comparten las reglas, `suite-index` y `analyzers/lint-crossfile`: framework, estructura de tests, `titlePath`, acciones, assertions, locators, esperas fijas y, desde v1-10, selectores. Son funciones puras sobre el AST de typescript-eslint; `src/syntax/` no importa las reglas ni ESLint en runtime. Lo comprueban dos reglas: `eslint-plugin-syntax-no-rules` de dependency-cruiser, sobre el grafo de `src/syntax/`, y un `no-restricted-imports` de ESLint para `src/syntax/**`, que prohíbe importar en runtime `eslint`, `@typescript-eslint/utils`, `@typescript-eslint/parser` y `@typescript-eslint/typescript-estree`; los tipos y nombres de nodos salen de `@typescript-eslint/types`.
 - Las reglas de `.dependency-cruiser.cjs` para cada paquete de la tabla se añaden en la tarea que crea ese paquete.
 
 ## Núcleo funcional, borde imperativo
