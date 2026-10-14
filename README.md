@@ -35,4 +35,4 @@ The design documents and ADRs are currently written in Spanish.
 
 ## License
 
-Not decided yet.
+[Apache License 2.0](LICENSE).

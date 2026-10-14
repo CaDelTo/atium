@@ -2,6 +2,7 @@
   "name": "@atium/core",
   "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
   "description": "Data model, configuration, pipeline and shared building blocks for Atium.",
   "type": "module",
   "sideEffects": false,
