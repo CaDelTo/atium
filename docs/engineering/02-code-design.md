@@ -21,7 +21,7 @@ Si un analizador necesita algo de otro, ese algo pertenece a `core` (por ejemplo
 
 Entradas compartidas del linter ([ADR-0023](../adr/0023-arquitectura-linter.md)):
 
-- `@atium/core/pure` reexporta solo módulos de `core` sin I/O (`model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never`). dependency-cruiser comprueba que su grafo no llega a módulos con I/O.
+- `@atium/core/pure` reexporta solo módulos de `core` sin I/O (`model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never`, `zod-issues`). dependency-cruiser comprueba que su grafo no llega a módulos con I/O.
 - `@atium/eslint-plugin/syntax` contiene la lógica E2E que comparten las reglas, `suite-index` y `analyzers/lint-crossfile`: framework, estructura de tests, `titlePath`, acciones, assertions, locators y selectores. Son funciones puras sobre el AST de typescript-eslint; `src/syntax/` no importa las reglas ni ESLint en runtime.
 - Las reglas de `.dependency-cruiser.cjs` para cada paquete de la tabla se añaden en la tarea que crea ese paquete.
 

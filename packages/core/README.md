@@ -401,6 +401,13 @@ const run = aRun()
   .build();
 ```
 
+The `@atium/core/pure` entry point re-exports only the modules without I/O:
+the data model, findings (including `ruleDocsUrl(code)`, the URL of a rule's
+documentation page), redaction, `computeTestId`, paths, `AtiumError`,
+`Result`, `assertNever` and `describeIssues`. The ESLint plugin imports it
+instead of the root, which also loads configuration, CI detection and
+storage. It is internal like `@atium/core/testing`.
+
 The `@atium/core/test-contracts` entry point exposes that suite as
 `storageContract` to the tests of other packages. It is ESM only, because it
 imports Vitest, and internal like `@atium/core/testing`:

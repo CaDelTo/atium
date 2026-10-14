@@ -23,10 +23,18 @@ atium/
 │   │       ├── scoring/
 │   │       ├── storage/         interfaz, layout, compactación
 │   │       ├── plugins/         carga de plugins
+│   │       ├── pure/            reexporta los módulos sin I/O (`@atium/core/pure`, ADR-0023)
 │   │       └── testing/         builders y fakes (`@atium/core/testing`)
 │   │
 │   ├── cli/                     @atium/cli (bin: atium)
 │   ├── eslint-plugin/           @atium/eslint-plugin
+│   │   ├── test/                helper compartido de RuleTester
+│   │   └── src/
+│   │       ├── rules/           una regla por archivo y su registro
+│   │       ├── syntax/          lógica E2E compartida (`@atium/eslint-plugin/syntax`, ADR-0023)
+│   │       ├── create-rule.ts   fija `meta.docs.url` desde el código de la regla
+│   │       ├── settings.ts      lee y valida `settings.atium`
+│   │       └── plugin.ts        objeto del plugin para flat config
 │   ├── suite-index/             índice cross-file de la suite
 │   │
 │   ├── adapters/
@@ -64,7 +72,7 @@ atium/
 │   ├── playwright-demo/         tests con problemas deliberados, expected-findings.json y verify/; la app llega en V2
 │   └── cypress-demo/
 ├── fixtures/                    reportes reales por versión de framework, historiales sintéticos
-├── docs/                        documentación interna y futuro sitio; rules/ tiene una página por regla
+├── docs/                        documentación interna y futuro sitio; rules/ tiene una página por regla, a partir de rules/_template.md
 └── .changeset/
 ```
 

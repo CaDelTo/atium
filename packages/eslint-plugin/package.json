@@ -1,0 +1,54 @@
+{
+  "name": "@atium/eslint-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ESLint rules for Playwright and Cypress test suites, from Atium.",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "pkg:check": "publint && attw --pack . --profile node16"
+  },
+  "dependencies": {
+    "@atium/core": "workspace:*",
+    "@typescript-eslint/utils": "8.70.1",
+    "zod": "4.6.5"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": ">=4.8.4 <6.1.0"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "22.20.4",
+    "@typescript-eslint/rule-tester": "8.70.1",
+    "@vitest/coverage-v8": "5.0.2",
+    "eslint": "9.39.5",
+    "publint": "0.3.24",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.2"
+  }
+}
