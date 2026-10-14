@@ -4,6 +4,10 @@ import { defineConfig } from "vitest/config";
 // `pnpm test` still runs them per package through Turborepo.
 export default defineConfig({
   test: {
-    projects: ["packages/*/vitest.config.ts", "packages/*/*/vitest.config.ts"],
+    projects: [
+      "packages/*/vitest.config.ts",
+      "packages/*/*/vitest.config.ts",
+      "examples/*/verify/vitest.config.ts",
+    ],
   },
 });
