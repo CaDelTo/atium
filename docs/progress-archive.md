@@ -4,6 +4,93 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-12 — #15 v0-14-run-files
+
+- **Hecho:**
+  - Rama `feat/15-run-files`, creada desde `origin/main` en `d3651bd` (ya incluye el merge del PR #34). El push lo hizo el usuario con `! git push -u origin feat/15-run-files`. PR #35 abierto con `Closes #15`, sin mergear.
+  - Commit `4cd34b1` `docs(repo): add handoff entry for #14`: el handoff de #14 que estaba sin commitear.
+  - Commit `e392dc3` `feat(core): write and read run files`, en `packages/core/src/`:
+    - `storage/select.ts`: `keepFirst`, `keepLast`, `keepFirstAndLast` y `keepRanked`. Los cuatro devuelven `{ items, dropped }` con los elementos en su orden original; en `keepRanked`, un empate lo gana el índice menor.
+    - `storage/cap-run.ts`: `capTestResult`, `capRunHeader` y `bddReferenceIndex`.
+      - Quita ANSI con `util.stripVTControlCharacters` de `message`, `stack`, las muestras de consola y `pageErrors`.
+      - Aplica todos los topes de listas y de textos de ADR-0018 con `truncateUtf8` y suma los conteos `*Dropped`.
+      - No toca el `testId`.
+    - `storage/fit-line.ts`: `fitTestResultLine(result, { targetBytes?, maxBytes? })`.
+      - Aplica los pasos 1 a 5 de la garantía final de ADR-0018 y vuelve a medir tras cada uno.
+      - Si después del paso 5 la línea sigue por encima de 1 MiB, lanza un `Error` (bug).
+    - `storage/line-reader.ts`: `splitLines(chunks, limits)`. Divide sobre bytes y comprueba los límites de línea 1, de las demás líneas y del total antes de juntar la línea. Decodifica UTF-8 en modo `fatal` y emite eventos `line`, `exceeded` e `invalidUtf8`.
+    - `storage/run-file-format.ts`: `RunHeaderSchema` (privado), `RUN_FILE_SCHEMAS` (mapa versión → esquemas; hoy solo la 1), `CURRENT_RUN_FILE_SCHEMAS` y `SchemaVersionProbe`.
+    - `storage/run-file-reader.ts`:
+      - `readRunFileEntries(file)`: generador que entrega el encabezado y luego cada resultado con su número de línea.
+      - `readRunFile(file)`: devuelve el `Run` completo.
+      - `readRunFileEntriesWithin(file, limits)`: interna, para que los tests usen límites pequeños.
+      - Errores: `STORAGE_UNAVAILABLE` para E/S. `MODEL_INVALID` para gzip `Z_*`, UTF-8, JSON, esquema, límite, versión o archivo vacío.
+      - Ni el `ZodError` ni el error de `JSON.parse` se adjuntan como `cause`.
+    - `storage/run-file-writer.ts`:
+      - `writeRunFile(run, { rootDir, logger })` escribe en `<rootDir>/.atium/runs/<runId>.ndjson.gz`. `runFilePath` construye esa ruta. `writeRunFileWith(run, options, remove)` es interna y permite inyectar el borrado del temporal.
+      - Valida el encabezado antes de tocar el disco y hace streaming de gzip a `.tmp-*/` con `mkdtemp`, `flags: "wx"`, `flush` y `mode: 0o600`.
+      - Antes de publicar comprueba con `lstat` si el destino existe (si existe, `STORAGE_CONFLICT`) y luego hace `rename`.
+      - El borrado del temporal es best-effort, con `maxRetries: 3`; si falla, avisa en el `logger`.
+    - `errno.ts` (`errnoCode`) y `zod-issues.ts` (`describeIssues`: cita y recorta la ruta y el mensaje, y muestra como mucho `ZOD_ISSUES_SHOWN` problemas). Ahora los usan también `config/config-file.ts` y `ci/detect-run-context.ts`.
+    - `defaults.ts`: `RUN_FILE_READ_LIMITS` (64 KiB, 1 MiB, 256 MiB), `RUN_FILE_LINE_TARGET_BYTES` (768 KiB), `BDD_TRUNCATION_WINDOW_STEPS` (10), `RUNS_DIRECTORY` (`.atium/runs`), `ENDPOINT_FAILURE_MIN_STATUS` (400) y `ZOD_ISSUES_SHOWN` (5).
+    - Exports nuevos en `index.ts`: `writeRunFile`, `WriteRunFileOptions`, `runFilePath`, `readRunFile`, `readRunFileEntries`, `RunFileEntry` y `RunHeader`.
+    - Tests: `select`, `cap-run`, `fit-line`, `line-reader`, `run-file`, `errno` y `zod-issues`, con el soporte en `storage/samples.test-support.ts` (`trickyText`, `maxedResult`, `HEAVY_TEST_TIMEOUT_MS = 60 s`).
+    - Docs:
+      - `15-storage.md` §23.2.1, nueva: layout local, escritura atómica, casos que el ADR no fija, lectura y errores.
+      - `02-code-design.md:25`: los archivos de run son un borde de I/O de core.
+      - README de core.
+  - Verificado:
+    - `pnpm verify` sale con 0 con Node 22: 865 tests. Core tiene un 99,19 % de líneas y un 96,31 % de ramas, y todo `src/storage` supera el 92 % de ramas salvo `run-file-reader.ts` (88,9 %) y `run-file-writer.ts` (75 %); la cobertura global sigue por encima de los umbrales de 90 %. `errno.ts` y `zod-issues.ts` tienen el 100 %.
+    - Todos los criterios de aceptación del issue tienen test:
+      - Gzip bomb real de 64 MiB.
+      - Flujos infinitos que demuestran que no se lee todo.
+      - Tests property-based con semilla fija para los topes.
+      - 10 intentos al tope, y un resultado con todo por encima del tope por debajo de 768 KiB.
+    - El test de cierre del archivo usa `/dev/fd`, se omite en Windows y se comprobó que falla si se quita el cierre.
+    - `/review` con code-reviewer, duplication-auditor, docs-checker, security-reviewer (lanzado aunque las rutas no lo exigían) y design-auditor:
+      - Se corrigió el bloqueante: publicar con un enlace duro contradecía ADR-0018 ("temporal + rename").
+      - Se corrigieron los importantes 2 a 6 y, a petición del usuario ("Haz las sugerencias"), las sugerencias 7 a 11.
+    - CI del PR #35 al cerrar: `verify` en macOS (Node 22 y 24) pasa; ubuntu y windows estaban en curso; `audit` falla por el problema conocido.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan ("Si"):
+    - Las muestras de consola por encima de 5 conservan las 5 últimas.
+    - En los pasos 2 y 3 de la garantía final, `callsDropped` y `pageErrorsDropped` se eliminan junto con su lista, y `samples` queda en `[]`.
+    - Si la entrada ya trae `*Dropped`, se les suma lo descartado, y `detailTruncated` se conserva.
+    - Las claves de `statuses` que coinciden al truncarlas suman sus conteos.
+    - Los IDs con formato y las fechas no se truncan.
+    - ANSI con `stripVTControlCharacters`.
+    - Sin códigos de error nuevos.
+  - Cambiada tras `/review`, con la opción que recomendó el agente ("Corrige lo importante"): publicar con `rename` y comprobación previa en lugar del enlace duro del plan, para cumplir ADR-0018.
+  - Tomadas por el agente al implementar:
+    - Un valor justo en el límite se acepta.
+    - El `\n` no cuenta en el tamaño de una línea.
+    - Los endpoints con fallos también se ordenan entre sí por `count`.
+    - Una clave de `statuses` ≥ 400 cuenta aunque su conteo sea 0.
+    - `commitSha`, `ci.runId` y `ci.jobId` se truncan a 2 KiB como texto.
+    - `logger` obligatorio en `writeRunFile`.
+    - Permisos `0600`.
+  - Todas quedaron escritas en `15-storage.md` §23.2.1 y en `defaults.ts`, salvo el orden de los endpoints con fallos, el valor justo en el límite y la clave de `statuses` con conteo 0, que solo están en el código. Están listadas en el PR #35 para que las confirme quien revise. No hay ADR nuevo.
+  - Sin changeset porque `@atium/core` es `private`.
+- **Problemas:**
+  - El hook `test-guard` bloqueó el borrado de un test temporal (`storage/smoke.test.ts`) que creó el agente. El usuario lo aprobó y lo borró con `! rm`.
+  - El hook también da un falso positivo con cualquier comando que contenga `rm(`, incluido un `grep`.
+  - `readRunFileEntries` puede entregar resultados válidos antes de rechazar un archivo que luego supera un límite. Está documentado en el PR; `readRunFile` rechaza el archivo entero.
+  - Un `.tmp-*` puede quedar en `.atium/runs/` si el proceso muere a mitad: quien liste ese directorio (v0-15 y v0-16) debe ignorarlo.
+  - El PR #35 tiene unas 3.100 líneas, más de la mitad de tests.
+  - Sin cambios desde sesiones anteriores:
+    - `audit` falla por `shell-quote`, `source-map-js` y `esbuild`; el bump se puede hacer desde el 2026-10-14T14:08Z.
+    - Hay que usar `source ~/.nvm/nvm.sh && nvm use 22`.
+    - `CLAUDE.md` dice que el repositorio no tiene código.
+    - Contradicción sobre changesets entre `11-code-review.md:70` y el DoD.
+    - Tope de líneas de `CONFIG_INVALID` sin definir.
+    - Significado de omitir `quarantine.auto` sin definir.
+  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
+- **Siguiente paso:**
+  1. Revisar con `gh pr checks 35` que `verify` pasa en ubuntu y windows. En Windows hay que fijarse en `rename` y en los tests omitidos de `/dev/fd` y del modo.
+  2. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
+  3. Cuando una persona mergee el PR #35, ejecutar `/task 16` (v0-15-storage-contract, que depende de v0-14). Usar `readRunFile` y `readRunFileEntries` desde el fake o la suite de contrato si hace falta, e ignorar `.tmp-*` al listar.
+
 ### 2026-10-12 — #14 v0-13-ci-context
 
 - **Hecho:**
