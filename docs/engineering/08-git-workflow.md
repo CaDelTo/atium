@@ -26,7 +26,7 @@ chore(deps): update vitest
 
 Tipos: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `ci`, `chore`. Un cambio incompatible lleva `!` (`feat(core)!: ...`) y una sección `BREAKING CHANGE:` en el cuerpo.
 
-Cada commit compila y pasa los tests.
+Cada commit compila y pasa los tests. La única excepción es el commit de especificación del TDD (`test(<scope>): specify …`): compila, pero sus tests `AC-n` fallan a propósito ([04-testing.md](04-testing.md#tdd)). Como los PRs se mergean con squash, `main` nunca lo ve.
 
 ## Ramas
 
@@ -91,7 +91,12 @@ La siguiente tarea es el issue Pendiente más antiguo del milestone actual: abie
 
 ### Quién hace qué
 
-- `/task` comenta en el issue que la tarea empezó; `/handoff` comenta el resumen de cada sesión.
+- `/task` comenta en el issue el plan aprobado (`## Plan aprobado`) y que la tarea empezó; `/deliver` y `/handoff` comentan el resumen.
+- Etiquetas de trabajo (las crea con `gh label create` el primer comando que las necesita):
+
+  | Etiqueta | Dónde | Quién la pone | Significado |
+  |---|---|---|---|
+  | `plan:approved` | Issue | `/task`, tras la aprobación de la persona | El plan comentado en el issue está aprobado |
 - El PR de la tarea incluye `Closes #<n>`, y el issue se cierra al mergear.
 - Solo una persona cierra issues y mergea PRs. El agente nunca cierra, borra ni transfiere issues.
 
@@ -111,6 +116,7 @@ Design refs: docs/design/XX-*.md §N
 ## Breaking changes / ADR
 ```
 
+- El agente abre el PR en borrador (`/deliver`) y lo pasa a listo para revisión (`gh pr ready`) cuando la CI está en verde. El cuerpo incluye la tabla `criterio → evidencia` de `delivery-auditor`.
 - Requisitos para mergear: CI verde, changeset si cambia un paquete publicado, diseño actualizado si cambió un comportamiento descrito.
 - Squash merge, con el título del PR en formato Conventional Commits.
 

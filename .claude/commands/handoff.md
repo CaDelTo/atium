@@ -20,6 +20,6 @@ Cierra la sesión dejando el estado por escrito.
 3. Comenta la misma entrada en el issue de la tarea de la sesión con `gh issue comment N --body-file <archivo>`, escribiendo el archivo en un directorio temporal fuera del repo. El issue se identifica por la rama actual (`<tipo>/<n>-…`) o por la conversación; si la sesión no tuvo issue, omite el comentario y dilo.
 4. Si docs/progress.md tiene más de 10 entradas, mueve las más antiguas a docs/progress-archive.md, dejando las 10 más recientes.
 5. Sé literal y específico: la próxima sesión no tendrá esta conversación. No incluyas valores de variables de entorno, tokens ni datos sensibles.
-6. Muestra la entrada al usuario. No hagas commit salvo que te lo pida.
+6. Muestra la entrada al usuario. Si la tarea de la sesión ya tiene un PR abierto (`/deliver`), haz commit de la entrada (`docs(repo): add handoff entry for #N`) con solo `docs/progress.md` y, si archivaste, `docs/progress-archive.md`, y push con `node .claude/scripts/push-branch.mjs <rama>`. Ese commit no vuelve a pasar por `delivery-auditor`; la CI lo verifica. Si no hay PR, no hagas commit salvo que te lo pida.
 
 Nunca cierres issues: lo hace una persona.
