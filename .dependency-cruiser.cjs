@@ -60,6 +60,18 @@ module.exports = {
       to: { path: "^packages/(?!eslint-plugin/)", pathNot: "^packages/core/dist/pure/" },
     },
     {
+      // ADR-0023: suite-index and the analyzers load `@atium/eslint-plugin/syntax`
+      // without ESLint, so its graph never reaches the rules or the plugin. npm
+      // packages are excluded from the graph: ESLint forbids importing ESLint there.
+      name: "eslint-plugin-syntax-no-rules",
+      severity: "error",
+      from: { path: "^packages/eslint-plugin/src/syntax/", pathNot: TEST_FILE },
+      to: {
+        reachable: true,
+        path: "^packages/eslint-plugin/src/(rules/|(plugin|create-rule|settings|index)\\.ts$)",
+      },
+    },
+    {
       name: "no-test-code-in-src",
       severity: "error",
       // Covers packages/<name>/src and nested ones such as packages/analyzers/<name>/src.

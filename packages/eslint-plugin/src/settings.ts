@@ -1,12 +1,10 @@
 import { AtiumError, describeIssues } from "@atium/core/pure";
 import { z } from "zod";
 import { SETTINGS_DEFAULTS } from "./defaults.js";
+import { FRAMEWORKS } from "./syntax/framework.js";
 
 /** Key of the plugin options inside the `settings` of an ESLint config. */
 const SETTINGS_KEY = "atium";
-
-/** Frameworks that `settings.atium.framework` accepts (03-linter.md §11.1). */
-const SETTINGS_FRAMEWORKS = ["playwright", "cypress"] as const;
 
 /** Globs or function names: a list of non-empty strings. */
 const PatternListSchema = z.array(z.string().min(1)).readonly();
@@ -20,7 +18,7 @@ const AtiumSettingsSchema = z.strictObject({
    * Framework of the suite; when absent, it is detected from the imports.
    * `undefined` counts as absent, for configs that set it conditionally.
    */
-  framework: z.enum(SETTINGS_FRAMEWORKS).optional(),
+  framework: z.enum(FRAMEWORKS).optional(),
   /** Globs of the Page Object code, where selectors are allowed. */
   pageObjectDirs: PatternListSchema.default(SETTINGS_DEFAULTS.pageObjectDirs),
   /** Helpers that count as an assertion; globs such as `verify*` are allowed. */

@@ -63,12 +63,27 @@ export default [
 | --------------------- | -------------------------- | ----------------------------------------------------------------------------- |
 | `framework`           | detected from each file's imports | `"playwright"` or `"cypress"`                                         |
 | `pageObjectDirs`      | `[]`                       | Globs of the Page Object code, where selectors are allowed                    |
-| `assertFunctionNames` | `[]`                       | Helpers that count as an assertion; globs such as `verify*` are allowed       |
+| `assertFunctionNames` | `[]`                       | Helpers that count as an assertion, by function or method name; `*` is the only wildcard, as in `verify*` |
 | `i18n`                | `false`                    | Penalize selectors by visible text, because they change with the language    |
+
+Without `framework`, a file counts as Playwright when it imports
+`@playwright/test` or `playwright/test`, and as Cypress when it imports
+`cypress`; subpaths such as `cypress/react` count too. A file that imports
+neither, or both, has no framework. Cypress specs usually import nothing, and
+Playwright specs often import `test` from a fixtures file, so set `framework`
+for rules that depend on it.
 
 When an Atium rule runs, an unknown key or a value of the wrong type stops
 ESLint with a `CONFIG_INVALID` error that names the key, so a typo does not go
 unnoticed.
+
+## Internal entry: `@atium/eslint-plugin/syntax`
+
+Pure helpers over the typescript-eslint AST that recognize the framework,
+tests and their `titlePath`, actions, assertions, locators and fixed waits.
+The rules, `@atium/suite-index` and the analyzers share them. This entry is
+internal, not public API, and never loads ESLint. The recognized names are in
+`src/defaults.ts` and in section 11.3.1 of the linter design.
 
 ## Documentation
 

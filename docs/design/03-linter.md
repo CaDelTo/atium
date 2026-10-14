@@ -73,6 +73,53 @@ El autofix solo se ofrece cuando la transformación es segura. Para E2E001 no ha
 | E2E010 | `.only` olvidado | `test.only`, `describe.only`, `it.only` | — | — |
 | E2E012 | Secretos en tests | Literales asignados a identificadores tipo `password`, `token`, `secret`, `apiKey` con entropía alta; patrones conocidos (JWT, claves de nube) | Valores obviamente ficticios (`"password123"`, `"test"`) | Entropía ≥ 3.5 bits/char |
 
+#### 11.3.1 Reconocimiento de sintaxis
+
+Las reglas por archivo, `suite-index` y los analizadores reconocen el código E2E con los helpers de `@atium/eslint-plugin/syntax` ([ADR-0023](../adr/0023-arquitectura-linter.md)). Son funciones puras sobre el AST de typescript-eslint, sin información de tipos: reconocen por nombres. Las listas de nombres viven en `packages/eslint-plugin/src/defaults.ts`.
+
+Los envoltorios de TypeScript (`x!`, `x as T`, `<T>x`, `x satisfies T`) y el encadenamiento opcional (`a?.b`) son transparentes: `cy.get("a")!.click()` se reconoce igual que `cy.get("a").click()`.
+
+- **Framework:** el de `settings.atium.framework`. Si no está, el que revelan los imports del archivo, incluidos los `import type`:
+  - Playwright: `@playwright/test` o `playwright/test`;
+  - Cypress: `cypress`.
+
+  También cuentan los subpaths, como `cypress/react` o `@playwright/test/reporter`. Solo cuentan las declaraciones `import`; no cuentan `export … from`, `require()` ni `/// <reference types="cypress" />`.
+
+  Si el archivo no importa ninguno, o importa los dos, el framework es `undefined`. Es el caso habitual de un spec de Cypress, que no importa nada, o de uno de Playwright que importa `test` desde un archivo de fixtures. Por eso el reconocimiento de la estructura no depende del framework.
+- **Estructura:** una declaración es una llamada cuyo callee es uno de estos nombres y cuyo último argumento es una función:
+
+  | Tipo | Playwright | Mocha/Cypress |
+  |---|---|---|
+  | Test | `test`, `test.only`, `test.skip`, `test.fixme`, `test.fail` | `it`, `it.only`, `it.skip` |
+  | Describe | `test.describe` y `.only`, `.skip`, `.fixme`, `.serial`, `.serial.only`, `.parallel`, `.parallel.only` | `describe`, `context` y `.only`, `.skip` |
+  | Hook | `test.beforeEach`, `test.afterEach`, `test.beforeAll`, `test.afterAll` | `before`, `after`, `beforeEach`, `afterEach` |
+  | Step | `test.step`, `test.step.skip` | — |
+
+  - Las declaraciones que empiezan por `test` siguen la sintaxis de Playwright; el resto, la de Mocha.
+  - Los modificadores son las partes del nombre `only`, `skip`, `fixme`, `fail`, `serial` y `parallel`. Qué modificadores reporta E2E010 lo decide la regla.
+  - Un test y un step necesitan título: `test.skip()`, `test.skip(isMobile, "reason")` y `test.skip(({ browserName }) => ...)` son anotaciones, no tests.
+  - El título es el primer argumento cuando hay más de uno; la función es el último. Por eso `test.step(title, body, { box: true })` no se reconoce como step; sus nodos siguen perteneciendo al test que lo contiene.
+  - Quedan fuera `specify`, `xit` y `xdescribe`.
+- **`titlePath`:** los títulos de los describes que contienen el test y el suyo, unidos con `" › "` (sección 9.3), como los construye cada runner.
+  - Un describe sin título no añade nivel; los steps y los hooks tampoco.
+  - Un describe de Playwright titulado `""` no añade nivel, porque Playwright lo descarta de su `titlePath`. En Mocha/Cypress sí lo añade, como hace Mocha. Un test titulado `""` siempre añade su nivel.
+  - Un nodo pertenece al test cuyo callback lo contiene, también dentro de un `test.step`. Un nodo en un hook, un helper o el nivel de módulo no tiene test.
+  - **Títulos no estáticos:** un string literal o una plantilla sin `${}` son estáticos. Cualquier otro título se marca como no estático y su texto se reconstruye desde el AST, así que no depende de espacios, saltos de línea, comillas ni envoltorios de TypeScript:
+    - Las partes de texto se escriben tal cual y el resto como `${código}`: `` `logs in as ${user.name}` `` da `logs in as ${user.name}`, y `"cart " + item` da `cart ${item}`.
+    - Un `+` une texto solo si uno de sus lados es texto, como en JavaScript: `"Item " + (count + 1)` da `Item ${count + 1}`.
+    - El código se reconstruye para identificadores, `this`, identificadores privados, literales (los números en su forma decimal: `1_000` da `1000`), miembros (también `?.`), llamadas, plantillas, operadores binarios y lógicos y spread. Cualquier otra expresión se escribe `…`, también dentro de otra: `${a ? b : c}` da `${…}`.
+    - No se normaliza el contenido de los literales (sección 9.3).
+- **Acciones (E2E005):** en Playwright, una llamada a `click`, `fill`, `goto`, `press`, `check` o `selectOption` sobre cualquier objeto que no sea una cadena de `cy`. En Cypress, cada llamada de una cadena que empieza en `cy`, salvo `.should()` y `.and()`: `cy.get("a").click()` son dos acciones. Sin información de tipos, `$el.click()` dentro de un `.then()` de Cypress cuenta como acción de la lista de Playwright.
+- **Assertions (E2E006):**
+  - `expect(...)`, `expect.soft(...)` y `expect.poll(...)` cuentan una vez, sin importar los matchers que sigan;
+  - cada `.should()` y `.and()` encadenado;
+  - una llamada cuyo nombre (el identificador, o la propiedad en `loginPage.verifyLoggedIn()`) encaja con `assertFunctionNames`. El patrón encaja con el nombre completo y distingue mayúsculas; `*` encaja con cualquier secuencia, también vacía, y es el único comodín.
+
+  Los helpers que contienen assertions no se siguen aquí: los del mismo archivo los resuelve E2E006 y los de otros archivos, E2E006b.
+- **Locators:** `locator()` y `$()` sobre cualquier objeto, `getBy*` (el prefijo seguido de una mayúscula) y `cy.get()` en una cadena de `cy`. `.nth()`, `.first()` y `.last()` son refinamientos; su locator base es la consulta más cercana de la misma cadena, aunque haya otras llamadas o propiedades en medio, como `.filter()`. Un `getByRole` con la opción `name` se marca como tal, para E2E004.
+- **Esperas fijas (E2E001):** `waitForTimeout(n)` sobre cualquier objeto, `.wait` con un número literal en una cadena de `cy` (`cy.wait(500)`, también `cy.get("a").wait(500)`), y `new Promise(r => setTimeout(r, n))` cuando la llamada a `setTimeout` es todo el cuerpo del executor y recibe su primer parámetro. No cuentan `cy.wait("@alias")`, `cy.wait(delay)` (el tipo de `delay` no se conoce sin información de tipos), `window.setTimeout`, `return setTimeout(...)` ni `setTimeout(() => r(), n)`. Que la espera esté dentro de un test lo decide la regla.
+- **E2E009:** no tiene helper en esta sección. Los nombres `isVisible`, `textContent` y `count` llegan con la regla.
+
 ### 11.4 Reglas cross-file
 
 ESLint analiza archivo por archivo. El CLI construye un **índice de la suite** (tests, locators normalizados, helpers, fixtures, imports) usando el parser de typescript-eslint con el project service de TypeScript para resolver referencias entre archivos.

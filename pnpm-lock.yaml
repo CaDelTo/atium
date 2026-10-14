@@ -324,6 +324,9 @@ importers:
       '@atium/core':
         specifier: workspace:*
         version: link:../core
+      '@typescript-eslint/types':
+        specifier: 8.70.1
+        version: 8.70.1
       '@typescript-eslint/utils':
         specifier: 8.70.1
         version: 8.70.1(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
@@ -340,12 +343,18 @@ importers:
       '@typescript-eslint/rule-tester':
         specifier: 8.70.1
         version: 8.70.1(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+      '@typescript-eslint/typescript-estree':
+        specifier: 8.70.1
+        version: 8.70.1(supports-color@7.2.0)(typescript@6.0.3)
       '@vitest/coverage-v8':
         specifier: 5.0.2
         version: 5.0.2(vitest@5.0.2)
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
+      fast-check:
+        specifier: 4.10.2
+        version: 4.10.2
       publint:
         specifier: 0.3.24
         version: 0.3.24

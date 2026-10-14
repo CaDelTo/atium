@@ -70,6 +70,31 @@ export default tseslint.config(
     },
   },
   {
+    // ADR-0023: `@atium/eslint-plugin/syntax` never loads ESLint at runtime, so
+    // suite-index can use it. dependency-cruiser does not see npm packages.
+    files: ["packages/eslint-plugin/src/syntax/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            { group: ["@atium/*/src/*"], message: "Import from the package entry point." },
+            {
+              group: [
+                "eslint",
+                "@typescript-eslint/utils",
+                "@typescript-eslint/parser",
+                "@typescript-eslint/typescript-estree",
+              ],
+              allowTypeImports: true,
+              message: "syntax/ never loads ESLint (ADR-0023): use @typescript-eslint/types.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Root config files are not part of any tsconfig, so they get no type information.
     files: ["**/*.{js,cjs,mjs}"],
     extends: [tseslint.configs.disableTypeChecked],

@@ -17,7 +17,7 @@
 | Terminal | picocolors, cli-table3; respeta `NO_COLOR` | Ligeros |
 | Logs de depuración | Sintaxis de `DEBUG` del paquete debug (`DEBUG=atium:*`), leída por el logger de core sin la dependencia | Estándar en Node; el paquete usa estado global y escribe solo en stderr, sin redacción ni stream inyectado ([ADR-0022](../adr/0022-logger-reloj-en-core.md)) |
 | Detección de CI | env-ci + reglas propias | Cubre los proveedores comunes |
-| Linter | ESLint 9 + typescript-eslint (project service); reglas con `RuleCreator` de `@typescript-eslint/utils` | Editor, autofix, resolución entre archivos |
+| Linter | ESLint 9 + typescript-eslint (project service); reglas con `RuleCreator` de `@typescript-eslint/utils`; los helpers de `@atium/eslint-plugin/syntax` usan `@typescript-eslint/types`, que no carga ESLint, y sus tests parsean con `@typescript-eslint/typescript-estree` | Editor, autofix, resolución entre archivos |
 | Parser CSS | parsel-js | Analiza selectores CSS para E2E002 |
 | Similitud | fastest-levenshtein | Renombres y duplicados |
 | Archivos | tinyglobby | Búsqueda rápida de tests |
