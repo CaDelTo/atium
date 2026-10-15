@@ -90,6 +90,7 @@ async function isFile(file: string): Promise<boolean> {
     );
   }
 }
+
 /**
  * Loads a config file with jiti, imported only now so that commands that do
  * not read the config do not pay for it (ADR-0017, 05-performance.md).

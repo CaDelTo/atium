@@ -4,11 +4,6 @@ import { errnoCode, isMissingFileError } from "@atium/core";
 
 // The file system work of `atium init` and `atium doctor`, apart from their
 // decisions in run-init.ts and doctor/.
-
-// The rule lives in @atium/core. Re-exported because project-files.test.ts
-// imports it from this module; new code imports it from @atium/core.
-export { errnoCode } from "@atium/core";
-
 /** What is at a path, without following a symlink: a symlink counts as a file. */
 export type EntryKind = "none" | "file" | "directory";
 

@@ -35,7 +35,7 @@ export interface DetectRunContextOptions {
 
 /**
  * Value of `ci.provider` when Atium runs outside CI, on a developer machine
- * (02-data-model.md, step 6 of the run context).
+ * (02-data-model.md §10.1, step 6).
  */
 export const LOCAL_PROVIDER = "local";
 

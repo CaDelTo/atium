@@ -78,7 +78,9 @@ export function toPosixRelative(root: string, absolutePath: string): string {
  * they ran Atium.
  *
  * Uses the system `path`. A name that only starts with two dots, such as
- * `..foo.ts`, is inside `cwd`.
+ * `..foo.ts`, is inside `cwd`. The comparison is lexical and does not follow
+ * symlinks, so use it only to show a path, never to decide whether a path may
+ * be read or written: that is {@link resolveInside}. It does not throw.
  *
  * @param cwd - Directory the user ran Atium from.
  * @param file - Absolute path of the file.

@@ -219,7 +219,7 @@ export const BDD_TRUNCATION_WINDOW_STEPS = 10;
  * Directory where Atium keeps its local files (run files, the SQLite
  * database), relative to the repository root.
  *
- * Source: 15-storage.md §23.2.1 and §23.6.
+ * Source: 15-storage.md §23.2.1, §23.5 and §23.6, and 18-cli-config.md §26.1.
  */
 export const ATIUM_DIRECTORY = ".atium";
 
