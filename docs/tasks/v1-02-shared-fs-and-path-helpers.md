@@ -26,6 +26,7 @@ Quitar el conocimiento duplicado entre paquetes que el audit encontró:
   - **Resuelto por la persona (plan aprobado en #42):**
     - `errnoCode`, `isMissingFileError`, `displayPath`, `ATIUM_DIRECTORY` y `LOCAL_PROVIDER` se exportan desde el índice principal de `@atium/core`, como `resolveInside` y `CONFIG_FILE_NAMES`. No van a `@atium/core/pure`, cuyo test exige que solo exporte lo que también exporta la raíz y cuya lista de módulos fija ADR-0023, ni a un subpath nuevo. Es un cambio aditivo y core es `private`, así que no lleva ADR ni changeset.
     - `ATIUM_DIRECTORY` se queda duplicado en cli, como excepción al primer criterio. `messages.ts` lo usa en la ayuda, y `atium --help` no carga `@atium/core` (05-performance.md, "Arranque del CLI"). `packages/cli/src/defaults.test.ts` comprueba que vale lo mismo que el de core.
+    - En `/review`, la persona aprobó ("Corrige todo") que cli no reexporte `errnoCode`, en contra del plan, así que el import de `project-files.test.ts` pasa a `@atium/core`.
 
 ## Criterios de aceptación
 

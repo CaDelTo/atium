@@ -178,13 +178,7 @@ const trace = resolveInside(repoRoot, attachment.path);
 ```
 
 A message names a file with `displayPath`: relative to the directory the user
-ran Atium from if the file is inside it, or as given otherwise:
-
-```ts
-import { displayPath, quoteForMessage } from "@atium/core";
-
-const shown = quoteForMessage(displayPath(process.cwd(), configPath)); // "atium.config.ts"
-```
+ran Atium from if the file is inside it, or as given otherwise.
 
 A finding's fingerprint hashes the parts that identify it, without line
 numbers, so the baseline survives edits. Every output sorts findings with
