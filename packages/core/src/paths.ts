@@ -91,9 +91,13 @@ export function toPosixRelative(root: string, absolutePath: string): string {
  * displayPath("/repo", "/etc/atium.config.ts"); // "/etc/atium.config.ts"
  * ```
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- stub until the implementation (TDD)
 export function displayPath(cwd: string, file: string): string {
-  throw new Error("not implemented");
+  const relative = systemPath.relative(cwd, file);
+  const outside =
+    relative === ".." ||
+    relative.startsWith(`..${systemPath.sep}`) ||
+    systemPath.isAbsolute(relative);
+  return outside ? file : relative;
 }
 
 /** Why `relative` cannot be used inside `root`, or `undefined` if it can. */

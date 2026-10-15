@@ -20,7 +20,7 @@ export function errnoCode(error: unknown): string | undefined {
  * @returns `true` for an error with code `ENOENT` or `ENOTDIR`, `false` for
  *   any other error or value.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- stub until the implementation (TDD)
 export function isMissingFileError(error: unknown): boolean {
-  throw new Error("not implemented");
+  const code = errnoCode(error);
+  return code === "ENOENT" || code === "ENOTDIR";
 }

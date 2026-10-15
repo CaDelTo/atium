@@ -1,4 +1,4 @@
-import * as path from "node:path";
+import { displayPath } from "../paths.js";
 import { quoteForMessage } from "../quote.js";
 import { findConfigFile, loadConfigFile } from "./config-file.js";
 import type { ConfigEnv, ConfigFlags, ResolvedConfig } from "./resolve-config.js";
@@ -56,10 +56,4 @@ export async function loadConfig(options: LoadConfigOptions): Promise<LoadedConf
   const source = quoteForMessage(displayPath(cwd, configPath));
   const value = await loadConfigFile(configPath, source);
   return { ...resolveConfig({ source, value }, env, flags), configPath };
-}
-
-/** `file` relative to `cwd` if it is inside it, or else as it is. */
-function displayPath(cwd: string, file: string): string {
-  const relative = path.relative(cwd, file);
-  return relative.startsWith("..") || path.isAbsolute(relative) ? file : relative;
 }

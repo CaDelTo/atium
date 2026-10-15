@@ -27,11 +27,14 @@ For configuration it provides `defineConfig`, `loadConfig` with
 config file names searched for.
 For the Git and CI context of a run it provides `detectRunContext` with
 `DetectRunContextOptions`, `RunContext` and `EnvVars` (the type of
-`process.env`, also used by `ConfigEnv`), and the `GitClient`
+`process.env`, also used by `ConfigEnv`), `LOCAL_PROVIDER` (the
+`ci.provider` of a run outside CI), and the `GitClient`
 interface with `createGitClient` and `CreateGitClientOptions`.
 For run files it provides `writeRunFile` with `WriteRunFileOptions`,
 `runFilePath`, `readRunFile`, and `readRunFileEntries` with `RunFileEntry`
-and `RunHeader`.
+and `RunHeader`, and `ATIUM_DIRECTORY`, the directory of Atium's local files.
+For file system errors, `errnoCode` reads the code of a Node.js error and
+`isMissingFileError` tells whether it means that nothing is at the path.
 For storage backends it provides the `StorageReader`, `StorageWriter` and
 `Storage` interfaces with `ListRunsQuery`, and `parseListRunsQuery` with
 `ParsedListRunsQuery`. For error messages, `describeIssues` summarizes Zod
@@ -172,6 +175,15 @@ trailing dot). The check is lexical, so it does not follow symlinks:
 import { resolveInside } from "@atium/core";
 
 const trace = resolveInside(repoRoot, attachment.path);
+```
+
+A message names a file with `displayPath`: relative to the directory the user
+ran Atium from if the file is inside it, or as given otherwise:
+
+```ts
+import { displayPath, quoteForMessage } from "@atium/core";
+
+const shown = quoteForMessage(displayPath(process.cwd(), configPath)); // "atium.config.ts"
 ```
 
 A finding's fingerprint hashes the parts that identify it, without line

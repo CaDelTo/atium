@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { CONFIG_FILE_NAMES } from "../defaults.js";
 import { AtiumError } from "../errors.js";
 import { quoteForMessage } from "../quote.js";
-import { errnoCode } from "../errno.js";
+import { isMissingFileError } from "../errno.js";
 
 // The only I/O of `core`: finding and loading the config file stays here, next
 // to the precedence and the validation (ADR-0017).
@@ -90,12 +90,6 @@ async function isFile(file: string): Promise<boolean> {
     );
   }
 }
-
-function isMissingFileError(error: unknown): boolean {
-  const code = errnoCode(error);
-  return code === "ENOENT" || code === "ENOTDIR";
-}
-
 /**
  * Loads a config file with jiti, imported only now so that commands that do
  * not read the config do not pay for it (ADR-0017, 05-performance.md).
