@@ -6,13 +6,13 @@ import { RunSchema } from "../model/run.js";
 import { TestResultSchema } from "../model/test-result.js";
 import { jsonEscapedByteLength } from "../model/text.js";
 import { aRun, aTestCase, aTestResult } from "../testing/index.js";
+import { HEAVY_TEST_TIMEOUT_MS } from "../testing/timeouts.js";
 import { bddReferenceIndex, capRunHeader, capTestResult } from "./cap-run.js";
 import {
   call,
   defaultError,
   endpoint,
   FAILED_AT_MS,
-  HEAVY_TEST_TIMEOUT_MS,
   failedAttempt,
   maxedResult,
   resultWithAttempt,
@@ -108,19 +108,24 @@ describe("capTestResult", () => {
       expect(capped.test.titlePath).toEqual([titlePath[0], ...titlePath.slice(6)]);
     });
 
-    it("keeps the testId computed from the original values when titlePath and file are capped", () => {
-      const test = aTestCase("checkout").build();
-      const titlePath = Array.from({ length: 30 }, () => trickyText(3000));
-      const original = {
-        ...aTestResult("checkout").build(),
-        test: { ...test, titlePath, file: trickyText(5000) },
-      };
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+    it(
+      "keeps the testId computed from the original values when titlePath and file are capped",
+      () => {
+        const test = aTestCase("checkout").build();
+        const titlePath = Array.from({ length: 30 }, () => trickyText(3000));
+        const original = {
+          ...aTestResult("checkout").build(),
+          test: { ...test, titlePath, file: trickyText(5000) },
+        };
 
-      const capped = capTestResult(original);
+        const capped = capTestResult(original);
 
-      expect(capped.test.testId).toBe(test.testId);
-      expect(capped.test.titlePath).toHaveLength(MODEL_LIST_CAPS.titlePathLevels);
-    });
+        expect(capped.test.testId).toBe(test.testId);
+        expect(capped.test.titlePath).toHaveLength(MODEL_LIST_CAPS.titlePathLevels);
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   describe("network calls", () => {
@@ -183,37 +188,43 @@ describe("capTestResult", () => {
       })
       .map(({ startedAtMs, durationMs }) => call(startedAtMs, durationMs));
 
-    it("keeps pending calls first, then the closest to the failure, in their original order", () => {
-      fc.assert(
-        fc.property(fc.array(callArbitrary, { minLength: 190, maxLength: 260 }), (calls) => {
-          const tagged = calls.map((item, index) => ({ ...item, host: `h${String(index)}` }));
-          const capped = capTestResult(
-            resultWithAttempt({ network: { endpoints: [], calls: tagged } }),
-          );
-          const network = capped.attempts[0]?.network;
-          const kept = network?.calls ?? [];
-          const keptHosts = new Set(kept.map((item) => item.host));
-          const dropped = tagged.filter((item) => !keptHosts.has(item.host));
-          const isPending = (item: NetworkCall): boolean =>
-            item.startedAtMs <= FAILED_AT_MS &&
-            (item.durationMs === undefined || item.startedAtMs + item.durationMs > FAILED_AT_MS);
-          const distance = (item: NetworkCall): number => Math.abs(item.startedAtMs - FAILED_AT_MS);
-          const order = kept.map((item) => Number(item.host.slice(1)));
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+    it(
+      "keeps pending calls first, then the closest to the failure, in their original order",
+      () => {
+        fc.assert(
+          fc.property(fc.array(callArbitrary, { minLength: 190, maxLength: 260 }), (calls) => {
+            const tagged = calls.map((item, index) => ({ ...item, host: `h${String(index)}` }));
+            const capped = capTestResult(
+              resultWithAttempt({ network: { endpoints: [], calls: tagged } }),
+            );
+            const network = capped.attempts[0]?.network;
+            const kept = network?.calls ?? [];
+            const keptHosts = new Set(kept.map((item) => item.host));
+            const dropped = tagged.filter((item) => !keptHosts.has(item.host));
+            const isPending = (item: NetworkCall): boolean =>
+              item.startedAtMs <= FAILED_AT_MS &&
+              (item.durationMs === undefined || item.startedAtMs + item.durationMs > FAILED_AT_MS);
+            const distance = (item: NetworkCall): number =>
+              Math.abs(item.startedAtMs - FAILED_AT_MS);
+            const order = kept.map((item) => Number(item.host.slice(1)));
 
-          expect(kept).toHaveLength(Math.min(calls.length, MODEL_LIST_CAPS.networkCalls));
-          expect(network?.callsDropped).toBe(dropped.length > 0 ? dropped.length : undefined);
-          expect(order).toEqual([...order].sort((a, b) => a - b));
-          const rank = (item: NetworkCall): RankKey => [
-            isPending(item) ? 0 : 1,
-            distance(item),
-            item.startedAtMs > FAILED_AT_MS ? 1 : 0,
-            Number(item.host.slice(1)),
-          ];
-          expectKeptOutrankDropped(kept.map(rank), dropped.map(rank));
-        }),
-        runOptions,
-      );
-    });
+            expect(kept).toHaveLength(Math.min(calls.length, MODEL_LIST_CAPS.networkCalls));
+            expect(network?.callsDropped).toBe(dropped.length > 0 ? dropped.length : undefined);
+            expect(order).toEqual([...order].sort((a, b) => a - b));
+            const rank = (item: NetworkCall): RankKey => [
+              isPending(item) ? 0 : 1,
+              distance(item),
+              item.startedAtMs > FAILED_AT_MS ? 1 : 0,
+              Number(item.host.slice(1)),
+            ];
+            expectKeptOutrankDropped(kept.map(rank), dropped.map(rank));
+          }),
+          runOptions,
+        );
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   describe("network endpoints", () => {
@@ -372,11 +383,16 @@ describe("capTestResult", () => {
       HEAVY_TEST_TIMEOUT_MS,
     );
 
-    it("leaves texts at their cap as they are", () => {
-      const result = maxedResult({ attempts: 1 });
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+    it(
+      "leaves texts at their cap as they are",
+      () => {
+        const result = maxedResult({ attempts: 1 });
 
-      expect(capTestResult(result)).toEqual(result);
-    });
+        expect(capTestResult(result)).toEqual(result);
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   it("never leaves ANSI codes in the texts it cleans", () => {

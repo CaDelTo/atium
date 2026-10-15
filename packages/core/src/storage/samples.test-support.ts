@@ -13,13 +13,6 @@ import { anAttempt, anError, aTestCase, aTestResult } from "../testing/index.js"
 type NetworkEndpoint = NetworkSummary["endpoints"][number];
 type BddStep = BddContext["steps"][number];
 
-/**
- * Timeout of the tests on results with every field at its cap: capping,
- * validating and measuring them takes a few seconds on a slow CI runner or
- * next to the rest of the suite.
- */
-export const HEAVY_TEST_TIMEOUT_MS = 60_000;
-
 /** Moment the default error of `anError()` happens, from the start of the attempt. */
 export const FAILED_AT_MS = 1000;
 

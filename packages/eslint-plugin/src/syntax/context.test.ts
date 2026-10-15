@@ -1,3 +1,4 @@
+import { HEAVY_TEST_TIMEOUT_MS } from "@atium/core/testing";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../test/parse.js";
@@ -171,55 +172,61 @@ describe("titlePathOf", () => {
     expect(titlePathOf(hook!).titles).toEqual(["login", "with a valid user"]);
   });
 
-  it("is stable when spaces and line breaks change between tokens", () => {
-    // Every token of a spec; whitespace is free between any two of them, except
-    // that a line break before `=>` is a syntax error.
-    // prettier-ignore
-    const tokens = [
+  // 300 typescript-estree parses: slow next to the rest of the suite, so room on
+  // a loaded CI runner (#99).
+  it(
+    "is stable when spaces and line breaks change between tokens",
+    () => {
+      // Every token of a spec; whitespace is free between any two of them, except
+      // that a line break before `=>` is a syntax error.
+      // prettier-ignore
+      const tokens = [
       "test", ".", "describe", "(", "DESCRIBE", ",", "(", ")", "=>", "{",
       "test", ".", "describe", "(", "`group ${", "user", ".", "name", "}`", ",", "(", ")", "=>", "{",
       "test", "(", "TEST", ",", "(", "{", "page", "}", ")", "=>", "{",
       "page", ".", "click", "(", '"#ok"', ")", ";",
       "}", ")", ";", "}", ")", ";", "}", ")", ";",
     ];
-    const whitespace = fc
-      .array(fc.constantFrom(" ", "\n", "\t", "\r\n", "  "), { maxLength: 3 })
-      .map((parts) => parts.join(""));
-    const title = fc.string({ unit: "binary" });
-    const sourceOf = (describeTitle: string, testTitle: string, gaps: readonly string[]) =>
-      tokens
-        .map((token, index) => {
-          const titles: Readonly<Record<string, string>> = {
-            DESCRIBE: JSON.stringify(describeTitle),
-            TEST: JSON.stringify(testTitle),
-          };
-          const text = titles[token] ?? token;
-          const gap = gaps[index] ?? "";
-          return `${text}${tokens[index + 1] === "=>" ? gap.replace(/[\r\n]/gu, " ") : gap}`;
-        })
-        .join("");
+      const whitespace = fc
+        .array(fc.constantFrom(" ", "\n", "\t", "\r\n", "  "), { maxLength: 3 })
+        .map((parts) => parts.join(""));
+      const title = fc.string({ unit: "binary" });
+      const sourceOf = (describeTitle: string, testTitle: string, gaps: readonly string[]) =>
+        tokens
+          .map((token, index) => {
+            const titles: Readonly<Record<string, string>> = {
+              DESCRIBE: JSON.stringify(describeTitle),
+              TEST: JSON.stringify(testTitle),
+            };
+            const text = titles[token] ?? token;
+            const gap = gaps[index] ?? "";
+            return `${text}${tokens[index + 1] === "=>" ? gap.replace(/[\r\n]/gu, " ") : gap}`;
+          })
+          .join("");
 
-    fc.assert(
-      fc.property(
-        title,
-        title,
-        fc.array(whitespace, { minLength: tokens.length, maxLength: tokens.length }),
-        (describeTitle, testTitle, gaps) => {
-          const code = sourceOf(describeTitle, testTitle, gaps);
-          const click = parseSource(code).calls.find((call) => calleeName(call) === "click");
+      fc.assert(
+        fc.property(
+          title,
+          title,
+          fc.array(whitespace, { minLength: tokens.length, maxLength: tokens.length }),
+          (describeTitle, testTitle, gaps) => {
+            const code = sourceOf(describeTitle, testTitle, gaps);
+            const click = parseSource(code).calls.find((call) => calleeName(call) === "click");
 
-          expect(testContextOf(click!)).toMatchObject({
-            // Playwright drops a describe titled "" from the titlePath.
-            titles: [
-              ...(describeTitle === "" ? [] : [describeTitle]),
-              "group ${user.name}",
-              testTitle,
-            ],
-            isStatic: false,
-          });
-        },
-      ),
-      runOptions,
-    );
-  });
+            expect(testContextOf(click!)).toMatchObject({
+              // Playwright drops a describe titled "" from the titlePath.
+              titles: [
+                ...(describeTitle === "" ? [] : [describeTitle]),
+                "group ${user.name}",
+                testTitle,
+              ],
+              isStatic: false,
+            });
+          },
+        ),
+        runOptions,
+      );
+    },
+    HEAVY_TEST_TIMEOUT_MS,
+  );
 });
