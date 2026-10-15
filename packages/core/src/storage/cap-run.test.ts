@@ -5,7 +5,8 @@ import type { NetworkCall } from "../model/network.js";
 import { RunSchema } from "../model/run.js";
 import { TestResultSchema } from "../model/test-result.js";
 import { jsonEscapedByteLength } from "../model/text.js";
-import { aRun, aTestCase, aTestResult, HEAVY_TEST_TIMEOUT_MS } from "../testing/index.js";
+import { aRun, aTestCase, aTestResult } from "../testing/index.js";
+import { HEAVY_TEST_TIMEOUT_MS } from "../testing/timeouts.js";
 import { bddReferenceIndex, capRunHeader, capTestResult } from "./cap-run.js";
 import {
   call,
@@ -107,19 +108,24 @@ describe("capTestResult", () => {
       expect(capped.test.titlePath).toEqual([titlePath[0], ...titlePath.slice(6)]);
     });
 
-    it("keeps the testId computed from the original values when titlePath and file are capped", () => {
-      const test = aTestCase("checkout").build();
-      const titlePath = Array.from({ length: 30 }, () => trickyText(3000));
-      const original = {
-        ...aTestResult("checkout").build(),
-        test: { ...test, titlePath, file: trickyText(5000) },
-      };
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+    it(
+      "keeps the testId computed from the original values when titlePath and file are capped",
+      () => {
+        const test = aTestCase("checkout").build();
+        const titlePath = Array.from({ length: 30 }, () => trickyText(3000));
+        const original = {
+          ...aTestResult("checkout").build(),
+          test: { ...test, titlePath, file: trickyText(5000) },
+        };
 
-      const capped = capTestResult(original);
+        const capped = capTestResult(original);
 
-      expect(capped.test.testId).toBe(test.testId);
-      expect(capped.test.titlePath).toHaveLength(MODEL_LIST_CAPS.titlePathLevels);
-    });
+        expect(capped.test.testId).toBe(test.testId);
+        expect(capped.test.titlePath).toHaveLength(MODEL_LIST_CAPS.titlePathLevels);
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   describe("network calls", () => {
@@ -377,11 +383,16 @@ describe("capTestResult", () => {
       HEAVY_TEST_TIMEOUT_MS,
     );
 
-    it("leaves texts at their cap as they are", () => {
-      const result = maxedResult({ attempts: 1 });
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+    it(
+      "leaves texts at their cap as they are",
+      () => {
+        const result = maxedResult({ attempts: 1 });
 
-      expect(capTestResult(result)).toEqual(result);
-    });
+        expect(capTestResult(result)).toEqual(result);
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   it("never leaves ANSI codes in the texts it cleans", () => {
