@@ -1,5 +1,7 @@
+import { ATIUM_DIRECTORY } from "@atium/core";
+
 /** Path of the local database, relative to the repository root (15-storage.md §23.6). */
-export const SQLITE_DATABASE_PATH = ".atium/atium.db";
+export const SQLITE_DATABASE_PATH = `${ATIUM_DIRECTORY}/atium.db` as const;
 
 /**
  * How long a statement waits for another connection to release its lock
