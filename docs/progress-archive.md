@@ -4,6 +4,61 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-12 — #16 v0-15-storage-contract
+
+- **Hecho:**
+  - Rama `feat/16-storage-contract`, creada desde `origin/main` en `b91646a` (ya incluye el merge del PR #35). El push lo hizo el usuario con `! git push -u origin feat/16-storage-contract`. PR #36 abierto con `Closes #16`, sin mergear.
+  - Commit `aa2892b` `docs(repo): add handoff entry for #15`: el handoff de #15 que estaba sin commitear.
+  - Commit `23b5ee3` `feat(core): add storage interfaces, contract suite and in-memory fake`:
+    - `packages/core/src/storage/storage.ts`: interfaces `StorageReader` (`getRun`, `listRuns`), `StorageWriter` (`writeRun`), `Storage` (los dos lados más `close`) y `ListRunsQuery`. Se exportan como tipos desde `@atium/core`.
+    - `packages/core/src/storage/list-runs-query.ts`: `runSelector(query)`, interna de core. Valida la consulta (lanza `RangeError`) y devuelve la función que filtra, ordena y aplica `limit`. Valida `since` con `z.iso.datetime({ offset: true })` y calcula `Date.parse` una vez por run.
+    - `packages/core/src/testing/in-memory-storage.ts`: `InMemoryStorage`, exportado desde `@atium/core/testing`.
+      - Copia con `structuredClone` al escribir y al leer.
+      - Usa el helper privado `#whenOpen`, que cede una vez (`await Promise.resolve()`) y comprueba si está cerrado.
+      - `listRuns` valida la consulta antes de ceder.
+    - `packages/core/test-contracts/storage.contract.ts`: `storageContract(create)` con 28 casos, divididos en `describeWriteAndGet`, `describeListRunsOrder`, `describeListRunsFilters`, `describeListRunsInvalidQuery`, `describeConcurrency` y `describeClose`. Importa de `../src/...` con rutas relativas.
+    - `packages/core/src/testing/in-memory-storage.test.ts`: ejecuta el contrato contra el fake y comprueba que dos instancias no comparten runs.
+    - `packages/core/tsconfig.json`: `include` con `test-contracts`. `eslint.config.js` no cambia: el lint pasa sin overrides para esa carpeta.
+    - Docs:
+      - `docs/design/15-storage.md` §23.2.2 "Interfaces", nueva.
+      - `docs/design/16-repository-structure.md`: añade `test-contracts/`.
+      - `docs/engineering/04-testing.md`: corrige el ejemplo del contrato y la línea de `InMemoryStorage`.
+      - README de core.
+  - Verificado:
+    - `pnpm verify` sale con 0: 894 tests. Core tiene un 99,12 % de líneas y un 96,29 % de ramas. `in-memory-storage.ts` tiene el 100 %; en `list-runs-query.ts` solo queda sin cubrir la línea 70 (`return 0` con ids iguales, que no se da).
+    - Cinco mutaciones del fake rompen el contrato: `since` exclusivo, empate por id ascendente, guardar sin copiar, aceptar ids repetidos y `Date.parse` sin validar ISO.
+    - Calculé los ids de las semillas 1, 2 y 3: en orden descendente quedan 2, 3, 1, así que el test de empate distingue el orden de inserción, el inverso y el ascendente.
+    - `/review` con code-reviewer, duplication-auditor y docs-checker (security, design y perf no aplicaban por las rutas):
+      - Sin bloqueantes.
+      - Se corrigió el importante: `since` aceptaba fechas no ISO y fechas sin zona, que dependen de la zona horaria de la máquina.
+      - Se corrigieron todas las sugerencias a petición del usuario ("Corrige todo").
+    - CI del PR #36 al cerrar: `verify` pasa en ubuntu, macos y windows con Node 22 y 24. `audit` falla por el problema conocido.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan ("Si, aprobados"):
+    - Orden de `listRuns`: `startedAt` descendente y, en empate, `id` descendente.
+    - `since`: ISO 8601 e inclusivo.
+    - `branch`: coincidencia exacta; los runs sin rama se excluyen.
+    - `limit`: obligatorio, entero ≥ 1; un `limit` o un `since` inválidos lanzan `RangeError`.
+    - Después de `close`, todo devuelve `STORAGE_UNAVAILABLE`.
+    - Un run inexistente es `ok(undefined)`; no hay códigos de error nuevos.
+    - `close` solo está en `Storage`.
+  - Tomadas tras `/review`, aprobadas con "Corrige todo":
+    - `since` exige `Z` o un offset.
+    - Una consulta inválida lanza `RangeError` aunque el storage esté cerrado.
+    - El máximo de `limit` es `Number.MAX_SAFE_INTEGER`.
+  - Todas quedaron escritas en `15-storage.md` §23.2.2 y en el TSDoc de `storage.ts`. No hay ADR nuevo.
+  - Sin changeset porque `@atium/core` es `private`.
+- **Problemas:**
+  - El hook `test-guard` bloqueó un comando que creaba y borraba un `.test.ts` temporal en el scratchpad para imprimir ids. No se creó nada; los ids se calcularon con `node -e`.
+  - Deuda para v0-16 (SQLite) y los backends de archivos: el `writeRunFile` de #15 comprueba con `lstat` y luego hace `rename`. Un backend de archivos podría fallar el caso "accepts exactly one of several concurrent writes of the same id". No se relajó el contrato.
+  - Los backends de `packages/storage/*` no pueden importar `test-contracts/` con rutas relativas a `../src`. Hará falta exponer el contrato por nombre de paquete (por ejemplo `@atium/core/test-contracts`) y cambiar sus imports. No está decidido.
+  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
+- **Siguiente paso:**
+  1. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
+  2. Cuando una persona mergee el PR #36, ejecutar `/task 17` (v0-16-storage-sqlite, que depende de v0-15). Antes, decidir con el usuario cómo importa el paquete de SQLite la suite de contrato.
+  3. Si el PR #36 sigue sin mergear, la siguiente tarea disponible es #18 (v0-17-cli-skeleton, que depende de v0-12, ya cerrada).
+
 ### 2026-10-12 — #15 v0-14-run-files
 
 - **Hecho:**

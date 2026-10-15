@@ -8,6 +8,56 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-15 — #41 v1-01-dependency-security-bump
+
+- **Hecho:**
+  - **Dry run de `/dev-loop V1 --dry-run`** al empezar la sesión. No escribió nada en GitHub ni en el registro.
+    - No había PRs con la etiqueta `loop`.
+    - Faltaban `plan:approved`, `loop:blocked` y `loop`. En esta sesión se creó `plan:approved`; las otras dos siguen sin existir.
+    - `plan-reviewer` dio `REQUIERE PERSONA` a #41, porque cambia dependencias y el loop no las toca.
+    - También a #42, por dos bloqueos verificados en el código:
+      - `packages/core/src/pure/index.test.ts:6` exige que `@atium/core/pure` solo exporte lo que también exporta la raíz de core, así que exportar los helpers desde `pure` amplía la API pública.
+      - `packages/cli/src/messages.ts` usa `ATIUM_DIRECTORY` y no puede importar `@atium/core`, porque lo carga `--help`.
+    - Ni #41 ni #42 recibieron comentario ni etiqueta.
+  - **#41 con `/task 41`,** en el worktree `atium-loop`:
+    - Plan aprobado por la persona tras dos rondas de `plan-reviewer`. Está comentado en el issue bajo `## Plan aprobado` y el issue tiene `plan:approved`.
+    - Rama `chore/41-dependency-security-bump`. PR #97 en borrador con `Closes #41`. Resumen comentado en el issue.
+  - **Commits:**
+    - `c95a7d3` `chore(deps): resolve patched shell-quote and source-map-js`. Solo cambia el lockfile: shell-quote 1.10.0 → 1.11.0 (crítico) y source-map-js 1.2.1 → 1.2.2 (alto). Las versiones parcheadas ya cabían en los rangos de `launch-editor`, `postcss` y `magicast`.
+    - `5a91fdb` `chore(deps): override esbuild to patched versions`. Añade a `pnpm-workspace.yaml` los overrides `tsup>esbuild: ^0.28.2` (aviso bajo, GHSA-g7r4-m6w7-qqqr) y `@esbuild-kit/core-utils>esbuild: ^0.25.12` (aviso moderado, GHSA-67mh-4wv8-2f99, vía drizzle-kit). Cada uno lleva un comentario con la condición para quitarlo. También actualiza el lockfile y añade la viñeta de `overrides` en `docs/engineering/06-security.md`, sección "Dependencias".
+    - `f636de4` `docs(design): …`. Corrige lo que salió en `/review`:
+      - la frase sobre `overrides` en `docs/design/17-tech-stack.md:40`;
+      - "elegible (según `minimumReleaseAge`)" en `06-security.md`.
+  - **Verificado:**
+    - `pnpm audit` no encuentra ningún aviso, y `pnpm why -r esbuild` solo muestra 0.25.12 y 0.28.2.
+    - `dist/` de cli, core, eslint-plugin y storage-sqlite es idéntico byte a byte al de antes del cambio (`pnpm build --force` y `diff -r`), y `pnpm pkg:check` pasa.
+    - `drizzle-kit generate` desde cero, antes y después, produce el mismo `.sql` y el mismo snapshot (sin `id` ni `prevId`), igual a `0000_initial.sql`.
+    - `pnpm verify` en verde, ejecutado por `verifier` y por `delivery-auditor`.
+    - `/review` sin bloqueantes; `code-reviewer` aprobó las correcciones en una segunda pasada. `delivery-auditor` dio APROBADO.
+    - En CI, el check `audit` ya está en verde.
+- **En curso:** PR #97 en borrador, esperando los 6 checks `verify (…)`, que seguían en curso al cerrar la sesión.
+- **Decisiones:**
+  - **shell-quote y source-map-js sin overrides:** solo se refresca el lockfile, con `pnpm update -r --no-save <paquete>`. pnpm 12 no acepta `--depth Infinity`, y su profundidad por defecto ya es ilimitada.
+  - **esbuild:** overrides acotados `padre>hijo` en `pnpm-workspace.yaml`. La política está escrita en `06-security.md`, "Dependencias", y referenciada desde `17-tech-stack.md`.
+  - **El peer opcional de vite:** el override no lo movía, y vite@8.3.1 seguía recibiendo esbuild 0.27.7 porque pnpm conservaba la resolución anterior. Hizo falta `pnpm update -r --no-save esbuild`. Solo está escrito aquí y en el mensaje de `5a91fdb`.
+  - **AC-3 y la CI:** el AC-3 se evalúa con el criterio del paso 8 de `/deliver`, porque la entrada del 2026-10-14 dice que los `verify` fallan también en `main`. `plan-reviewer` lo aceptó en la segunda ronda.
+- **Problemas:**
+  - **Permisos:** en esta sesión, la edición de `pnpm-workspace.yaml` está denegada, y también leer `.claude/settings*.json`, así que no sé qué regla lo bloquea. La persona añadió el bloque `overrides` con un comando `!`. Cualquier tarea que toque ese archivo necesita a la persona.
+  - **Comentario impreciso:** el comentario del override `tsup>esbuild` dice "esbuild <0.28.1", pero el rango exacto del aviso es `>=0.27.3 <0.28.1`. Lo señaló `delivery-auditor` y no está corregido.
+  - **Overrides que habrá que quitar:**
+    - `tsup>esbuild`, al subir a tsup 9, que es major y cumple `minimumReleaseAge` el 2026-10-28;
+    - `@esbuild-kit/core-utils>esbuild`, cuando drizzle-kit deje `@esbuild-kit`.
+
+    Ningún mecanismo lo recuerda.
+  - **Worktree del loop ocupado:** `atium-loop`, que es el de `/dev-loop`, quedó en la rama `chore/41-dependency-security-bump`.
+  - **Sugerencias de `/review` fuera de alcance, no aplicadas:** un recordatorio de overrides en `/audit` y documentar `pnpm-workspace.yaml` en `docs/engineering/10-tooling.md`.
+- **Siguiente paso:**
+  1. `gh pr checks 97 --json name,bucket`:
+     - si los 6 `verify (…)` están en `pass`, `gh pr ready 97`;
+     - si alguno falla, compararlo con el último PR mergeado a `main` (paso 8 de `/deliver`).
+  2. Decidir en #42 dónde se exportan los helpers (raíz de core con changeset, un subpath `internal` nuevo, o `pure` con un ADR que reemplace la lista de ADR-0023) y qué hacer con `ATIUM_DIRECTORY` en cli.
+  3. Antes de lanzar `/dev-loop`: `git -C ../atium-loop switch --detach origin/main`, y crear las etiquetas `loop:blocked` y `loop` o dejar que las cree el loop.
+
 ### 2026-10-14 — #91 Loop de desarrollo, pipeline de entrega y push del agente
 
 - **Hecho:**
@@ -621,58 +671,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
   2. Ejecutar `/task 18` (v0-17-cli-skeleton, que depende de v0-12, ya cerrada).
   3. A partir del 2026-10-14T14:08Z, proponer al usuario un PR aparte que suba `shell-quote` y `source-map-js` para que `audit` vuelva a pasar.
-
-### 2026-10-12 — #16 v0-15-storage-contract
-
-- **Hecho:**
-  - Rama `feat/16-storage-contract`, creada desde `origin/main` en `b91646a` (ya incluye el merge del PR #35). El push lo hizo el usuario con `! git push -u origin feat/16-storage-contract`. PR #36 abierto con `Closes #16`, sin mergear.
-  - Commit `aa2892b` `docs(repo): add handoff entry for #15`: el handoff de #15 que estaba sin commitear.
-  - Commit `23b5ee3` `feat(core): add storage interfaces, contract suite and in-memory fake`:
-    - `packages/core/src/storage/storage.ts`: interfaces `StorageReader` (`getRun`, `listRuns`), `StorageWriter` (`writeRun`), `Storage` (los dos lados más `close`) y `ListRunsQuery`. Se exportan como tipos desde `@atium/core`.
-    - `packages/core/src/storage/list-runs-query.ts`: `runSelector(query)`, interna de core. Valida la consulta (lanza `RangeError`) y devuelve la función que filtra, ordena y aplica `limit`. Valida `since` con `z.iso.datetime({ offset: true })` y calcula `Date.parse` una vez por run.
-    - `packages/core/src/testing/in-memory-storage.ts`: `InMemoryStorage`, exportado desde `@atium/core/testing`.
-      - Copia con `structuredClone` al escribir y al leer.
-      - Usa el helper privado `#whenOpen`, que cede una vez (`await Promise.resolve()`) y comprueba si está cerrado.
-      - `listRuns` valida la consulta antes de ceder.
-    - `packages/core/test-contracts/storage.contract.ts`: `storageContract(create)` con 28 casos, divididos en `describeWriteAndGet`, `describeListRunsOrder`, `describeListRunsFilters`, `describeListRunsInvalidQuery`, `describeConcurrency` y `describeClose`. Importa de `../src/...` con rutas relativas.
-    - `packages/core/src/testing/in-memory-storage.test.ts`: ejecuta el contrato contra el fake y comprueba que dos instancias no comparten runs.
-    - `packages/core/tsconfig.json`: `include` con `test-contracts`. `eslint.config.js` no cambia: el lint pasa sin overrides para esa carpeta.
-    - Docs:
-      - `docs/design/15-storage.md` §23.2.2 "Interfaces", nueva.
-      - `docs/design/16-repository-structure.md`: añade `test-contracts/`.
-      - `docs/engineering/04-testing.md`: corrige el ejemplo del contrato y la línea de `InMemoryStorage`.
-      - README de core.
-  - Verificado:
-    - `pnpm verify` sale con 0: 894 tests. Core tiene un 99,12 % de líneas y un 96,29 % de ramas. `in-memory-storage.ts` tiene el 100 %; en `list-runs-query.ts` solo queda sin cubrir la línea 70 (`return 0` con ids iguales, que no se da).
-    - Cinco mutaciones del fake rompen el contrato: `since` exclusivo, empate por id ascendente, guardar sin copiar, aceptar ids repetidos y `Date.parse` sin validar ISO.
-    - Calculé los ids de las semillas 1, 2 y 3: en orden descendente quedan 2, 3, 1, así que el test de empate distingue el orden de inserción, el inverso y el ascendente.
-    - `/review` con code-reviewer, duplication-auditor y docs-checker (security, design y perf no aplicaban por las rutas):
-      - Sin bloqueantes.
-      - Se corrigió el importante: `since` aceptaba fechas no ISO y fechas sin zona, que dependen de la zona horaria de la máquina.
-      - Se corrigieron todas las sugerencias a petición del usuario ("Corrige todo").
-    - CI del PR #36 al cerrar: `verify` pasa en ubuntu, macos y windows con Node 22 y 24. `audit` falla por el problema conocido.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan ("Si, aprobados"):
-    - Orden de `listRuns`: `startedAt` descendente y, en empate, `id` descendente.
-    - `since`: ISO 8601 e inclusivo.
-    - `branch`: coincidencia exacta; los runs sin rama se excluyen.
-    - `limit`: obligatorio, entero ≥ 1; un `limit` o un `since` inválidos lanzan `RangeError`.
-    - Después de `close`, todo devuelve `STORAGE_UNAVAILABLE`.
-    - Un run inexistente es `ok(undefined)`; no hay códigos de error nuevos.
-    - `close` solo está en `Storage`.
-  - Tomadas tras `/review`, aprobadas con "Corrige todo":
-    - `since` exige `Z` o un offset.
-    - Una consulta inválida lanza `RangeError` aunque el storage esté cerrado.
-    - El máximo de `limit` es `Number.MAX_SAFE_INTEGER`.
-  - Todas quedaron escritas en `15-storage.md` §23.2.2 y en el TSDoc de `storage.ts`. No hay ADR nuevo.
-  - Sin changeset porque `@atium/core` es `private`.
-- **Problemas:**
-  - El hook `test-guard` bloqueó un comando que creaba y borraba un `.test.ts` temporal en el scratchpad para imprimir ids. No se creó nada; los ids se calcularon con `node -e`.
-  - Deuda para v0-16 (SQLite) y los backends de archivos: el `writeRunFile` de #15 comprueba con `lstat` y luego hace `rename`. Un backend de archivos podría fallar el caso "accepts exactly one of several concurrent writes of the same id". No se relajó el contrato.
-  - Los backends de `packages/storage/*` no pueden importar `test-contracts/` con rutas relativas a `../src`. Hará falta exponer el contrato por nombre de paquete (por ejemplo `@atium/core/test-contracts`) y cambiar sus imports. No está decidido.
-  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
-- **Siguiente paso:**
-  1. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
-  2. Cuando una persona mergee el PR #36, ejecutar `/task 17` (v0-16-storage-sqlite, que depende de v0-15). Antes, decidir con el usuario cómo importa el paquete de SQLite la suite de contrato.
-  3. Si el PR #36 sigue sin mergear, la siguiente tarea disponible es #18 (v0-17-cli-skeleton, que depende de v0-12, ya cerrada).

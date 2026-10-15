@@ -37,7 +37,7 @@
 | Mutation (opcional) | Stryker | No reinventar |
 | Documentación | Astro Starlight o VitePress | Una página por regla |
 
-Las dependencias se fijan en la última versión estable, con una excepción: TypeScript se queda en la serie 6.x. TypeScript 7 es la versión nativa y su paquete npm ya no expone la API JS del compilador, que necesitan tsup (para generar las declaraciones) y typescript-eslint. Se pasa a 7 cuando ambas herramientas la soporten ([ADR-0021](../adr/0021-typescript-6.md)).
+Las dependencias se fijan en la última versión estable, con una excepción: TypeScript se queda en la serie 6.x. TypeScript 7 es la versión nativa y su paquete npm ya no expone la API JS del compilador, que necesitan tsup (para generar las declaraciones) y typescript-eslint. Se pasa a 7 cuando ambas herramientas la soporten ([ADR-0021](../adr/0021-typescript-6.md)). Las versiones transitivas solo se fuerzan con los `overrides` de seguridad de [06-security.md](../engineering/06-security.md#dependencias).
 
 ### Calidad de código
 
