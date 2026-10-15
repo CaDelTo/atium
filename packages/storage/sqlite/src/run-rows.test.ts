@@ -1,4 +1,5 @@
 import { RunSchema } from "@atium/core";
+import { HEAVY_TEST_TIMEOUT_MS } from "@atium/core/testing";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { rowsToRun, runToRows } from "./run-rows.js";
@@ -52,20 +53,25 @@ function withoutField(value: unknown, path: readonly (string | number)[]): unkno
 }
 
 describe("runToRows and rowsToRun", () => {
-  it("rebuild a run without adding or losing keys, whichever optional fields it has", () => {
-    fc.assert(
-      fc.property(fc.subarray([...OPTIONAL_FIELDS]), (removed) => {
-        const input = removed.reduce<unknown>(
-          (run, path) => withoutField(run, path),
-          structuredClone(runWithEveryField()),
-        );
-        const run = RunSchema.parse(input);
-        const rows = runToRows(run);
+  // Slow next to the rest of the suite: room on a loaded CI runner (#99).
+  it(
+    "rebuild a run without adding or losing keys, whichever optional fields it has",
+    () => {
+      fc.assert(
+        fc.property(fc.subarray([...OPTIONAL_FIELDS]), (removed) => {
+          const input = removed.reduce<unknown>(
+            (run, path) => withoutField(run, path),
+            structuredClone(runWithEveryField()),
+          );
+          const run = RunSchema.parse(input);
+          const rows = runToRows(run);
 
-        expect(rowsToRun(rows.run, rows.testResults, rows.attempts)).toStrictEqual(run);
-      }),
-    );
-  });
+          expect(rowsToRun(rows.run, rows.testResults, rows.attempts)).toStrictEqual(run);
+        }),
+      );
+    },
+    HEAVY_TEST_TIMEOUT_MS,
+  );
 
   it("stores an absent field as null, never as undefined", () => {
     const rows = runToRows(
