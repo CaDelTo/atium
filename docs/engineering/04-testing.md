@@ -33,6 +33,22 @@ it("does not report cy.wait with an alias as a hard wait", ...);
 - **Un bug corregido empieza con un test que lo reproduce** y falla antes del arreglo.
 - **Nunca se debilita un test para que pase.** Si el test está mal, se explica en el PR. En Claude Code lo hace cumplir el hook `test-guard` ([12-ai-workflow.md](12-ai-workflow.md#hooks)).
 
+## TDD
+
+Cuando una tarea lo permite, se implementa guiada por tests: los tests de especificación se escriben primero, a partir de los criterios de aceptación y del diseño, y la implementación se escribe después para que pasen. Así el código cumple los requisitos, en lugar de que los tests describan lo que el código ya hace. Los pasos están en el [pipeline de entrega](12-ai-workflow.md#pipeline-de-entrega).
+
+**Con TDD:** funciones puras, fórmulas, esquemas Zod, normalizadores, reglas de lint (`RuleTester` con casos válidos e inválidos del diseño), analizadores, reporters, y el contrato de storage y adapters con fakes.
+
+**Sin TDD:** CI, documentación, configuración de herramientas, scaffolding de paquetes, y lo que solo se puede comprobar de punta a punta. El plan lo justifica y los tests se escriben junto al código.
+
+Reglas:
+
+- **Un test por criterio, como mínimo,** con el criterio en el nombre: `it("AC-3: …")`, donde `AC-3` es el tercer criterio de aceptación del issue. Así cada requisito se puede trazar hasta su test.
+- **Los escribe un agente distinto del que implementa** (`spec-tester`), sin ver la implementación. Los valores esperados salen del diseño, nunca de ejecutar el código.
+- **Rojo verificado:** antes de implementar, cada test `AC-n` falla por una assertion o por el `not implemented` de un stub, nunca por un error del propio test. Un test que ya pasa sin implementación no especifica nada.
+- **Los tests de especificación no se tocan durante la implementación.** Si uno parece incorrecto, lo decide `spec-tester` con el diseño en la mano, o una persona.
+- **Endurecimiento:** con los tests en verde, `test-writer` busca los casos que la especificación no cubre.
+
 ## Determinismo
 
 Un test que falla a veces es un bug, sobre todo en una herramienta que detecta tests flaky.

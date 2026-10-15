@@ -18,7 +18,7 @@ El agente principal planifica, decide e implementa. Las tareas mecánicas o de l
 |---|---|---|---|
 | Ligero | `haiku` | Tareas mecánicas, búsqueda, ejecutar herramientas y resumir su salida | `explorer`, `verifier`, `duplication-auditor`, `docs-checker`, `perf-benchmarker`, `issue-writer` |
 | Intermedio | `sonnet` | Juicio sobre código con criterios claros | `code-reviewer`, `security-reviewer`, `test-writer` |
-| Principal | `inherit` (el modelo de la sesión) | Precisión crítica, decisiones, diseño | `design-auditor`, planificación, implementación de fórmulas, ADRs |
+| Principal | `inherit` (el modelo de la sesión) | Precisión crítica, decisiones, diseño | `design-auditor`, `plan-reviewer`, `spec-tester`, `delivery-auditor`, planificación, implementación de fórmulas, ADRs |
 
 Reglas:
 - Si la tarea consiste en ejecutar algo y resumir, o en buscar y listar, va a un agente ligero.
@@ -38,8 +38,11 @@ Reglas:
 | `issue-writer` | haiku | No (solo issues en GitHub) | Milestone, etiquetas e issues de una fase con el formato de [08-git-workflow.md](08-git-workflow.md#issues) |
 | `code-reviewer` | sonnet | No | Revisión contra [11-code-review.md](11-code-review.md) |
 | `security-reviewer` | sonnet | No | Revisión contra [06-security.md](06-security.md) |
-| `test-writer` | sonnet | Solo tests | Casos borde, contratos, property-based |
+| `test-writer` | sonnet | Solo tests | Endurecimiento después del verde: casos borde, contratos, property-based |
 | `design-auditor` | inherit | No | Conformidad exacta con `docs/design/` |
+| `plan-reviewer` | inherit | No | Revisión del plan antes de implementar (puerta 0) |
+| `spec-tester` | inherit | Solo tests | Tests de especificación `AC-n` antes de la implementación (fase roja del TDD) |
+| `delivery-auditor` | inherit | No | Auditoría final estricta de la entrega (puerta 3), veredicto binario |
 
 Los subagentes no ven la conversación principal: cada invocación debe incluir el alcance (archivos o ref) y la pregunta concreta.
 
@@ -47,7 +50,8 @@ Los subagentes no ven la conversación principal: cada invocación debe incluir 
 
 | Comando | Qué hace |
 |---|---|
-| `/task <n\|archivo> [en paralelo con #M …]` | Lee el issue (número) o el archivo de `docs/tasks/`, comprueba que nadie más la tiene en curso, reúne contexto con `explorer`, presenta un plan y espera aprobación; al aprobarse crea la rama `<tipo>/<n>-<nombre>` desde `origin/main` y comenta en el issue. Con `en paralelo con #M` aplica las reglas de "Trabajo en paralelo" |
+| `/task <n\|archivo> [en paralelo con #M …]` | Lee el issue (número) o el archivo de `docs/tasks/`, comprueba que nadie más la tiene en curso, reúne contexto con `explorer`, presenta el plan con el veredicto de `plan-reviewer` y espera aprobación; después sigue el [pipeline de entrega](#pipeline-de-entrega). Con `en paralelo con #M` aplica las reglas de "Trabajo en paralelo" |
+| `/deliver` | Puerta final: `delivery-auditor`; si aprueba, push de la rama, PR en borrador con `Closes #N` y resumen en el issue |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |
 | `/review [ref]` | Revisión en paralelo con los agentes de revisión contra `ref` (por defecto `origin/main`); consolida un solo reporte |
 | `/audit` | Auditoría de todo el repo y propuesta de tareas |
@@ -65,30 +69,43 @@ siguiente tarea → issue abierto más antiguo del milestone actual
                   con las dependencias cerradas o Hechas y sin rama, PR ni worktree
    ▼
 /task 25   (o /task docs/tasks/v1-04-hard-wait-rule.md)
-   │  gh issue view → explorer reúne contexto → plan → aprobación
-   │  rama feat/25-hard-wait-rule + comentario en el issue
+   │  gh issue view → explorer reúne contexto → plan → plan-reviewer → aprobación (una persona)
    ▼
-implementación (modelo principal)
-   │  hook: Prettier en cada archivo editado
-   ▼
-/verify  → verifier (haiku)        ── falla → corregir → /verify
-   ▼
-/review  → code-reviewer, duplication-auditor, docs-checker
-           (+ security-reviewer / design-auditor / perf-benchmarker según los archivos)
-   │  bloqueantes → corregir → /review
-   ▼
-resumen final → push (una persona) → PR con "Closes #25"
+pipeline de entrega (ver abajo)
+   │  rama → [TDD: stubs → spec-tester → rojo → commit] → implementación → test-writer
+   │  /verify → /review → /deliver (delivery-auditor → push → PR en borrador)
    ▼
 /handoff → entrada en docs/progress.md + comentario en el issue
    ▼
-revisión humana → merge (una persona) → el issue se cierra
+CI en verde → PR listo para revisión → revisión humana → merge (una persona) → el issue se cierra
 ```
 
 Al cerrar una fase: `/audit` y luego `/plan-phase <siguiente fase>`.
 
+## Pipeline de entrega
+
+Cada tarea pasa por estos pasos ([ADR-0025](../adr/0025-pipeline-entrega-loop-autonomo.md)). Esta sección es la única fuente; los comandos remiten aquí.
+
+1. **Plan:** archivos, enfoque, riesgos, la decisión `TDD: sí/no` ([04-testing.md](04-testing.md#tdd)) y el mapa `AC-n → archivo → test previsto` para cada criterio de aceptación del issue.
+2. **Puerta 0, `plan-reviewer`:** `CAMBIOS` → se corrige el plan y se vuelve a pasar (máx. 2 rondas). `REQUIERE PERSONA` → la tarea se detiene.
+3. **Aprobación:** una persona, después de ver el plan y el veredicto. El plan se comenta en el issue bajo `## Plan aprobado`, indicando quién lo aprobó, y el issue recibe la etiqueta `plan:approved`.
+4. **Rama** `<tipo>/<n>-<nombre>` desde `origin/main` y comentario "Tarea iniciada" en el issue.
+5. **Especificación (solo con TDD):**
+   1. Stubs de las firmas públicas del plan, con TSDoc, que lanzan `new Error("not implemented")`.
+   2. `spec-tester` escribe los tests `AC-n`.
+   3. Rojo verificado: el agente principal ejecuta los tests y comprueba que cada `AC-n` falla por una assertion o por el stub.
+   4. Commit `test(<scope>): specify <tarea>` con los stubs y los tests. Es el único commit que puede tener tests en rojo ([08-git-workflow.md](08-git-workflow.md#commits)). Nunca `--no-verify`: si un hook rechaza el commit, se corrige la causa.
+6. **Implementación** mínima hasta verde y refactor con los tests en verde. Los tests `AC-n` no se tocan: si el implementador cree que uno está mal, lo devuelve a `spec-tester` con la justificación (máx. 1 ronda). Si `spec-tester` lo corrige, el cambio va en un commit `test(<scope>): revise AC-n` con el motivo en el cuerpo; si siguen en desacuerdo, la tarea se detiene. Sin TDD, los tests se escriben junto al código.
+7. **Endurecimiento:** `test-writer`. Un bug que encuentre se arregla empezando por su test.
+8. **Puerta 1, `/verify`:** máx. 3 rondas de corrección.
+9. **Puerta 2, `/review`:** bloqueantes e importantes corregidos o justificados por escrito, y una segunda pasada de `code-reviewer` sobre las correcciones (máx. 2 rondas).
+10. **Puerta 3, `/deliver`:** `delivery-auditor`; un `RECHAZADO` vuelve a la puerta 1 (máx. 2 rondas). Si aprueba: push, PR en borrador y resumen en el issue. Con la CI en verde, el PR pasa a listo para revisión. Después, `/handoff` añade al PR la entrada de `docs/progress.md` en un commit que solo toca ese archivo (y el archivo histórico); no se vuelve a auditar.
+
+La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o hace falta una decisión humana: un valor que el diseño no define, un ADR, un cambio de API pública o de esquema, una dependencia fuera de `17-tech-stack.md`, una decisión abierta de `CLAUDE.md`, un bloqueo de `test-guard`, un test existente que parece incorrecto o un desacuerdo sobre un test `AC-n`. El agente se detiene y pregunta.
+
 ## Trabajo en paralelo
 
-Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y en su propia sesión de Claude Code; el flujo de cada tarea no cambia: plan, aprobación, `/verify`, `/review`, PR y `/handoff`. Esta sección es la única fuente de las reglas; `/parallel` y `/task` remiten a ella.
+Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y en su propia sesión de Claude Code; cada tarea sigue el [pipeline de entrega](#pipeline-de-entrega) completo. Esta sección es la única fuente de las reglas; `/parallel` y `/task` remiten a ella.
 
 ```
 /parallel   (en el repo principal)
@@ -137,7 +154,7 @@ Actualiza la rama con `git fetch origin && git merge origin/main`. Merge, no reb
 - `pnpm-lock.yaml`: toma la versión de `origin/main` y regenera con `pnpm install`.
 - Bloques añadidos en ambos lados (exports, constantes, códigos de error): conserva ambos.
 - Cualquier conflicto que toque lógica existente: no lo resuelvas por tu cuenta. Detente, explica el conflicto y pregunta.
-- Después, `/verify` y pide el push.
+- Después, vuelve a la puerta 1 del pipeline: `/verify`, `/review` y `/deliver`, que hace el push.
 
 ## Hooks
 
@@ -163,14 +180,14 @@ No se ejecuta `pnpm verify` en un hook: es lento y se ejecuta explícitamente co
 - **Permitido sin preguntar:** comandos de verificación, lectura de git y gh, y el script de push `node .claude/scripts/push-branch.mjs`.
 - **Prohibido:** `git push` (el agente solo empuja con el script), publicar paquetes, leer `.env`, editar `fixtures/` (se generan con `pnpm fixtures:generate`), cerrar issues, mergear o cerrar PRs, y editar `.claude/settings.json`, `.claude/hooks/` o `.claude/scripts/` (para que el agente no pueda desactivar sus propios controles; esos archivos los cambia una persona).
 
-Todo lo demás pide confirmación. Los permisos se comparan por prefijo del comando y no cubren todas las variantes de un comando: por eso el push pasa por un script que valida la rama y construye el refspec, y la garantía final es el ruleset de `main` en GitHub ([08-git-workflow.md](08-git-workflow.md#ramas)). Ningún permiso aísla la ejecución: el agente ejecuta código del repositorio (tests, scripts de `package.json`, hooks) con las credenciales de la persona.
+Todo lo demás pide confirmación. Los permisos se comparan por prefijo del comando y no cubren todas las variantes de un comando: por eso el push pasa por un script que valida la rama y construye el refspec, y la garantía final es el ruleset de `main` en GitHub ([08-git-workflow.md](08-git-workflow.md#ramas)).
 
 ## GitHub (`gh`)
 
 El agente usa `gh` para leer y escribir issues y PRs del repo. El formato de los issues está en [08-git-workflow.md](08-git-workflow.md#issues).
 
 - **Lectura:** `gh issue view`, `gh issue list`, `gh label list`, `gh pr view`, `gh pr list`, `gh pr checks`.
-- **Escritura (pide confirmación):** `gh issue create`, `gh issue edit`, `gh issue comment`, `gh label create`, `gh pr create`.
+- **Escritura (pide confirmación):** `gh issue create`, `gh issue edit`, `gh issue comment`, `gh label create`, `gh pr create`, `gh pr ready`, `gh pr edit`, `gh pr comment`.
 - **`gh api`:** solo para crear el milestone de una fase (`/plan-phase`, `issue-writer`). No se deniega en los permisos porque `/plan-phase` lo necesita; el límite lo imponen los prompts.
 - **Nunca:** cerrar, borrar o transferir issues, mergear o cerrar PRs, ni hacer push fuera de `.claude/scripts/push-branch.mjs`. Mergear y cerrar lo hace una persona.
 - Los cuerpos largos se pasan con `--body-file` desde un directorio temporal fuera del repo.
@@ -195,4 +212,6 @@ Cada sesión empieza leyendo la última entrada de `docs/progress.md` y termina 
 ## Límites
 
 - Los resúmenes de subagentes pueden omitir detalles: el agente principal verifica en el código cada hallazgo bloqueante antes de actuar.
-- Los subagentes de revisión no reemplazan la revisión humana de fórmulas, esquemas públicos y decisiones de diseño.
+- Los subagentes de revisión no reemplazan la revisión humana de fórmulas, esquemas públicos y decisiones de diseño. `plan-reviewer` y `delivery-auditor` usan el mismo modelo que el agente: son controles de calidad, no una revisión independiente ni una barrera de seguridad.
+- `test-guard` es heurístico y fail-open: ayuda, pero no garantiza que ningún test se debilite; por eso `delivery-auditor` compara los tests `AC-n` con su commit de especificación.
+- El agente ejecuta código del repositorio (tests, scripts de `package.json`, hooks) con las credenciales de la persona; no hay aislamiento.

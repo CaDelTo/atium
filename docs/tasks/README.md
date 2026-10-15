@@ -34,6 +34,7 @@ Estándares: docs/engineering/01-typescript.md, 04-testing.md
 - ...
 - `pnpm verify` pasa
 - `/review` sin hallazgos bloqueantes
+- `delivery-auditor` aprueba la entrega
 
 ## Fuera de alcance
 
