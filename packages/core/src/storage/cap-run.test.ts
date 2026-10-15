@@ -183,37 +183,43 @@ describe("capTestResult", () => {
       })
       .map(({ startedAtMs, durationMs }) => call(startedAtMs, durationMs));
 
-    it("keeps pending calls first, then the closest to the failure, in their original order", () => {
-      fc.assert(
-        fc.property(fc.array(callArbitrary, { minLength: 190, maxLength: 260 }), (calls) => {
-          const tagged = calls.map((item, index) => ({ ...item, host: `h${String(index)}` }));
-          const capped = capTestResult(
-            resultWithAttempt({ network: { endpoints: [], calls: tagged } }),
-          );
-          const network = capped.attempts[0]?.network;
-          const kept = network?.calls ?? [];
-          const keptHosts = new Set(kept.map((item) => item.host));
-          const dropped = tagged.filter((item) => !keptHosts.has(item.host));
-          const isPending = (item: NetworkCall): boolean =>
-            item.startedAtMs <= FAILED_AT_MS &&
-            (item.durationMs === undefined || item.startedAtMs + item.durationMs > FAILED_AT_MS);
-          const distance = (item: NetworkCall): number => Math.abs(item.startedAtMs - FAILED_AT_MS);
-          const order = kept.map((item) => Number(item.host.slice(1)));
+    // About a second and a half next to the rest of the suite: room on a slow CI runner (#99).
+    it(
+      "keeps pending calls first, then the closest to the failure, in their original order",
+      () => {
+        fc.assert(
+          fc.property(fc.array(callArbitrary, { minLength: 190, maxLength: 260 }), (calls) => {
+            const tagged = calls.map((item, index) => ({ ...item, host: `h${String(index)}` }));
+            const capped = capTestResult(
+              resultWithAttempt({ network: { endpoints: [], calls: tagged } }),
+            );
+            const network = capped.attempts[0]?.network;
+            const kept = network?.calls ?? [];
+            const keptHosts = new Set(kept.map((item) => item.host));
+            const dropped = tagged.filter((item) => !keptHosts.has(item.host));
+            const isPending = (item: NetworkCall): boolean =>
+              item.startedAtMs <= FAILED_AT_MS &&
+              (item.durationMs === undefined || item.startedAtMs + item.durationMs > FAILED_AT_MS);
+            const distance = (item: NetworkCall): number =>
+              Math.abs(item.startedAtMs - FAILED_AT_MS);
+            const order = kept.map((item) => Number(item.host.slice(1)));
 
-          expect(kept).toHaveLength(Math.min(calls.length, MODEL_LIST_CAPS.networkCalls));
-          expect(network?.callsDropped).toBe(dropped.length > 0 ? dropped.length : undefined);
-          expect(order).toEqual([...order].sort((a, b) => a - b));
-          const rank = (item: NetworkCall): RankKey => [
-            isPending(item) ? 0 : 1,
-            distance(item),
-            item.startedAtMs > FAILED_AT_MS ? 1 : 0,
-            Number(item.host.slice(1)),
-          ];
-          expectKeptOutrankDropped(kept.map(rank), dropped.map(rank));
-        }),
-        runOptions,
-      );
-    });
+            expect(kept).toHaveLength(Math.min(calls.length, MODEL_LIST_CAPS.networkCalls));
+            expect(network?.callsDropped).toBe(dropped.length > 0 ? dropped.length : undefined);
+            expect(order).toEqual([...order].sort((a, b) => a - b));
+            const rank = (item: NetworkCall): RankKey => [
+              isPending(item) ? 0 : 1,
+              distance(item),
+              item.startedAtMs > FAILED_AT_MS ? 1 : 0,
+              Number(item.host.slice(1)),
+            ];
+            expectKeptOutrankDropped(kept.map(rank), dropped.map(rank));
+          }),
+          runOptions,
+        );
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
   });
 
   describe("network endpoints", () => {

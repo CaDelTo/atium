@@ -5,6 +5,7 @@ import { failOpen } from "./fail-open.js";
 import type { LogStream, StderrLoggerOptions } from "./stderr-logger.js";
 import { createStderrLogger } from "./stderr-logger.js";
 import { createRedactor, RedactConfigSchema } from "./redact/redactor.js";
+import { HEAVY_TEST_TIMEOUT_MS } from "./storage/samples.test-support.js";
 
 const ANSI_ESCAPE = "\u001b[";
 const SECRET_HEADER = "Authorization: Bearer abc.def";
@@ -331,26 +332,31 @@ describe("createStderrLogger", () => {
       expect(stream.chunks).toEqual(["atium:cli info [unformattable log entry]\n"]);
     });
 
-    it("writes exactly one line for any message and context", () => {
-      fc.assert(
-        fc.property(
-          fc.string({ unit: "binary" }),
-          fc.dictionary(fc.string(), fc.anything({ withBigInt: true, withDate: true })),
-          (message, context) => {
-            const stream = fakeStream();
+    // About two seconds next to the rest of the suite: room on a slow CI runner (#99).
+    it(
+      "writes exactly one line for any message and context",
+      () => {
+        fc.assert(
+          fc.property(
+            fc.string({ unit: "binary" }),
+            fc.dictionary(fc.string(), fc.anything({ withBigInt: true, withDate: true })),
+            (message, context) => {
+              const stream = fakeStream();
 
-            loggerFor(stream, { verbose: true }).warn(message, context);
+              loggerFor(stream, { verbose: true }).warn(message, context);
 
-            expect(stream.chunks).toHaveLength(1);
-            expect(stream.chunks[0]?.match(/\n/g)).toEqual(["\n"]);
-            expect(stream.chunks[0]?.endsWith("\n")).toBe(true);
-            expect(stream.chunks[0]).not.toContain("\u001b");
-          },
-        ),
-        // Fixed seed, so a failure reproduces (04-testing.md, "Determinismo").
-        { seed: 20261012, numRuns: 300 },
-      );
-    });
+              expect(stream.chunks).toHaveLength(1);
+              expect(stream.chunks[0]?.match(/\n/g)).toEqual(["\n"]);
+              expect(stream.chunks[0]?.endsWith("\n")).toBe(true);
+              expect(stream.chunks[0]).not.toContain("\u001b");
+            },
+          ),
+          // Fixed seed, so a failure reproduces (04-testing.md, "Determinismo").
+          { seed: 20261012, numRuns: 300 },
+        );
+      },
+      HEAVY_TEST_TIMEOUT_MS,
+    );
 
     it("lets failOpen report a failure through it", async () => {
       const stream = fakeStream();
