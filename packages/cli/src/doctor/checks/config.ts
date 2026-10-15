@@ -1,5 +1,4 @@
-import * as path from "node:path";
-import { loadConfig, quoteForMessage } from "@atium/core";
+import { displayPath, loadConfig, quoteForMessage } from "@atium/core";
 import type { LoadedConfig } from "@atium/core";
 import type { CommandContext } from "../../command-context.js";
 import { isUserError } from "../../error-kind.js";
@@ -56,12 +55,4 @@ export async function checkConfig(context: CommandContext): Promise<DoctorCheckO
     message: DOCTOR.config.loaded(quoteForMessage(file), adapters),
     details: { file, adapters },
   };
-}
-
-/** `file` relative to `cwd` if it is inside it, or else as it is, as `loadConfig` shows it. */
-function displayPath(cwd: string, file: string): string {
-  const relative = path.relative(cwd, file);
-  const outside =
-    relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
-  return outside ? file : relative;
 }

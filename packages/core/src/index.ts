@@ -1,5 +1,5 @@
 export { assertNever } from "./assert-never.js";
-export { detectRunContext } from "./ci/detect-run-context.js";
+export { detectRunContext, LOCAL_PROVIDER } from "./ci/detect-run-context.js";
 export type { DetectRunContextOptions, RunContext } from "./ci/detect-run-context.js";
 export { createGitClient } from "./ci/git-client.js";
 export type { CreateGitClientOptions, GitClient } from "./ci/git-client.js";
@@ -9,9 +9,10 @@ export { loadConfig } from "./config/load-config.js";
 export type { LoadConfigOptions, LoadedConfig } from "./config/load-config.js";
 export type { ConfigEnv, ConfigFlags } from "./config/resolve-config.js";
 export { AtiumConfigSchema, defineConfig, QUARANTINE_MODES } from "./config/schema.js";
-export { CONFIG_FILE_NAMES } from "./defaults.js";
+export { ATIUM_DIRECTORY, CONFIG_FILE_NAMES } from "./defaults.js";
 export type { AtiumConfig, AtiumConfigInput, QuarantineMode } from "./config/schema.js";
 export type { EnvVars } from "./env.js";
+export { errnoCode, isMissingFileError } from "./errno.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
@@ -56,7 +57,7 @@ export type { TestCase } from "./model/test-case.js";
 export { TEST_OUTCOMES, TestResultSchema } from "./model/test-result.js";
 export type { TestOutcome, TestResult } from "./model/test-result.js";
 export { truncateUtf8 } from "./model/text.js";
-export { resolveInside, toPosixRelative } from "./paths.js";
+export { displayPath, resolveInside, toPosixRelative } from "./paths.js";
 export { ANALYZER_KINDS, CAPABILITIES } from "./pipeline/analyzer.js";
 export type {
   AnalysisContext,

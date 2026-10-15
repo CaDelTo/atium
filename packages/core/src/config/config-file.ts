@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { CONFIG_FILE_NAMES } from "../defaults.js";
 import { AtiumError } from "../errors.js";
 import { quoteForMessage } from "../quote.js";
-import { errnoCode } from "../errno.js";
+import { isMissingFileError } from "../errno.js";
 
 // The only I/O of `core`: finding and loading the config file stays here, next
 // to the precedence and the validation (ADR-0017).
@@ -89,11 +89,6 @@ async function isFile(file: string): Promise<boolean> {
       { cause: error, hint: "Check that Atium can read that directory." },
     );
   }
-}
-
-function isMissingFileError(error: unknown): boolean {
-  const code = errnoCode(error);
-  return code === "ENOENT" || code === "ENOTDIR";
 }
 
 /**

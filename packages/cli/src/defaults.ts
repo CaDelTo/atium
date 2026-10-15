@@ -57,6 +57,11 @@ export const MIN_NODE_VERSION = "22.12.0";
  * working directory. `atium doctor` checks it can be written.
  *
  * Source: 15-storage.md and 18-cli-config.md §26.1.
+ *
+ * Same value as `ATIUM_DIRECTORY` of `@atium/core`, kept here on purpose:
+ * messages.ts uses it in the help, which `atium --help` loads without
+ * `@atium/core` (05-performance.md, "Arranque del CLI"). defaults.test.ts
+ * keeps both equal.
  */
 export const ATIUM_DIRECTORY = ".atium";
 

@@ -33,8 +33,11 @@ export interface DetectRunContextOptions {
   readonly logger: Logger;
 }
 
-/** Value of `ci.provider` outside CI. */
-const LOCAL_PROVIDER = "local";
+/**
+ * Value of `ci.provider` when Atium runs outside CI, on a developer machine
+ * (02-data-model.md §10.1, step 6).
+ */
+export const LOCAL_PROVIDER = "local";
 
 const LOCAL = unknownCiDetection(LOCAL_PROVIDER);
 

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type { EnvVars } from "@atium/core";
@@ -106,6 +106,27 @@ describe("checkConfig", () => {
     const check = await checkConfig(context({ config: "..atium.json" }));
 
     expect(check.details).toEqual({ file: "..atium.json", adapters: [] });
+  });
+
+  it("shows a config inside a directory named with two dots as relative", async () => {
+    const relative = path.join("..conf", "atium.json");
+    await mkdir(path.join(cwd, "..conf"));
+    await writeConfig(relative, {});
+
+    const check = await checkConfig(context({ config: relative }));
+
+    expect(check.details).toEqual({ file: relative, adapters: [] });
+  });
+
+  it("shows a file in the parent of the working directory by its absolute path", async () => {
+    const nested = path.join(cwd, "nested");
+    await mkdir(nested);
+    const file = path.join(cwd, "parent.json");
+    await writeFile(file, "{}");
+
+    const check = await checkConfig({ ...context({}, { ATIUM_CONFIG: file }), cwd: nested });
+
+    expect(check.details).toEqual({ file, adapters: [] });
   });
 
   it("fails when the file named by --config does not exist", async () => {

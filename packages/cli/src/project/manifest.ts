@@ -1,11 +1,11 @@
 import * as path from "node:path";
-import { assertNever, quoteForMessage } from "@atium/core";
+import { assertNever, errnoCode, quoteForMessage } from "@atium/core";
 import { MANIFEST_MAX_BYTES } from "../defaults.js";
 import { MANIFEST } from "../messages.js";
 import { detectFrameworks } from "./detect-frameworks.js";
 import type { DetectedProject } from "./detect-frameworks.js";
 import type { CappedRead } from "./project-files.js";
-import { errnoCode, readCapped } from "./project-files.js";
+import { readCapped } from "./project-files.js";
 
 /** The manifest of the project, read by `atium init` and `atium doctor`. */
 const MANIFEST_FILE = "package.json";

@@ -216,12 +216,20 @@ export const RUN_FILE_LINE_TARGET_BYTES = 768 * 1024;
 export const BDD_TRUNCATION_WINDOW_STEPS = 10;
 
 /**
+ * Directory where Atium keeps its local files (run files, the SQLite
+ * database), relative to the repository root.
+ *
+ * Source: 15-storage.md §23.2.1, §23.5 and §23.6, and 18-cli-config.md §26.1.
+ */
+export const ATIUM_DIRECTORY = ".atium";
+
+/**
  * Directory of the local run files, relative to the repository root. Each run
  * is written to `<RUNS_DIRECTORY>/<runId>.ndjson.gz`.
  *
  * Source: 04-collector.md and 15-storage.md §23.2.1.
  */
-export const RUNS_DIRECTORY = ".atium/runs";
+export const RUNS_DIRECTORY = `${ATIUM_DIRECTORY}/runs` as const;
 
 /**
  * Lowest HTTP status that marks an endpoint as failing when the endpoints of
