@@ -72,6 +72,30 @@ export function toPosixRelative(root: string, absolutePath: string): string {
   return relative.split(api.sep).join(posix.sep);
 }
 
+/**
+ * A file path as shown in a message: relative to `cwd` if the file is inside
+ * it, or as given if it is outside it, so the user can find it from where
+ * they ran Atium.
+ *
+ * Uses the system `path`. A name that only starts with two dots, such as
+ * `..foo.ts`, is inside `cwd`.
+ *
+ * @param cwd - Directory the user ran Atium from.
+ * @param file - Absolute path of the file.
+ * @returns The path relative to `cwd`, or `file` itself if it is `cwd`'s
+ *   parent, outside `cwd` or, on Windows, on another drive.
+ *
+ * @example
+ * ```ts
+ * displayPath("/repo", "/repo/atium.config.ts"); // "atium.config.ts"
+ * displayPath("/repo", "/etc/atium.config.ts"); // "/etc/atium.config.ts"
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- stub until the implementation (TDD)
+export function displayPath(cwd: string, file: string): string {
+  throw new Error("not implemented");
+}
+
 /** Why `relative` cannot be used inside `root`, or `undefined` if it can. */
 function unsafeReason(api: PlatformPath, root: string, relative: string): string | undefined {
   if (relative.includes("\0")) {

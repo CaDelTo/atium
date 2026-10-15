@@ -1,7 +1,7 @@
-import { posix, resolve, sep, win32 } from "node:path";
+import { dirname, join, posix, resolve, sep, win32 } from "node:path";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import { resolveInside, resolveInsideWith, toPosixRelative } from "./paths.js";
+import { displayPath, resolveInside, resolveInsideWith, toPosixRelative } from "./paths.js";
 
 // Fixed seed, so a failure reproduces (04-testing.md, "Determinismo").
 const runOptions = { seed: 20261012, numRuns: 500 };
@@ -265,4 +265,38 @@ describe("resolveInside", () => {
     expect(resolveInside(root, "a.json")).toBe(resolve(root, "a.json"));
     expectModelInvalid(() => resolveInside(root, `..${sep}secret`));
   });
+});
+
+describe("displayPath", () => {
+  // Built with the path of the operating system, so the same cases run on
+  // Linux, macOS and Windows.
+  const cwd = resolve(sep, "repo", "project");
+
+  it.each([
+    ["a file named ..foo.ts", "..foo.ts"],
+    ["a file inside a directory named ..foo", join("..foo", "a.ts")],
+  ])(
+    "AC-2: displayPath keeps a file named ..foo.ts inside cwd relative (%s)",
+    (_label, relative) => {
+      expect(displayPath(cwd, join(cwd, relative))).toBe(relative);
+    },
+  );
+
+  it.each([
+    ["the parent of cwd (..)", dirname(cwd)],
+    ["a file next to cwd (../x)", join(dirname(cwd), "x")],
+    ["a file two levels up (../../x)", join(dirname(dirname(cwd)), "x")],
+    ["a sibling with a misleading prefix", `${cwd}-evil${sep}a.ts`],
+  ])("AC-2: displayPath returns the file as given when it is outside cwd (%s)", (_label, file) => {
+    expect(displayPath(cwd, file)).toBe(file);
+  });
+
+  it.runIf(process.platform === "win32")(
+    "AC-2: displayPath returns the file as given when it is on another Windows drive",
+    () => {
+      const file = "D:\\repo\\project\\atium.config.ts";
+
+      expect(displayPath("C:\\repo\\project", file)).toBe(file);
+    },
+  );
 });

@@ -12,6 +12,7 @@ export { AtiumConfigSchema, defineConfig, QUARANTINE_MODES } from "./config/sche
 export { CONFIG_FILE_NAMES } from "./defaults.js";
 export type { AtiumConfig, AtiumConfigInput, QuarantineMode } from "./config/schema.js";
 export type { EnvVars } from "./env.js";
+export { errnoCode, isMissingFileError } from "./errno.js";
 export { AtiumError, ERROR_CODES, isAtiumError } from "./errors.js";
 export type { ErrorCode } from "./errors.js";
 export { failOpen } from "./fail-open.js";
@@ -56,7 +57,7 @@ export type { TestCase } from "./model/test-case.js";
 export { TEST_OUTCOMES, TestResultSchema } from "./model/test-result.js";
 export type { TestOutcome, TestResult } from "./model/test-result.js";
 export { truncateUtf8 } from "./model/text.js";
-export { resolveInside, toPosixRelative } from "./paths.js";
+export { displayPath, resolveInside, toPosixRelative } from "./paths.js";
 export { ANALYZER_KINDS, CAPABILITIES } from "./pipeline/analyzer.js";
 export type {
   AnalysisContext,

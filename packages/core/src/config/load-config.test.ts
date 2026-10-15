@@ -240,6 +240,18 @@ describe("loadConfig", () => {
       }
     });
 
+    it("AC-2: loadConfig names a config file called ..foo.json inside cwd by its relative path", async () => {
+      const file = await writeConfig("..foo.json", '{ "storgae": {} }');
+
+      const error = await rejectedAtiumError(
+        loadConfig({ cwd, env: {}, flags: { config: "..foo.json" } }),
+      );
+
+      expect(error.code).toBe("CONFIG_INVALID");
+      expect(error.message).toContain('Invalid config in "..foo.json":');
+      expect(error.message).not.toContain(file);
+    });
+
     it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
       "rejects a working directory that cannot be read with CONFIG_NOT_FOUND",
       async () => {
