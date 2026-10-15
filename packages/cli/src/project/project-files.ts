@@ -1,8 +1,13 @@
 import { lstat, mkdtemp, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, isMissingFileError } from "@atium/core";
 
 // The file system work of `atium init` and `atium doctor`, apart from their
 // decisions in run-init.ts and doctor/.
+
+// The rule lives in @atium/core. Re-exported because project-files.test.ts
+// imports it from this module; new code imports it from @atium/core.
+export { errnoCode } from "@atium/core";
 
 /** What is at a path, without following a symlink: a symlink counts as a file. */
 export type EntryKind = "none" | "file" | "directory";
@@ -19,7 +24,7 @@ export async function entryKind(file: string): Promise<EntryKind> {
   try {
     return (await lstat(file)).isDirectory() ? "directory" : "file";
   } catch (error) {
-    if (isMissing(error)) {
+    if (isMissingFileError(error)) {
       return "none";
     }
     throw error;
@@ -38,7 +43,7 @@ export async function isRegularFile(file: string): Promise<boolean> {
   try {
     return (await stat(file)).isFile();
   } catch (error) {
-    if (isMissing(error)) {
+    if (isMissingFileError(error)) {
       return false;
     }
     throw error;
@@ -71,7 +76,7 @@ export async function readCapped(file: string, maxBytes: number): Promise<Capped
     }
     size = info.size;
   } catch (error) {
-    if (isMissing(error)) {
+    if (isMissingFileError(error)) {
       return { kind: "missing" };
     }
     throw error;
@@ -135,22 +140,4 @@ export async function replaceFile(file: string, content: string): Promise<void> 
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
-}
-
-/**
- * The code of a Node.js system error, such as `ENOENT`.
- *
- * @param error - Anything caught.
- * @returns The string `code` of an `Error`, or `undefined` if it has none.
- */
-export function errnoCode(error: unknown): string | undefined {
-  return error instanceof Error && "code" in error && typeof error.code === "string"
-    ? error.code
-    : undefined;
-}
-
-/** Nothing at the path, also when a parent is not a directory, as in `loadConfig`. */
-function isMissing(error: unknown): boolean {
-  const code = errnoCode(error);
-  return code === "ENOENT" || code === "ENOTDIR";
 }

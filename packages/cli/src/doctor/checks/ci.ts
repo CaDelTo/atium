@@ -1,11 +1,8 @@
-import { detectRunContext, isAtiumError, quoteForMessage } from "@atium/core";
+import { detectRunContext, isAtiumError, LOCAL_PROVIDER, quoteForMessage } from "@atium/core";
 import type { AtiumError, DetectRunContextOptions, RunContext } from "@atium/core";
 import { DOCTOR } from "../../messages.js";
 import type { DoctorCheckOf } from "../report.js";
 import { errorOutcome } from "./error-outcome.js";
-
-/** `ci.provider` outside CI (02-data-model.md §10.1). */
-const LOCAL_PROVIDER = "local";
 
 /** The `ci` check and what it tells about Git. */
 export interface CiCheckResult {

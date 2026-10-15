@@ -1,8 +1,8 @@
 import { lstat, mkdtemp, realpath, rm, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "@atium/core";
 import { ATIUM_DIRECTORY } from "../../defaults.js";
 import { DOCTOR } from "../../messages.js";
-import { errnoCode } from "../../project/project-files.js";
 import type { DoctorCheckOf } from "../report.js";
 
 /** Prefix of the directory created, and removed at once, to check a directory can be written. */
