@@ -21,3 +21,15 @@ strictDepBuilds: true
 # Resolve only versions published at least 14 days ago, transitive ones included
 # (docs/engineering/06-security.md). In minutes.
 minimumReleaseAge: 20160
+
+# Transitive versions forced to fix security advisories that no eligible
+# direct dependency fixes yet (docs/engineering/06-security.md). Each entry
+# names its advisory and when to remove it.
+overrides:
+  # GHSA-g7r4-m6w7-qqqr (low): esbuild <0.28.1. tsup 8.5.1 declares
+  # esbuild ^0.27.0. Remove when tsup declares esbuild ^0.28.1 or later.
+  "tsup>esbuild": ^0.28.2
+  # GHSA-67mh-4wv8-2f99 (moderate): esbuild <=0.24.2, pulled by drizzle-kit
+  # through the deprecated @esbuild-kit packages. Pinned to the series that
+  # drizzle-kit itself uses. Remove when drizzle-kit drops @esbuild-kit.
+  "@esbuild-kit/core-utils>esbuild": ^0.25.12
