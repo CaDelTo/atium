@@ -4,6 +4,76 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-12 — #18 v0-17-cli-skeleton
+
+- **Hecho:**
+  - Rama `feat/18-cli-skeleton`, desde `origin/main` en `ae7dd27`. El push lo hizo el usuario con `! git push -u origin feat/18-cli-skeleton`. PR #38 con `Closes #18`, abierto; sin mergear al cerrar la sesión.
+  - Commit `1d68c8b` `docs(repo): add handoff entry for #17`: la entrada de #17 que estaba sin commitear al empezar.
+  - Commit `fcf4a78` `feat(core): export the config file names`: `CONFIG_FILE_NAMES` exportado desde `packages/core/src/index.ts` y listado en el README de core.
+  - Commit `96ddb2d` `feat(cli): add the CLI base and the init command`. Paquete privado `@atium/cli` en `packages/cli/`:
+    - Configuración: `commander@15.0.0` y `zod@4.6.5`, `engines >=22.12` (lo exige Commander 15), solo ESM, `bin: atium` → `dist/bin.js` y `exports` solo con `./package.json`. tsup con un único entry, `splitting` y shebang; `pkg:check` es solo `publint`.
+    - `src/run.ts`: `run({ argv, cwd, env, stdout, stderr, commands? })` devuelve el código de salida; `commands` es inyectable para los tests.
+    - Errores de Commander: con `exitOverride`, su código 0 se mantiene y cualquier otro se convierte en 2. Su `writeErr` pasa por `terminalText`.
+    - `reportFailure`: si `report-error.js` no se puede importar o falla, escribe un aviso mínimo y devuelve 0, o 3 con `--strict`.
+    - `src/report-error.ts`: un error de usuario se escribe como mensaje más `  Hint: ...`, redactado con `createCliRedactor()` y escapado con `terminalText`; si stderr falla, el error se ignora y se devuelve 2 igualmente. Un error interno se registra con `logger.error` y el contexto `{ error }`.
+    - `src/error-kind.ts`: `isUserError` (`UsageError`, o `CONFIG_INVALID`/`CONFIG_NOT_FOUND`, con `switch` exhaustivo sobre `ErrorCode`) y `exitCodeFor`.
+    - `src/exit-codes.ts`: `EXIT_CODES` (0, 1, 2, 3).
+    - `src/global-options.ts`: las 7 opciones; `--quiet` y `--verbose` declaradas con `.conflicts`.
+    - `src/command-context.ts`: `createCommandContext`, `createCliLogger` y `createCliRedactor` (redacción por defecto).
+    - `src/terminal-text.ts`: escapa C0, DEL, C1, U+2028/2029 y los caracteres bidi, salvo `\n` y `\t`.
+    - `src/messages.ts`: todos los textos, con TSDoc. `src/defaults.ts`: `LOG_NAMESPACE`, `INIT_CONFIG_FILE`, `FRAMEWORK_PACKAGES`, `CONFIG_PACKAGE` y `MANIFEST_MAX_BYTES` (1 MiB).
+    - `src/commands/`: interfaz `CliCommand` y `initCommand`, que carga `../init/run-init.js` con `await import`.
+    - `src/init/run-init.ts`: orquesta `init`. `src/init/project-files.ts`: `entryKind` (`lstat`), `isRegularFile` (`stat`, igual que `loadConfig`), `readCapped`, `createFile` (`wx`), `replaceFile` (`mkdtemp` junto al archivo y `rename`) y `errnoCode`. `src/init/detect-frameworks.ts` (Zod `looseObject`) y `src/init/config-template.ts`.
+    - Tests: 9 archivos y 130 tests, entre ellos `bin.test.ts`, que ejecuta `dist/bin.js`. Benchmark en `bench/help.bench.ts`. `coverage` excluye `src/bin.ts`.
+    - `turbo.json`: `@atium/cli#test` y `@atium/cli#bench` dependen también de su propio `build`.
+    - Docs:
+      - `18-cli-config.md` §26.1: opciones globales y comportamiento de `init`.
+      - `18-cli-config.md` §26.2: clasificación de errores, redacción y escape, fallback del reporte y `atium` sin comando, que sale con 2.
+      - `18-cli-config.md` §26.3: tabla del nivel de log.
+      - `03-errors-logging.md` (nivel de log y salida del CLI), `05-performance.md` (el presupuesto se mide sobre la media), `07-public-api.md` (excepción del CLI sin `src/index.ts`), `10-tooling.md` (`pkg:check` y turbo).
+      - ADR-0022: nota posterior sobre `--quiet`.
+      - READMEs de cli y core.
+  - Verificado:
+    - `pnpm verify` local en verde: 1.096 tests (905 de core, 61 de sqlite, 130 de cli); cli con 98 % de líneas y 95,5 % de ramas. `pkg:check` pasa.
+    - Benchmark: `atium --help` tarda 41 ms de media y 51 ms en p99 (presupuesto: 300 ms) y no carga `@atium/core`. `init` tarda unos 72 ms.
+    - `/review` con 6 agentes. Bloqueante corregido: el código 1 cuando falla el reporte. Importantes corregidos:
+      - errores de usuario sin redactar ni escapar;
+      - lectura de `package.json` sin tope;
+      - `lstat` frente al `stat` de `loadConfig`;
+      - `--force` no atómico.
+    - Sugerencias aplicadas: TSDoc de `messages.ts`, literales sustituidos por `CONFIG_PACKAGE` y `EXIT_CODES`, fuente de `FRAMEWORK_PACKAGES`, `sideEffects` eliminado, documentación, aviso de `package.json` solo con el código de error y aviso de `ATIUM_CONFIG`.
+    - CI del PR #38: estaba en `pending` al cerrar la sesión; no se vio el resultado.
+- **En curso:** nada. El PR #38 espera CI y la revisión del usuario.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan ("Si") y escritas en §26.1:
+    - `--quiet` → `error`.
+    - `--format`, `--output` y `--ci` llegan tipadas a los comandos, sin validar ni usar en V0.
+    - `init --config` es un error de uso (2).
+    - `--force` con otro `atium.config.*` existente es un error de uso (2).
+    - La detección usa `@playwright/test`, `playwright` y `cypress`.
+    - Export de `CONFIG_FILE_NAMES` **sin ADR**: queda en el README de core, no en un ADR.
+  - Tomada tras `/review` con "Arregla todo lo que puedas": tope de 1 MiB para `package.json` (`MANIFEST_MAX_BYTES`). El diseño no lo definía; lo propuse yo y el usuario no confirmó el valor de forma explícita. Escrito en §26.1 y `defaults.ts`.
+  - Tomadas por mí y documentadas en §26.1, §26.2, `05-performance.md` y el README de cli:
+    - `UsageError` es interna del CLI; no se añadió un `ErrorCode` público.
+    - `init` no carga la config ni lee `ATIUM_LOG_LEVEL`.
+    - Un error de I/O en `init` es interno, no `CONFIG_NOT_FOUND`.
+    - `atium` sin comando sale con 2.
+    - El benchmark compara la media.
+    - `engines >=22.12` en cli.
+  - Sin changeset: los paquetes son `private`.
+- **Problemas:**
+  - `audit` seguirá fallando en CI por `shell-quote` y `source-map-js` (problema conocido; el bump es posible desde el 2026-10-14T14:08Z).
+  - Pendientes sin cambio:
+    - Construir el logger con el `redact` de la config cuando un comando cargue la config.
+    - Validar `--output` con `resolveInside` cuando algún comando lo use.
+    - Base compartida de `vitest.config` (ya hay tres copias; jscpd marca el clon core/sqlite).
+  - Los tests de symlinks y permisos de cli se saltan en Windows. La cobertura de ramas local es 95,5 %, pero no se ha visto la de Windows en CI.
+  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
+- **Siguiente paso:**
+  1. Revisar el CI del PR #38 (`gh pr checks 38`), sobre todo `verify` en Windows y la cobertura de cli. Si falla, arreglarlo en `feat/18-cli-skeleton`.
+  2. Cuando el usuario mergee #38: commitear este handoff en la rama de la próxima tarea y ejecutar `/task 19` (v0-18, comando `doctor`).
+  3. A partir del 2026-10-14T14:08Z, proponer un PR aparte que suba `shell-quote` y `source-map-js`.
+
 ### 2026-10-12 — #17 v0-16-storage-sqlite
 
 - **Hecho:**
