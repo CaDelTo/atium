@@ -21,6 +21,7 @@
 ## Decisiones abiertas en esta tarea
 
 - Si un `headSha` que no cabe es un aviso (y se omite) o `MODEL_INVALID`.
+  - **Resuelto por la persona (2026-10-15):** es un aviso, y el run se guarda sin `prNumber` ni `headSha`, como cualquier `pull_request` inválido del payload (paso 3 de §10.1). El payload es un dato externo y no debe impedir guardar el run (ADR-0006). En 02-data-model.md, el caso límite de `MODEL_INVALID` debe dejar claro que no se aplica al payload de GitHub.
 
 ## Criterios de aceptación
 
