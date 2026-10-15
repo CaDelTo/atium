@@ -5,14 +5,13 @@ import type { NetworkCall } from "../model/network.js";
 import { RunSchema } from "../model/run.js";
 import { TestResultSchema } from "../model/test-result.js";
 import { jsonEscapedByteLength } from "../model/text.js";
-import { aRun, aTestCase, aTestResult } from "../testing/index.js";
+import { aRun, aTestCase, aTestResult, HEAVY_TEST_TIMEOUT_MS } from "../testing/index.js";
 import { bddReferenceIndex, capRunHeader, capTestResult } from "./cap-run.js";
 import {
   call,
   defaultError,
   endpoint,
   FAILED_AT_MS,
-  HEAVY_TEST_TIMEOUT_MS,
   failedAttempt,
   maxedResult,
   resultWithAttempt,
@@ -183,7 +182,7 @@ describe("capTestResult", () => {
       })
       .map(({ startedAtMs, durationMs }) => call(startedAtMs, durationMs));
 
-    // About a second and a half next to the rest of the suite: room on a slow CI runner (#99).
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
     it(
       "keeps pending calls first, then the closest to the failure, in their original order",
       () => {

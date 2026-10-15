@@ -1,3 +1,4 @@
+import { HEAVY_TEST_TIMEOUT_MS } from "@atium/core/testing";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../test/parse.js";
@@ -7,11 +8,6 @@ import { classifyBlock } from "./structure.js";
 
 // Fixed seed, so a failure reproduces (04-testing.md, "Determinismo").
 const runOptions = { seed: 20261013, numRuns: 300 };
-
-// 300 typescript-estree parses with v8 coverage take about a second locally
-// but exceeded Vitest's 5 s default on a loaded CI runner (#99). Same value as
-// HEAVY_TEST_TIMEOUT_MS in core's storage/samples.test-support.ts.
-const HEAVY_TEST_TIMEOUT_MS = 60_000;
 
 const playwrightSpec = `
 import { test, expect } from "@playwright/test";
@@ -176,6 +172,8 @@ describe("titlePathOf", () => {
     expect(titlePathOf(hook!).titles).toEqual(["login", "with a valid user"]);
   });
 
+  // 300 typescript-estree parses: slow next to the rest of the suite, so room on
+  // a loaded CI runner (#99).
   it(
     "is stable when spaces and line breaks change between tokens",
     () => {

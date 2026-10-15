@@ -58,6 +58,7 @@ Un test que falla a veces es un bug, sobre todo en una herramienta que detecta t
 - Sin red real en unitarios ni integración.
 - Directorios temporales con `fs.mkdtemp`, limpiados al terminar.
 - Los tests deben pasar en paralelo y en orden aleatorio (`--sequence.shuffle` en CI).
+- Un test lento por naturaleza (una propiedad con cientos de ejecuciones, o resultados con todos los campos en su tope) que tarde un segundo o más junto al resto de la suite recibe `HEAVY_TEST_TIMEOUT_MS` (`@atium/core/testing`) como tercer argumento de `it`: un runner de CI cargado puede ir varias veces más lento y superar los 5 s por defecto de Vitest. No se sube el `testTimeout` global ni se reducen las ejecuciones o la semilla de una propiedad.
 - Un job nocturno ejecuta la suite completa varias veces; un test inestable se arregla antes de cualquier otra tarea.
 
 ## Datos de prueba

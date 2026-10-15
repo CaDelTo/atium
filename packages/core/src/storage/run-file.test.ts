@@ -10,12 +10,8 @@ import { aRun, aTestResult, FakeLogger, rejectedAtiumError } from "../testing/in
 import { readRunFile, readRunFileEntries, readRunFileEntriesWithin } from "./run-file-reader.js";
 import { runFilePath, writeRunFile, writeRunFileWith } from "./run-file-writer.js";
 import type { WriteRunFileOptions } from "./run-file-writer.js";
-import {
-  defaultError,
-  HEAVY_TEST_TIMEOUT_MS,
-  maxedResult,
-  resultWithAttempt,
-} from "./samples.test-support.js";
+import { HEAVY_TEST_TIMEOUT_MS } from "../testing/timeouts.js";
+import { defaultError, maxedResult, resultWithAttempt } from "./samples.test-support.js";
 
 let rootDir: string;
 

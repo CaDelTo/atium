@@ -5,7 +5,7 @@ import { failOpen } from "./fail-open.js";
 import type { LogStream, StderrLoggerOptions } from "./stderr-logger.js";
 import { createStderrLogger } from "./stderr-logger.js";
 import { createRedactor, RedactConfigSchema } from "./redact/redactor.js";
-import { HEAVY_TEST_TIMEOUT_MS } from "./storage/samples.test-support.js";
+import { HEAVY_TEST_TIMEOUT_MS } from "./testing/timeouts.js";
 
 const ANSI_ESCAPE = "\u001b[";
 const SECRET_HEADER = "Authorization: Bearer abc.def";
@@ -332,7 +332,7 @@ describe("createStderrLogger", () => {
       expect(stream.chunks).toEqual(["atium:cli info [unformattable log entry]\n"]);
     });
 
-    // About two seconds next to the rest of the suite: room on a slow CI runner (#99).
+    // Slow next to the rest of the suite: room on a loaded CI runner (#99).
     it(
       "writes exactly one line for any message and context",
       () => {
