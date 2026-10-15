@@ -4,6 +4,55 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-12 — #17 v0-16-storage-sqlite
+
+- **Hecho:**
+  - Rama `feat/17-storage-sqlite`, desde `origin/main` en `abaf852`. El push lo hizo el usuario con `! git push`. PR #37 con `Closes #17`, mergeado por el usuario (merge `ae7dd27`); el issue #17 quedó cerrado.
+  - Commit `cc42eb0` `feat(core): share the storage contract and query checks with backends`:
+    - `packages/core/src/storage/list-runs-query.ts`: `parseListRunsQuery(query)` exportada (devuelve `ParsedListRunsQuery` `{ branch?, sinceMs?, limit }` o lanza `RangeError`); `runSelector` la usa. Tests en `list-runs-query.test.ts`.
+    - `@atium/core` exporta además `describeIssues` y `quoteForMessage`; `@atium/core/testing` exporta `FIXED_START` y `fixedTimePlus`.
+    - Subpath `@atium/core/test-contracts` (solo ESM, entrada en `tsup.config.ts` con `external: ["vitest"]`, excluido de attw con `--exclude-entrypoints`). Documentado como interno en `07-public-api.md`.
+  - Commit `f7604d8` `feat(storage-sqlite): add the local SQLite storage backend`: paquete privado `@atium/storage-sqlite` en `packages/storage/sqlite/`:
+    - better-sqlite3 13.0.3, drizzle-orm 0.45.3, drizzle-kit 0.31.11 (dev), fast-check (dev). `better-sqlite3: true` en `allowBuilds` de `pnpm-workspace.yaml`.
+    - `src/schema.ts`: tablas `runs`, `test_cases`, `test_results`, `attempts`, `errors` con los índices de §23.6. Migración generada en `drizzle/0000_initial.sql` (ignorada por Prettier); se aplica al abrir.
+    - `src/database-file.ts`: `prepareDatabaseFile` (ruta dentro de `rootDir` también tras `realpath`, rechaza symlinks, crea el archivo con `O_NOFOLLOW` y modo 0600, directorio 0700).
+    - `src/sqlite-storage.ts`: `openSqliteStorage({ rootDir, path?, logger })`. WAL (avisa por logger si no se puede), `foreign_keys`, `busy_timeout` 5000 ms, escrituras en transacción `IMMEDIATE` con sentencias preparadas, validación con `RunSchema` al escribir y al leer (`MODEL_INVALID`), `close` idempotente que nunca lanza.
+    - `src/run-rows.ts`, `src/statements.ts`, `src/invalid-run.ts`, `src/defaults.ts` (`SQLITE_DATABASE_PATH`, `SQLITE_BUSY_TIMEOUT_MS`, `SQLITE_FILE_MODE`, `SQLITE_DIRECTORY_MODE`).
+    - Tests: contrato de storage + casos propios (permisos, symlinks, base dañada, ids repetidos, round trip estricto, property-based de campos opcionales). Benchmark `bench/write-run.bench.ts`.
+    - Docs: `15-storage.md` §23.2.2 y §23.6 completa, `04-testing.md`, `06-security.md`, `07-public-api.md`, `10-tooling.md`, `16-repository-structure.md`, README de core y del paquete.
+  - Commit `a7fffe9` `build(repo): build workspace packages before linting`: el script `lint` raíz es `turbo run build && eslint .`, porque en CI el checkout limpio no tiene `dist/` y el lint con tipos fallaba en los tres sistemas.
+  - Commit `ef8b772` `test(storage-sqlite): cover symlinks and read failures on every platform`: en Windows la cobertura de ramas bajaba a 88,76 % porque se saltaban los tests de symlinks; ahora el de directorio usa una junction, el de archivo se salta en tiempo de ejecución si da `EPERM`, y hay tres tests más.
+  - Verificado:
+    - `pnpm verify` local en verde; 61 tests en el paquete, 94,38 % de ramas.
+    - Benchmark: escribir un run de 1.000 tests tarda 29–76 ms de media (presupuesto 1 s); 5.000 tests, 217–335 ms.
+    - `/review` con los 6 agentes: sin bloqueantes. Se corrigieron los importantes (symlinks, mensajes que podían filtrar texto de JSON o Zod, rutas largas con `quoteForMessage`, docs) a petición del usuario.
+    - CI del PR #37: `verify` pasa en ubuntu, macos y windows con Node 22 y 24. `audit` falla por el problema conocido (ver Problemas); el usuario mergeó igualmente, como con el PR #36.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan ("Apruebo todo y las sugerencias que me diste en las dudas"):
+    - Nuevos exports de core (`parseListRunsQuery`, `ParsedListRunsQuery`, `describeIssues`, `quoteForMessage`, `FIXED_START`, `fixedTimePlus`, subpath `test-contracts`) **sin ADR**. Quedaron en `07-public-api.md` y en el README de core, pero no en un ADR.
+    - `logger` es obligatorio en `OpenSqliteStorageOptions`: escrito en el README del paquete y en §23.6.
+    - `SQLITE_DIRECTORY_MODE = 0o700`: valor no definido antes en el diseño; ahora está en §23.6 y `defaults.ts`.
+  - Tomadas tras `/review` ("Lo que tanto tu como los otros agentes consideren mejor"):
+    - Se mantiene `better-sqlite3: true` en `allowBuilds` (la tarea lo exige y pnpm ejecuta node-gyp de todas formas; solo compila sin prebuild). Escrito en `06-security.md`.
+    - `detail_truncated` es un entero plano (no booleano de Drizzle) porque Drizzle convierte NULL en `false` y rompía el round trip. Escrito en §23.6.
+  - Cambio del script `lint` raíz: escrito en `10-tooling.md`.
+  - Sin changeset: los paquetes son `private`.
+- **Problemas:**
+  - `audit` falla en CI por advisories preexistentes: `shell-quote` crítica (vía `@changesets/cli` > `launch-editor`) y `source-map-js` alta (vía tsup/vitest/postcss). `06-security.md` dice que una advisory alta o crítica bloquea el merge; los PR #36 y #37 se mergearon como excepción. El bump solo es posible desde el 2026-10-14T14:08Z por `minimumReleaseAge`.
+  - Pendientes sin test ni decisión:
+    - La carrera entre procesos al abrir (dos `migrate` a la vez) y la transacción `IMMEDIATE` entre procesos no tienen test.
+    - Las ramas de aviso de WAL no disponible y de fallo al cerrar no tienen test.
+    - `atium stress --repeat-each` produciría `testId` repetidos en un run, que SQLite rechaza con `MODEL_INVALID`; falta decidir el modelo (abierto en §23.6).
+    - `closedError` y el modo 0600 están duplicados entre run files y SQLite.
+    - `listRuns` lee cada run con varias consultas (N+1); no hay benchmark de lectura.
+  - En local, `pnpm verify` desde limpio tuvo timeouts en tests de core con la máquina muy cargada (load ~13); pasan solos y en CI.
+  - Esta sesión no puede hacer `git push`; lo hace el usuario con `! git push`.
+- **Siguiente paso:**
+  1. Commitear este handoff (`docs/progress.md` y `docs/progress-archive.md`) en la rama de la próxima tarea.
+  2. Ejecutar `/task 18` (v0-17-cli-skeleton, que depende de v0-12, ya cerrada).
+  3. A partir del 2026-10-14T14:08Z, proponer al usuario un PR aparte que suba `shell-quote` y `source-map-js` para que `audit` vuelva a pasar.
+
 ### 2026-10-12 — #16 v0-15-storage-contract
 
 - **Hecho:**
