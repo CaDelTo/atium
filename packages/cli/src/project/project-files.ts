@@ -4,6 +4,7 @@ import { errnoCode, isMissingFileError } from "@atium/core";
 
 // The file system work of `atium init` and `atium doctor`, apart from their
 // decisions in run-init.ts and doctor/.
+
 /** What is at a path, without following a symlink: a symlink counts as a file. */
 export type EntryKind = "none" | "file" | "directory";
 
