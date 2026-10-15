@@ -93,17 +93,22 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
   ramas de tarea y solo con `node .claude/scripts/push-branch.mjs <rama>`
   (ADR-0025).
-- Antes de escribir código en una tarea no trivial, presenta un plan breve
-  (archivos a tocar, enfoque, tests) y espera aprobación.
+- Cada tarea sigue el pipeline de entrega (docs/engineering/12-ai-workflow.md):
+  plan → `plan-reviewer` → aprobación → [TDD] → implementación → `test-writer`
+  → `/verify` → `/review` → `/deliver` → `/handoff`.
+- Antes de escribir código, presenta el plan con el veredicto de `plan-reviewer`
+  y espera aprobación.
 - Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
   fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
 - Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
   `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
-- Escribe o actualiza los tests junto con el código, no después.
+- TDD cuando la tarea lo permite (docs/engineering/04-testing.md, "TDD"):
+  `spec-tester` escribe los tests `AC-n` antes de la implementación y no se
+  tocan después. Si no, los tests se escriben junto con el código.
 - Si cambias un comportamiento descrito en docs/design/, actualiza el diseño en
   el mismo cambio.
-- Antes de dar la tarea por terminada: `/verify` y luego `/review`. Corrige los
-  hallazgos bloqueantes y los importantes, o justifica por qué no.
+- Antes de dar la tarea por terminada: `/verify`, `/review` y `/deliver`.
+  Corrige los hallazgos bloqueantes y los importantes, o justifica por qué no.
 - Al terminar, resume qué cambiaste, qué verificaste y qué quedó pendiente.
 - Cierra cada sesión con `/handoff`. Si una decisión no quedó escrita en un ADR,
   el diseño o una tarea, dilo en la entrada.
@@ -119,9 +124,10 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
   rendimiento (`perf-benchmarker`), crear los issues de una fase
   (`issue-writer`).
 - Revisión con criterio (`sonnet`): `code-reviewer`, `security-reviewer`,
-  `test-writer`.
+  `test-writer` (endurecimiento de tests).
 - Lo crítico lo hace el modelo de la sesión: fórmulas, estados, esquemas,
-  decisiones de arquitectura y `design-auditor`.
+  decisiones de arquitectura, `design-auditor`, `plan-reviewer`, `spec-tester`
+  y `delivery-auditor`.
 - Nunca delegues decisiones; los subagentes reportan y tú decides.
 - Los subagentes no ven esta conversación: dales siempre alcance (archivos o ref)
   y una pregunta concreta.

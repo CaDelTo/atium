@@ -13,11 +13,14 @@ Empieza la tarea indicada en `$ARGUMENTS`. El formato de issues y ramas está en
    - Si `$ARGUMENTS` incluye `en paralelo con #M` (uno o más números), otra sesión trabaja a la vez en esos issues: aplica las reglas de la sección "Trabajo en paralelo" de docs/engineering/12-ai-workflow.md y lee el archivo de tarea de cada `#M` para conocer su alcance.
 2. Lee la tarea completa.
 3. Usa el subagente `explorer` para reunir las secciones de docs/design/, los ADR y los estándares de docs/engineering/ que aplican, y el código existente relacionado.
-4. Presenta un plan: archivos a crear o modificar, enfoque, tests, riesgos y dudas. Señala cualquier valor que el diseño no defina. Incluye el nombre de la rama. En paralelo, indica además qué archivos compartidos vas a tocar y que no tocas el alcance de las otras tareas.
-5. Espera aprobación antes de escribir código.
-6. Al aprobarse el plan:
+4. Redacta el plan según el paso 1 del pipeline de entrega (docs/engineering/12-ai-workflow.md, "Pipeline de entrega"): archivos, enfoque, riesgos, `TDD: sí/no` con el motivo, el mapa `AC-n → archivo → test previsto` y el nombre de la rama. Señala cualquier valor que el diseño no defina. En paralelo, indica además qué archivos compartidos vas a tocar y que no tocas el alcance de las otras tareas.
+5. Pasa el plan a `plan-reviewer`. Con `CAMBIOS`, corrígelo y vuelve a pasarlo (máx. 2 rondas). Presenta el plan junto con el veredicto; con `REQUIERE PERSONA`, presenta la pregunta.
+6. Espera aprobación antes de escribir código.
+7. Al aprobarse el plan:
+   - Comenta el plan en el issue bajo `## Plan aprobado` (aprobado por la persona) y añade la etiqueta `plan:approved` (`gh issue edit N --add-label plan:approved`).
    - Crea la rama `<tipo>/<n>-<nombre>` desde `main` actualizado: `git fetch origin` y `git switch --no-track -c <rama> origin/main`. No uses `git switch main`: dentro de un worktree falla porque `main` está activa en el repo principal.
    - Comenta en el issue, en español, que la tarea empezó: `gh issue comment N --body "Tarea iniciada en la rama \`<rama>\`."`.
-7. Después de implementar: `/verify`, luego `/review`, y resume según la sección "Flujo de trabajo" de CLAUDE.md. El PR incluye `Closes #N`.
+8. Sigue los pasos 5 a 10 del pipeline de entrega: especificación con `spec-tester` si hay TDD, implementación, `test-writer`, `/verify`, `/review` y `/deliver`. Si algo requiere una decisión humana, detente y pregunta.
+9. Resume según la sección "Flujo de trabajo" de CLAUDE.md y cierra con `/handoff`.
 
 Nunca cierres issues ni mergees PRs: lo hace una persona.

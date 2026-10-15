@@ -38,6 +38,8 @@ Una tarea está terminada cuando:
 
 - [ ] `pnpm verify` pasa (formato, lint, tipos, tests, reglas de dependencias, código sin usar, duplicación).
 - [ ] `/review` no tiene hallazgos bloqueantes y los importantes están corregidos o justificados.
+- [ ] Cada criterio de aceptación del issue tiene al menos un test `AC-n` que pasa, o una evidencia equivalente si no se puede expresar como test ([04-testing.md](04-testing.md#tdd)).
+- [ ] `delivery-auditor` aprueba la entrega (`/deliver`).
 - [ ] El comportamiento nuevo tiene tests; un bug corregido tiene un test que lo reproducía.
 - [ ] Ningún test existente se debilitó para que pase.
 - [ ] Los límites de capas se respetan (sin imports prohibidos).
