@@ -22,6 +22,9 @@
 ## Decisiones abiertas en esta tarea
 
 - Número de reintentos del borrado temporal y modo de los directorios de runs: el diseño no los define. Preguntar antes de fijarlos.
+  - **Resuelto por la persona (2026-10-15):**
+    - El borrado del directorio temporal hace 3 reintentos, el valor actual. Absorbe bloqueos breves, como un antivirus en Windows, y espera como mucho unos 0,3 s con el retraso por defecto de Node. Se escribe en 15-storage.md y va a `defaults.ts`.
+    - El escritor de runs crea `.atium/` y `.atium/runs/` con permisos `0700`, como SQLite (`SQLITE_DIRECTORY_MODE`, 15-storage.md §23.6). Así `.atium/` no depende de qué proceso lo cree primero.
 
 ## Criterios de aceptación
 
