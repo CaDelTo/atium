@@ -5,7 +5,12 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 import type { z } from "zod";
-import { RUNS_DIRECTORY } from "../defaults.js";
+import {
+  RUN_DIRECTORY_MODE,
+  RUN_FILE_MODE,
+  RUN_FILE_TEMPORARY_REMOVE_RETRIES,
+  RUNS_DIRECTORY,
+} from "../defaults.js";
 import { errnoCode } from "../errno.js";
 import { AtiumError, isAtiumError } from "../errors.js";
 import type { Logger } from "../logger.js";
@@ -20,9 +25,6 @@ import { CURRENT_RUN_FILE_SCHEMAS } from "./run-file-format.js";
 // I/O edge of `core`: writes run files (02-code-design.md). Each run is an
 // immutable file (ADR-0007) in the format of ADR-0018.
 
-/** Permissions of a run file: read and write for its owner only. */
-const RUN_FILE_MODE = 0o600;
-
 /** Options of {@link writeRunFile}. */
 export interface WriteRunFileOptions {
   /** Repository root. The file goes to `<rootDir>/.atium/runs/<runId>.ndjson.gz`. */
@@ -36,7 +38,7 @@ export type RemoveDirectory = (directory: string) => Promise<void>;
 
 /** Retries absorb short locks, such as an antivirus scanning the new file on Windows. */
 const removeDirectory: RemoveDirectory = (directory) =>
-  rm(directory, { recursive: true, force: true, maxRetries: 3 });
+  rm(directory, { recursive: true, force: true, maxRetries: RUN_FILE_TEMPORARY_REMOVE_RETRIES });
 
 /**
  * Path of the run file of `runId` under `rootDir`.
@@ -60,7 +62,8 @@ export function runFilePath(rootDir: string, runId: string): string {
  *
  * The write is atomic: the file is written in a temporary directory next to
  * it and then renamed, so readers never see a partial file. Run files are
- * immutable (ADR-0007): an existing file is never replaced.
+ * immutable (ADR-0007): an existing file is never replaced. The file and the
+ * directories it creates are readable only by their owner.
  *
  * Texts are written as they come, apart from the ANSI codes and the caps:
  * the caller redacts them first (20-security-privacy.md §28.1).
@@ -103,7 +106,8 @@ export async function writeRunFileWith(
   let temporaryDirectory: string;
   try {
     const directory = path.dirname(target);
-    await mkdir(directory, { recursive: true });
+    // Owner only, like the directories of the SQLite database (15-storage.md §23.2.1).
+    await mkdir(directory, { recursive: true, mode: RUN_DIRECTORY_MODE });
     temporaryDirectory = await mkdtemp(path.join(directory, ".tmp-"));
   } catch (error) {
     throw writeError(target, error);

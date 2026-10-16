@@ -1,5 +1,6 @@
 import type { FindingSeverity } from "./findings/finding.js";
 import type { LogLevel } from "./logger.js";
+import { REDACT_PATTERN_IDS } from "./redact/pattern-ids.js";
 
 /**
  * Maximum number of items in each capped list of the data model.
@@ -118,8 +119,8 @@ export const REDACT_DEFAULTS = Object.freeze({
     "cardnumber",
     "cvv",
   ] as const),
-  /** Every built-in pattern (`REDACT_PATTERN_IDS`). */
-  patterns: Object.freeze(["jwt", "bearer", "aws-key", "gcp-key", "azure-key"] as const),
+  /** Every built-in pattern (`REDACT_PATTERN_IDS`), in the order they are applied. */
+  patterns: Object.freeze([...REDACT_PATTERN_IDS] as const),
 });
 
 /**
@@ -274,3 +275,29 @@ export const ANALYZER_TIMEOUT_MS = 60_000;
  * Source: 14-architecture.md §22.2, "Valores del orquestador".
  */
 export const ANALYZER_CONCURRENCY = 4;
+
+/**
+ * Permissions of a run file: read and write for its owner only, because it
+ * holds error messages, stacks and network calls. Windows ignores them.
+ *
+ * Source: 15-storage.md §23.2.1.
+ */
+export const RUN_FILE_MODE = 0o600;
+
+/**
+ * Permissions of the directories that the run file writer creates
+ * (`.atium/` and `.atium/runs/`): only their owner can list them, like the
+ * directories of the SQLite database. Existing directories keep theirs.
+ *
+ * Source: 15-storage.md §23.2.1 and §23.6.
+ */
+export const RUN_DIRECTORY_MODE = 0o700;
+
+/**
+ * Retries of `fs.rm` when it removes the temporary directory of a run file,
+ * with the default delay of Node. They absorb short locks, such as an
+ * antivirus scanning the new file on Windows.
+ *
+ * Source: 15-storage.md §23.2.1.
+ */
+export const RUN_FILE_TEMPORARY_REMOVE_RETRIES = 3;
