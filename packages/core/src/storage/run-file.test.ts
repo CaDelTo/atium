@@ -180,6 +180,21 @@ describe("writeRunFile and readRunFile", () => {
     expect((await stat(file)).mode & 0o777).toBe(0o600);
   });
 
+  // POSIX permissions; Windows ignores the mode. Design §23.2.1, "Escritura atómica".
+  it.skipIf(process.platform === "win32")(
+    "AC-2: create .atium and .atium/runs readable only by their owner",
+    async () => {
+      await writeRunFile(sampleRun(), writeOptions());
+
+      const modes = await Promise.all(
+        [path.join(rootDir, ".atium"), path.join(rootDir, RUNS_DIRECTORY)].map(
+          async (dir) => (await stat(dir)).mode & 0o777,
+        ),
+      );
+      expect(modes).toEqual([0o700, 0o700]);
+    },
+  );
+
   it("never replace an existing run file, and leave no temporary files", async () => {
     const run = sampleRun();
     const file = await writeRunFile(run, writeOptions());
