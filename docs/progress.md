@@ -27,6 +27,13 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - PR #103 sigue en borrador porque los 7 checks de CI (`verify` ×6 y `audit`) estaban pendientes al entregarlo.
   - Si pasan todos, hay que ejecutar `gh pr ready 103`.
   - Si alguno falla, hay que compararlo con el mismo check del último PR mergeado, como dice `/deliver`, paso 8.
+  - Estado de la CI de #103 al cerrar la sesión:
+    - `verify` pasa en ubuntu (Node 22 y 24) y en macOS con Node 24; los de Windows y macOS con Node 22 siguen pendientes.
+    - **`audit` falla por una advisory nueva, no por esta tarea:**
+      - Es GHSA-587h-7wmj-h5pm (alta), contra `vite` 8.3.0–8.3.2 y `launch-editor` ≤2.14.1; las dos son dependencias de desarrollo.
+      - Se publicó después de que pasara #101, y `main` tiene el mismo lockfile, así que también fallaría.
+      - #43 no toca `pnpm-lock.yaml` ni ningún `package.json`.
+      - Hace falta un issue de bump de dependencias. Hasta entonces, el `audit` de cualquier PR fallará.
 - **Decisiones:**
   - La persona aprobó quitar el tercer test de `run-file-modes.test.ts`, que repetía AC-2 y el test de `0600`. El hook `test-guard` bloqueó la edición, así que la persona aplicó el parche ella misma.
     - Dónde quedó escrito: el cuerpo del commit `ebd7901`, el PR #103 y `.atium-loop/current.md`. No hay ADR ni cambio de diseño.
@@ -41,7 +48,8 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
     - `REDACT_PATTERN_IDS` no está congelado en tiempo de ejecución.
     - Antes de escribir no se comprueba con `realpath` si `.atium/runs` es un symlink (06-security.md:33).
 - **Siguiente paso:**
-  - Revisar la CI de PR #103 y, si está en verde, ejecutar `gh pr ready 103`.
+  - Pedir a la persona que cree el issue del bump de `vite` (≥8.3.3) y `launch-editor` (≥2.14.2) por GHSA-587h-7wmj-h5pm.
+  - Revisar la CI de PR #103. Si los `verify` pasan, decide la persona: el `audit` no lo causa la tarea, pero `/deliver` solo da el PR por listo cuando el mismo check también falla en el último PR mergeado.
   - Una persona revisa y mergea #103.
   - Decidir si se mueve el test AC-2 a `run-file-modes.test.ts` y si las dos sugerencias de seguridad merecen un issue.
   - Para reanudar el loop: `/loop /dev-loop`.
