@@ -8,6 +8,51 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-22 — #105 Avisos de seguridad en vite y launch-editor
+
+- **Hecho:**
+  - #105 no tiene archivo en `docs/tasks/`: la especificación es el cuerpo del issue. Se trabajó con `/task` en el worktree `atium-105`. `plan-reviewer` dio APROBADO, la persona aprobó el plan y este se comentó en el issue con la etiqueta `plan:approved`.
+  - **Rama y PR:** rama `chore/105-vite-launch-editor-advisories`, con un solo commit `b92e404`, `chore(deps): resolve patched vite and launch-editor`. PR #108 con `Closes #105`, listo para revisión. Los 7 checks de CI pasan (`verify` ×6 y `audit`).
+  - **Cambio:** solo `pnpm-lock.yaml`.
+    - `vite` pasa de 8.3.1 a 8.3.4 y `launch-editor` de 2.14.1 a 2.14.2, por GHSA-587h-7wmj-h5pm (high).
+    - Arrastra estas transitivas: `rolldown` 1.2.13, `@oxc-project/types` 0.153.0 y `postcss` 8.5.29.
+    - El peer opcional `postcss` de tsup también pasa a 8.5.29, así que queda una sola versión de postcss.
+    - Se hizo con `pnpm update -r vite launch-editor` y después `pnpm update -r postcss`.
+  - **Verificación:**
+    - `pnpm audit --audit-level high` sale con 0.
+    - `TURBO_FORCE=true pnpm verify` pasa.
+    - `pnpm install --frozen-lockfile` pasa.
+    - `/review`: `code-reviewer` aprobó en 2 rondas y `docs-checker` dio OK.
+    - `delivery-auditor`: APROBADO.
+- **En curso:** nada. Falta que una persona revise y mergee el PR #108.
+- **Decisiones:**
+  - **Sin `overrides`:**
+    - `vitest` y `@vitest/mocker` 5.0.2 aceptan vite `^8.0.0`, y `@changesets/cli` 3.0.3 acepta launch-editor `^2.14.1`.
+    - 06-security.md (sección Dependencias) solo permite overrides cuando ningún padre elegible corrige el aviso.
+    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
+  - **postcss unificado en 8.5.29:**
+    - Lo encontró `duplication-auditor` y la persona dejó corregirlo a criterio de la sesión.
+    - `pnpm dedupe` no lo resolvía porque postcss es un peer opcional de tsup.
+    - La 8.5.30 (2026-10-12) todavía no cumple los 14 días.
+    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
+  - **Sugerencias de `/review` descartadas:**
+    - Dudaba de que el padre de launch-editor fuera `@changesets/cli`; `pnpm why` lo confirma.
+    - Proponía cambiar el trailer de atribución; la atribución de la sesión es Claude Opus 5.5.
+    - Dónde quedó escrito: solo en esta entrada.
+- **Problemas:**
+  - Siguen 2 avisos moderate en `vitest` <5.0.3, que es dependencia directa y se pinea a 5.0.2 en la raíz, core, eslint-plugin, cli, storage-sqlite y playwright-demo.
+    - No bloquean el job `audit`, que solo bloquea en high.
+    - No hay issue para ellos.
+    - vitest 5.0.3 (2026-09-30) ya cumple los 14 días. Subirlo junto con `@vitest/coverage-v8` es una tarea aparte.
+  - En pnpm 12, `--depth` no acepta `Infinity` y su valor por defecto ya es ilimitado: basta `pnpm update -r <paquete>`.
+  - Siguen pendientes los puntos de la entrada anterior:
+    - Pasar PR #103 a listo. Ahora el `audit` debería pasar al rebasar sobre `main` con #108.
+    - Mover el test AC-2 de `run-file.test.ts` (405 líneas, aviso `max-lines`).
+- **Siguiente paso:**
+  - Una persona revisa y mergea #108.
+  - Después, volver a lanzar la CI de #103 (o actualizar su rama) para que `audit` pase, y ejecutar `gh pr ready 103` si todo pasa.
+  - Decidir si se abre un issue para subir `vitest` a >=5.0.3.
+
 ### 2026-10-22 — dev-loop V1
 
 - **Hecho:**
@@ -522,76 +567,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. `git fetch origin` y empezar la siguiente tarea con `/task 41` (v1-01, el issue abierto más antiguo de V1, sin dependencias).
   2. Commitear esta entrada en la rama de esa tarea.
   3. Antes del 2026-10-14T14:08Z, `source-map-js` todavía no cumple `minimumReleaseAge`; si se empieza antes, revisar el plan de v1-01.
-
-### 2026-10-13 — #20 v0-19-v0-acceptance
-
-- **Hecho:**
-  - **Rama, PR y merge:**
-    - Rama `test/20-v0-acceptance`, creada desde `origin/main` en `d2887bc`.
-    - PR #40 con `Closes #20`, que el usuario ya mergeó (`5960c18`). El issue #20 está cerrado.
-    - El push lo hizo esta sesión con `git -C <repo> push -u origin <rama>`. La forma `git push ... 2>&1 | tail` fue denegada dos veces.
-  - **CI del PR #40:** pasan los 6 jobs `verify` (ubuntu, macos y windows, con Node 22 y 24). `audit` falla por `shell-quote`, igual que en `main`; ver Problemas.
-  - **Commits:**
-    - `0ce87aa` `docs(repo): add handoff entry for #19`: la entrada de #19, que estaba sin commitear al empezar.
-    - `695318f` `test(cli): add the V0 acceptance test`.
-    - `d0cc000` `docs(repo): add the V1 tasks from the V0 phase audit`.
-    - `ab670e9` `test(core): share unwrap in @atium/core/testing`.
-    - `26cb2e7` `test(cli): tighten the V0 acceptance test`.
-    - `eba899d` `docs(repo): fix the references and the template of the task files`.
-  - **Test de aceptación** (`packages/cli/test/v0-acceptance.test.ts`):
-    - Un `it.each` recorre 6 escenarios: GitHub, GitLab, Jenkins, CircleCI, Azure y local.
-    - En cada uno llama a `detectRunContext` con un `env` explícito y con `FakeGitClient`, que el escenario crea con una fábrica. Construye el run con `aRun().with(context)` y tres resultados: `passed`, `failedThenPassed` y `failedAllAttempts(2)`.
-    - Escribe y lee el run con `writeRunFile` y `readRunFile`.
-    - Lo escribe en SQLite, cierra, reabre y lo lee con `getRun`.
-    - Compara las dos lecturas con `toStrictEqual`. Comprueba también el contexto esperado, `git.queries` (vacío en CI y `headCommit`, `currentBranch` e `isDirty` en local) y que no hay logs por encima de `debug`.
-    - El `event.json` de GitHub se escribe en `<root>/runner/`.
-  - **Dependencias y helpers:**
-    - `@atium/storage-sqlite: workspace:*` en `devDependencies` de cli.
-    - `unwrap(result)` nuevo en `packages/core/src/testing/unwrap.ts`, con su test, exportado por `@atium/core/testing` y listado en el README de core. Sustituye las copias de `test-contracts/storage.contract.ts` y `storage/sqlite/src/sqlite-storage.test.ts`.
-  - **`/audit` de cierre de V0** (duplication-auditor, design-auditor y docs-checker): no hay bloqueantes. Los hallazgos son ahora 6 tareas, listadas en una tabla nueva de la sección V1 de `docs/tasks/README.md`, sin issue:
-    - `v1-01-dependency-security-bump`
-    - `v1-02-shared-fs-and-path-helpers`
-    - `v1-03-run-file-defaults`
-    - `v1-04-run-context-robustness`
-    - `v1-05-design-alignment`
-    - `v1-06-core-api-docs`
-  - **Plantilla de `docs/tasks/README.md`:** se añadieron `ID`, `Origen` (opcional) y la sección opcional "Decisiones abiertas en esta tarea".
-  - **`v0-19-v0-acceptance.md`:** se aclaró que "6 entornos" es la matriz de CI, y que el test cubre los 5 proveedores y el run local.
-  - **Comprobado en GitHub:** los issues #5–#19 están cerrados. v0-01 a v0-03 no tienen issue y son Hechas; #2 y #3 son PR mergeados.
-  - **Verificado:**
-    - `pnpm verify` local en verde: core 907 tests, sqlite 61 y cli 220.
-    - Cobertura, con umbral de 90 % en todo:
-
-      | Paquete | Líneas | Ramas | Funciones |
-      |---|---|---|---|
-      | core | 99,1 % | 96,3 % | 100 % |
-      | sqlite | 96,1 % | 94,4 % | 93,75 % |
-      | cli | 98 % | 96,6 % | 100 % |
-
-    - `/review` con 5 agentes, sin bloqueantes. Se corrigieron los 2 importantes (la copia de `unwrap` y una cita de ADR-0018 en v1-05) y las 5 sugerencias. Se descartaron 2 hallazgos falsos.
-    - Benchmark: `atium --help` tarda 61,7 ms (presupuesto: 300 ms) y no carga SQLite.
-    - Tras el merge, probado a mano en un repo temporal: `init` y `doctor` dan los 6 checks en `pass`, `--format json` funciona y un GitHub Actions simulado se detecta. El config generado necesita `@atium/core` en `node_modules`; como no está publicado, se enlazó con un symlink a `packages/core`.
-- **En curso:** nada. El repo principal quedó en `main`, en `5960c18`. Esta entrada está sin commitear.
-- **Decisiones:**
-  - **Aprobadas en el plan ("Si"):**
-    - `FakeGitClient` también en el caso local, sin Git real.
-    - Los hallazgos del audit van a V1.
-    - No hubo bloqueantes que dejar en V0.
-  - **Tomadas por mí, porque el usuario no respondió esas dudas del plan:**
-    - No se crearon issues para las tareas v1-01 a v1-06; los crea `/plan-phase v1`. Está escrito en `docs/tasks/README.md`.
-    - El umbral de cobertura de cli se dejó en 90 %, aunque `docs/engineering/04-testing.md` dice 80 % para "resto". **No quedó escrito en ningún sitio.**
-  - **Con "Recomienda todo lo que puedas" tras `/review`:** lo interpreté como corregir todo. La extracción de `unwrap` tocó dos tests existentes sin cambiar ninguna aserción, y el hook `test-guard` no bloqueó.
-  - **Sin tarea:** el resumen de errores internos de ADR-0006 no se convirtió en tarea, porque es una funcionalidad y no un hallazgo del audit. Queda para `/plan-phase v1`. §26.1 sigue diciendo "Ninguna tarea lo recoge todavía".
-- **Problemas:**
-  - **El job `audit` de CI sigue en rojo en `main`:**
-    - `shell-quote` es crítico.
-    - `source-map-js` es alto y no cumple `minimumReleaseAge` hasta el 2026-10-14T14:08Z.
-    - Hay dos avisos de `esbuild`.
-    - El detalle y el plan están en `docs/tasks/v1-01-dependency-security-bump.md`.
-  - **V0 no muestra nada útil al usuario final más allá de `init` y `doctor`.** El `atium.config.ts` que genera `init` importa `@atium/core`, que no se puede instalar desde npm porque el paquete es privado. `doctor` da `fail` en `config` hasta que existe ese paquete. Es lo esperado en V0, pero conviene tenerlo en cuenta en la tarea de publicación.
-  - **Fecha de las tareas del audit:** son de 2026-10-13. Sus números de línea pueden desplazarse si cambia el código antes de trabajarlas.
-- **Siguiente paso:**
-  1. Commitear esta entrada en la rama de la próxima tarea.
-  2. Ejecutar `/plan-phase v1`. Debe integrar las 6 tareas v1-01 a v1-06 que ya existen, sin renumerarlas, y crear sus issues junto con los del linter.
-  3. Decidir en ese plan la fase de la tarea del resumen de errores internos de ADR-0006.
-  4. Preguntar al usuario si alinea el umbral de cobertura de cli en `04-testing.md` (80 %) o en `vitest.config.ts` (90 %).
