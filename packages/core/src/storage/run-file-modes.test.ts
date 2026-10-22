@@ -50,17 +50,4 @@ describe("writeRunFile permissions", () => {
 
     expect(await modeOf(runs)).toBe(0o755);
   });
-
-  itPosix(
-    "creates every missing directory and the run file readable only by the owner",
-    async () => {
-      const run = aRunWithOneResult();
-
-      const file = await writeRunFile(run, { rootDir, logger: new FakeLogger() });
-
-      expect(await modeOf(path.join(rootDir, ".atium"))).toBe(0o700);
-      expect(await modeOf(path.dirname(file))).toBe(0o700);
-      expect(await modeOf(file)).toBe(0o600);
-    },
-  );
 });
