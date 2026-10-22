@@ -315,7 +315,9 @@ without `results`) on line 1 and one `TestResult` per line. It removes ANSI
 codes and applies the list and text caps first, and trims the detail of a
 result whose line would exceed 768 KiB, marking it `detailTruncated`. The
 write is atomic (a temporary file and `rename`), and an existing file is
-never replaced (`STORAGE_CONFLICT`). Texts must be redacted before.
+never replaced (`STORAGE_CONFLICT`). The file and the directories it creates
+are readable only by their owner (`0600` and `0700` on POSIX). Texts must be
+redacted before.
 `readRunFile` reads a whole run back; `readRunFileEntries` streams the header
 and then each result. Both validate every line and reject a file over the
 size limits with `MODEL_INVALID` and the line number:

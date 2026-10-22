@@ -32,8 +32,9 @@ El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-ar
   - El archivo se escribe en un directorio temporal `.tmp-*` dentro de `.atium/runs/` y se publica con `rename`.
   - `rename` reemplaza en silencio un archivo existente, así que antes se comprueba el nombre: un `runId` repetido da `STORAGE_CONFLICT` y el archivo existente queda intacto (ADR-0007). Con `runId` uuid v7 no se espera que dos escrituras compitan entre la comprobación y el `rename`.
   - Si la escritura falla, no se publica ningún archivo.
-  - Después se borra el directorio temporal. Si no se puede borrar, se registra un aviso en el `logger` y la escritura no cambia de resultado. Si el proceso muere a mitad, puede quedar un `.tmp-*`: quien liste `.atium/runs/` debe ignorarlo.
-  - El archivo se crea con permisos `0600` (solo su dueño), porque contiene mensajes de error, stacks y llamadas de red. En Windows el modo se ignora.
+  - Los directorios `.atium/` y `.atium/runs/` que falten se crean con permisos `0700` (`RUN_DIRECTORY_MODE`), como los de SQLite (§23.6), así que `.atium/` no depende de qué proceso lo cree primero. Un directorio que ya existe conserva sus permisos.
+  - Después se borra el directorio temporal, con 3 reintentos (`RUN_FILE_TEMPORARY_REMOVE_RETRIES`, la opción `maxRetries` de `fs.rm`) y el retraso por defecto de Node, para absorber bloqueos breves, como un antivirus que examina el archivo nuevo en Windows. Si no se puede borrar, se registra un aviso en el `logger` y la escritura no cambia de resultado. Si el proceso muere a mitad, puede quedar un `.tmp-*`: quien liste `.atium/runs/` debe ignorarlo.
+  - El archivo se crea con permisos `0600` (`RUN_FILE_MODE`, solo su dueño), porque contiene mensajes de error, stacks y llamadas de red. En Windows los permisos se ignoran.
   - El escritor no redacta: recibe los textos ya redactados ([20-security-privacy.md §28.1](20-security-privacy.md)).
 - **Preparación de cada línea**, en este orden:
   1. Elimina los códigos ANSI (`util.stripVTControlCharacters` de Node).
