@@ -8,6 +8,44 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-10-22 — dev-loop V1
+
+- **Hecho:**
+  - Ejecución de `/dev-loop` en la fase V1, iniciada el 2026-10-15 con max-tasks=3, max-open-prs=4, max-failures=2 y max-idle=8.
+  - La persona pidió terminar #43 hasta `/deliver --loop`, cerrar con `/handoff` y detener el loop sin empezar más tareas ni vueltas.
+  - **#43 v1-03-run-file-defaults, entregado: PR #103 en borrador, rama `fix/43-run-file-defaults`, etiqueta `loop`.**
+    - Commits:
+      - `e92e542` diseño §23.2.1 y test AC-2. El rojo se verificó: `0o755 ≠ 0o700`.
+      - `6acaa65` implementación.
+      - `4b7fc8a` tests de endurecimiento.
+      - `ebd7901` quita un test duplicado.
+    - `pnpm verify` pasa en `ebd7901`. `delivery-auditor` dio APROBADO. Hay un comentario de entrega en #43.
+  - PRs mantenidos: ninguno.
+  - Tareas detenidas: ninguna.
+  - Contadores: 1 tarea entregada, 0 fallidas seguidas, 0 vueltas sin cambios.
+- **En curso:**
+  - PR #103 sigue en borrador porque los 7 checks de CI (`verify` ×6 y `audit`) estaban pendientes al entregarlo.
+  - Si pasan todos, hay que ejecutar `gh pr ready 103`.
+  - Si alguno falla, hay que compararlo con el mismo check del último PR mergeado, como dice `/deliver`, paso 8.
+- **Decisiones:**
+  - La persona aprobó quitar el tercer test de `run-file-modes.test.ts`, que repetía AC-2 y el test de `0600`. El hook `test-guard` bloqueó la edición, así que la persona aplicó el parche ella misma.
+    - Dónde quedó escrito: el cuerpo del commit `ebd7901`, el PR #103 y `.atium-loop/current.md`. No hay ADR ni cambio de diseño.
+  - Se justificó en lugar de corregir el aviso `max-lines` de `packages/core/src/storage/run-file.test.ts`, que tiene 405 líneas para un máximo de 400.
+    - Lo causa el test de especificación AC-2. Moverlo lo decide `spec-tester` o una persona (04-testing.md, "TDD").
+    - Dónde quedó escrito: el PR #103 y el comentario en #43.
+  - El loop se detuvo por instrucción de la persona. Dónde quedó escrito: solo en `.atium-loop/current.md`, que no se versiona.
+- **Problemas:**
+  - En las rondas 1 y 2 de `/verify` del 2026-10-15, varios tests de archivos que la tarea no tocó superaron el timeout bajo carga (load 20-46). En la ronda 3 y el 2026-10-22, con carga normal, todo pasó. Si se repite en CI, tratarlo como flaky preexistente.
+  - La spec de v1-03 dice que los reintentos de `fs.rm` esperan "unos 0,3 s". Con el retraso lineal de Node (100, 200 y 300 ms) son unos 0,6 s en el peor caso. El diseño no da cifra, así que no cambia nada.
+  - Sugerencias de `/review` que ya existían antes y no son de esta tarea, sin issue:
+    - `REDACT_PATTERN_IDS` no está congelado en tiempo de ejecución.
+    - Antes de escribir no se comprueba con `realpath` si `.atium/runs` es un symlink (06-security.md:33).
+- **Siguiente paso:**
+  - Revisar la CI de PR #103 y, si está en verde, ejecutar `gh pr ready 103`.
+  - Una persona revisa y mergea #103.
+  - Decidir si se mueve el test AC-2 a `run-file-modes.test.ts` y si las dos sugerencias de seguridad merecen un issue.
+  - Para reanudar el loop: `/loop /dev-loop`.
+
 ### 2026-10-15 — #99 Test de propiedades de context.test.ts supera el timeout en CI
 
 - **Hecho:**
@@ -549,93 +587,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   2. Ejecutar `/plan-phase v1`. Debe integrar las 6 tareas v1-01 a v1-06 que ya existen, sin renumerarlas, y crear sus issues junto con los del linter.
   3. Decidir en ese plan la fase de la tarea del resumen de errores internos de ADR-0006.
   4. Preguntar al usuario si alinea el umbral de cobertura de cli en `04-testing.md` (80 %) o en `vitest.config.ts` (90 %).
-
-### 2026-10-13 — #19 v0-18-doctor
-
-- **Hecho:**
-  - **Rama y PR:** rama `feat/19-doctor`, creada desde `origin/main` en `2cd7620`. PR #39 abierto con `Closes #19`, sin mergear. Los push los hizo el usuario con `! git push`.
-  - **CI del PR #39 en `518c2b2`:** pasan los 6 jobs `verify` (ubuntu, macos y windows, con Node 22 y 24). `audit` falla por `shell-quote`; ver Problemas.
-  - **Commits:**
-    - `e1d01cf` `docs(repo): add handoff entry for #18`.
-    - `a7ea23f` `feat(cli): add the doctor command`.
-    - `c2a8141` `fix(repo): stop passing --coverage twice in test:coverage`.
-    - `44233dc` `test(cli): run the doctor storage symlink tests on Windows`.
-    - `518c2b2` `fix(cli): leave no git process running after the doctor git check`.
-  - **Orquestación:** `src/commands/doctor.ts` es la definición ligera e importa `../doctor/run-doctor.js` con `await import`. `src/doctor/run-doctor.ts` contiene `runDoctor` y `diagnose`:
-    - valida `--format` (`text|json`) antes de comprobar nada;
-    - ejecuta los checks;
-    - redacta el informe completo con `createCliRedactor().redactFields(...)` y lo valida con `DoctorReportSchema.parse`;
-    - si algún check falla, escribe el informe y después lanza `UsageError`, que da el código 2. Así no cambia la interfaz `CliCommand`.
-  - **Checks**, en `src/doctor/checks/`:
-    - `node.ts`: `parseVersion` y `compareVersions`; una prerelease cuenta como anterior a su versión final. Exige `MIN_NODE_VERSION = "22.12.0"`.
-    - `config.ts`: `loadConfig` con `--config` y el nivel de log del flag.
-    - `git.ts`: consultas en serie; falla solo si `needed`, y si no, da `warn` con `DOCTOR.git.notNeededHint`.
-    - `ci.ts`: devuelve `{ check, needsGit }`, donde `needsGit` es `true` solo con `GIT_UNAVAILABLE`.
-    - `storage.ts`: `lstat` y `realpath`; prueba de escritura con `mkdtemp` y `rm`; no crea `.atium` ni abre SQLite.
-    - `frameworks.ts`.
-    - `error-outcome.ts`: helper compartido por config, git y ci.
-  - **Salida:** `report.ts` contiene el esquema Zod, que exige los 6 ids en orden y un hint en todo lo que no sea `pass`. `format-text.ts` arma la tabla.
-  - **Refactor en `src/project/`:**
-    - `detect-frameworks.*` y `project-files.*` se movieron sin cambios desde `src/init/`, con sus tests. El usuario ejecutó el movimiento porque el hook `test-guard` lo bloqueaba.
-    - Nuevo `manifest.ts` con `readProjectManifest` y `manifestProblem`, que comparten init y doctor.
-    - En `messages.ts`, los textos de `package.json` pasaron de `INIT` a un grupo `MANIFEST`.
-  - **Defaults y messages:**
-    - `defaults.ts`: `MIN_NODE_VERSION`, `ATIUM_DIRECTORY` y `DOCTOR_FORMATS`.
-    - `messages.ts`: `HELP.doctor`, `DOCTOR` y el helper `quotedNames`.
-  - **Tests:**
-    - Helper `test/temp-dir.ts` (`useTempDir`), con `maxRetries` en `rm` para el `EBUSY` de Windows.
-    - Tests de aceptación en `run-doctor.test.ts`: proyecto sano, config inválida, sin Git, sin permisos, JSON validado con el esquema y redacción en JSON. Usan Git real con `GIT_CEILING_DIRECTORIES` vía `vi.stubEnv`.
-    - En Windows, los symlinks de directorio son junctions.
-    - Se añadió `fast-check@4.10.2` como devDependency de cli.
-  - **Docs:**
-    - `18-cli-config.md` §26.1: bloque `atium doctor` con la tabla de checks, y la línea 11.
-    - `18-cli-config.md` §26.2: el código 2 de doctor.
-    - `15-storage.md`: en el CLI, la raíz es el directorio de trabajo.
-    - `07-public-api.md`: el JSON de doctor es interno.
-    - `10-tooling.md`: `test:coverage` es un alias.
-    - README de cli.
-  - **Verificado:**
-    - `pnpm verify` local en verde con Node 22: core 905 tests, sqlite 61, cli 214. Cobertura de cli: 98 % de líneas y 96,6 % de ramas.
-    - `/review` con 6 agentes, sin bloqueantes. Se corrigieron los 7 importantes y casi todas las sugerencias.
-    - Medición de `atium --help`: main 83 ms y esta rama 61–67 ms, con la máquina cargada. No carga core ni doctor. `doctor` tarda unos 310 ms.
-- **En curso:** nada. El PR #39 espera la revisión y el merge del usuario.
-- **Decisiones:**
-  - **Aprobadas en el plan ("Si") y escritas en §26.1 y §26.2:**
-    - Código de salida 2 si algún check falla; `warn` no afecta al código.
-    - `storage` solo prueba la escritura y no abre SQLite.
-    - `MIN_NODE_VERSION` es 22.12.0.
-    - Sin config, el check da `warn`.
-    - El JSON de doctor no es API pública y no lleva `schemaVersion`.
-  - **Aprobada tras `/review` (opción "a" del punto 7):** en el CLI, la raíz de `.atium/` es el directorio de trabajo. Escrita en §26.1, `15-storage.md` y `defaults.ts`.
-  - **Tomadas por mí durante `/review` con "Corrige todo", escritas en §26.1 y el README:**
-    - Se redacta todo el informe, incluido `details`.
-    - `.atium` como symlink: se resuelve con `realpath`; da `fail` si está roto, si lleva fuera del directorio de trabajo o si lleva a él mismo.
-    - `git` da `fail` solo si `ci` falló con `GIT_UNAVAILABLE`.
-    - El esquema exige orden y unicidad de los checks.
-  - **Tomadas por mí, solo en el código y en commits:**
-    - `UsageError` en lugar de cambiar `CliCommand.run`, para no tocar los tests de `run.test.ts`.
-    - Consultas de Git en serie en `checkGit`.
-  - **Sin cambios, con justificación:**
-    - `displayPath` sigue duplicado con el privado de `load-config.ts`, porque unificarlo requiere ampliar la API de core.
-    - `errnoCode` e `isMissing` duplican core desde #18.
-  - **No quedó escrito en ninguna tarea ni ADR:** el resumen de errores internos que menciona ADR-0006. §26.1 dice "Ninguna tarea lo recoge todavía"; falta que el usuario decida la fase.
-- **Problemas:**
-  - **`audit` falla en CI**, también en `main` desde #36:
-    - `shell-quote` (crítico), vía `@changesets/cli` y `launch-editor`; la 1.11.0 ya cumple el `minimumReleaseAge`.
-    - `source-map-js` (alto), vía vite y postcss; la 1.2.2 no lo cumple hasta el 2026-10-14T14:08Z.
-    - `esbuild` (bajo): 0.27.7 vía vite; se arregla con 0.28.1 o posterior.
-    - `esbuild` (moderado): 0.18.20 vía `drizzle-kit` y `@esbuild-kit/core-utils`. Forzarlo con un override puede romper `drizzle-kit`.
-    - Hace falta un issue y una rama aparte; el usuario no lo ha pedido aún.
-  - **`detectRunContext` (core)** lanza `headCommit`, `currentBranch` e `isDirty` con `Promise.all`. En Windows puede dejar procesos `git` vivos que bloquean el directorio, como pasó en `checkGit`. Propuesto como mejora; no está en ninguna tarea.
-  - **Hook `test-guard`:**
-    - Bloqueó el movimiento de tests a `src/project/`; lo ejecutó el usuario con su aprobación.
-    - Bloqueó también una reescritura de `git.test.ts` que quitaba una aserción. Se rehízo con ediciones mínimas que conservan todas las aserciones.
-    - Dio un falso positivo al escribir este handoff con un heredoc en bash, porque el texto mencionaba ese movimiento. Con aprobación del usuario se escribió con Write y Edit.
-  - **Commit del movimiento:** no se pudo hacer aparte de `a7ea23f`. El lint de lefthook revisa el commit intermedio contra el `messages.ts` del working tree y falla.
-  - **Flake de CI en Windows con Node 22:** la descarga del binario de `better-sqlite3` se cortó (`TypeError: terminated`), pasó a `node-gyp` y falló. Se resolvió volviendo a lanzar el job.
-  - **Tamaño del PR #39:** unas 2.550 líneas, por encima de las 400 de `08-git-workflow.md`, igual que #38. Está indicado en el PR.
-  - **Push:** esta sesión no puede hacer `git push`; lo hace el usuario.
-- **Siguiente paso:**
-  1. Cuando el usuario mergee #39: commitear este handoff en la rama de la próxima tarea y ejecutar `/task` con el siguiente issue abierto del milestone V0 que tenga las dependencias cerradas.
-  2. Preguntar al usuario si crea el issue del bump de dependencias (`shell-quote`, `source-map-js` y `esbuild`) y trabajarlo después del 2026-10-14T14:08Z, para incluir `source-map-js`.
-  3. Preguntar en qué fase va la tarea del resumen de errores internos (ADR-0006) y la de `detectRunContext` sin `Promise.all`.

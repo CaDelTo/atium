@@ -4,6 +4,96 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-13 — #19 v0-18-doctor
+
+- **Hecho:**
+  - **Rama y PR:** rama `feat/19-doctor`, creada desde `origin/main` en `2cd7620`. PR #39 abierto con `Closes #19`, sin mergear. Los push los hizo el usuario con `! git push`.
+  - **CI del PR #39 en `518c2b2`:** pasan los 6 jobs `verify` (ubuntu, macos y windows, con Node 22 y 24). `audit` falla por `shell-quote`; ver Problemas.
+  - **Commits:**
+    - `e1d01cf` `docs(repo): add handoff entry for #18`.
+    - `a7ea23f` `feat(cli): add the doctor command`.
+    - `c2a8141` `fix(repo): stop passing --coverage twice in test:coverage`.
+    - `44233dc` `test(cli): run the doctor storage symlink tests on Windows`.
+    - `518c2b2` `fix(cli): leave no git process running after the doctor git check`.
+  - **Orquestación:** `src/commands/doctor.ts` es la definición ligera e importa `../doctor/run-doctor.js` con `await import`. `src/doctor/run-doctor.ts` contiene `runDoctor` y `diagnose`:
+    - valida `--format` (`text|json`) antes de comprobar nada;
+    - ejecuta los checks;
+    - redacta el informe completo con `createCliRedactor().redactFields(...)` y lo valida con `DoctorReportSchema.parse`;
+    - si algún check falla, escribe el informe y después lanza `UsageError`, que da el código 2. Así no cambia la interfaz `CliCommand`.
+  - **Checks**, en `src/doctor/checks/`:
+    - `node.ts`: `parseVersion` y `compareVersions`; una prerelease cuenta como anterior a su versión final. Exige `MIN_NODE_VERSION = "22.12.0"`.
+    - `config.ts`: `loadConfig` con `--config` y el nivel de log del flag.
+    - `git.ts`: consultas en serie; falla solo si `needed`, y si no, da `warn` con `DOCTOR.git.notNeededHint`.
+    - `ci.ts`: devuelve `{ check, needsGit }`, donde `needsGit` es `true` solo con `GIT_UNAVAILABLE`.
+    - `storage.ts`: `lstat` y `realpath`; prueba de escritura con `mkdtemp` y `rm`; no crea `.atium` ni abre SQLite.
+    - `frameworks.ts`.
+    - `error-outcome.ts`: helper compartido por config, git y ci.
+  - **Salida:** `report.ts` contiene el esquema Zod, que exige los 6 ids en orden y un hint en todo lo que no sea `pass`. `format-text.ts` arma la tabla.
+  - **Refactor en `src/project/`:**
+    - `detect-frameworks.*` y `project-files.*` se movieron sin cambios desde `src/init/`, con sus tests. El usuario ejecutó el movimiento porque el hook `test-guard` lo bloqueaba.
+    - Nuevo `manifest.ts` con `readProjectManifest` y `manifestProblem`, que comparten init y doctor.
+    - En `messages.ts`, los textos de `package.json` pasaron de `INIT` a un grupo `MANIFEST`.
+  - **Defaults y messages:**
+    - `defaults.ts`: `MIN_NODE_VERSION`, `ATIUM_DIRECTORY` y `DOCTOR_FORMATS`.
+    - `messages.ts`: `HELP.doctor`, `DOCTOR` y el helper `quotedNames`.
+  - **Tests:**
+    - Helper `test/temp-dir.ts` (`useTempDir`), con `maxRetries` en `rm` para el `EBUSY` de Windows.
+    - Tests de aceptación en `run-doctor.test.ts`: proyecto sano, config inválida, sin Git, sin permisos, JSON validado con el esquema y redacción en JSON. Usan Git real con `GIT_CEILING_DIRECTORIES` vía `vi.stubEnv`.
+    - En Windows, los symlinks de directorio son junctions.
+    - Se añadió `fast-check@4.10.2` como devDependency de cli.
+  - **Docs:**
+    - `18-cli-config.md` §26.1: bloque `atium doctor` con la tabla de checks, y la línea 11.
+    - `18-cli-config.md` §26.2: el código 2 de doctor.
+    - `15-storage.md`: en el CLI, la raíz es el directorio de trabajo.
+    - `07-public-api.md`: el JSON de doctor es interno.
+    - `10-tooling.md`: `test:coverage` es un alias.
+    - README de cli.
+  - **Verificado:**
+    - `pnpm verify` local en verde con Node 22: core 905 tests, sqlite 61, cli 214. Cobertura de cli: 98 % de líneas y 96,6 % de ramas.
+    - `/review` con 6 agentes, sin bloqueantes. Se corrigieron los 7 importantes y casi todas las sugerencias.
+    - Medición de `atium --help`: main 83 ms y esta rama 61–67 ms, con la máquina cargada. No carga core ni doctor. `doctor` tarda unos 310 ms.
+- **En curso:** nada. El PR #39 espera la revisión y el merge del usuario.
+- **Decisiones:**
+  - **Aprobadas en el plan ("Si") y escritas en §26.1 y §26.2:**
+    - Código de salida 2 si algún check falla; `warn` no afecta al código.
+    - `storage` solo prueba la escritura y no abre SQLite.
+    - `MIN_NODE_VERSION` es 22.12.0.
+    - Sin config, el check da `warn`.
+    - El JSON de doctor no es API pública y no lleva `schemaVersion`.
+  - **Aprobada tras `/review` (opción "a" del punto 7):** en el CLI, la raíz de `.atium/` es el directorio de trabajo. Escrita en §26.1, `15-storage.md` y `defaults.ts`.
+  - **Tomadas por mí durante `/review` con "Corrige todo", escritas en §26.1 y el README:**
+    - Se redacta todo el informe, incluido `details`.
+    - `.atium` como symlink: se resuelve con `realpath`; da `fail` si está roto, si lleva fuera del directorio de trabajo o si lleva a él mismo.
+    - `git` da `fail` solo si `ci` falló con `GIT_UNAVAILABLE`.
+    - El esquema exige orden y unicidad de los checks.
+  - **Tomadas por mí, solo en el código y en commits:**
+    - `UsageError` en lugar de cambiar `CliCommand.run`, para no tocar los tests de `run.test.ts`.
+    - Consultas de Git en serie en `checkGit`.
+  - **Sin cambios, con justificación:**
+    - `displayPath` sigue duplicado con el privado de `load-config.ts`, porque unificarlo requiere ampliar la API de core.
+    - `errnoCode` e `isMissing` duplican core desde #18.
+  - **No quedó escrito en ninguna tarea ni ADR:** el resumen de errores internos que menciona ADR-0006. §26.1 dice "Ninguna tarea lo recoge todavía"; falta que el usuario decida la fase.
+- **Problemas:**
+  - **`audit` falla en CI**, también en `main` desde #36:
+    - `shell-quote` (crítico), vía `@changesets/cli` y `launch-editor`; la 1.11.0 ya cumple el `minimumReleaseAge`.
+    - `source-map-js` (alto), vía vite y postcss; la 1.2.2 no lo cumple hasta el 2026-10-14T14:08Z.
+    - `esbuild` (bajo): 0.27.7 vía vite; se arregla con 0.28.1 o posterior.
+    - `esbuild` (moderado): 0.18.20 vía `drizzle-kit` y `@esbuild-kit/core-utils`. Forzarlo con un override puede romper `drizzle-kit`.
+    - Hace falta un issue y una rama aparte; el usuario no lo ha pedido aún.
+  - **`detectRunContext` (core)** lanza `headCommit`, `currentBranch` e `isDirty` con `Promise.all`. En Windows puede dejar procesos `git` vivos que bloquean el directorio, como pasó en `checkGit`. Propuesto como mejora; no está en ninguna tarea.
+  - **Hook `test-guard`:**
+    - Bloqueó el movimiento de tests a `src/project/`; lo ejecutó el usuario con su aprobación.
+    - Bloqueó también una reescritura de `git.test.ts` que quitaba una aserción. Se rehízo con ediciones mínimas que conservan todas las aserciones.
+    - Dio un falso positivo al escribir este handoff con un heredoc en bash, porque el texto mencionaba ese movimiento. Con aprobación del usuario se escribió con Write y Edit.
+  - **Commit del movimiento:** no se pudo hacer aparte de `a7ea23f`. El lint de lefthook revisa el commit intermedio contra el `messages.ts` del working tree y falla.
+  - **Flake de CI en Windows con Node 22:** la descarga del binario de `better-sqlite3` se cortó (`TypeError: terminated`), pasó a `node-gyp` y falló. Se resolvió volviendo a lanzar el job.
+  - **Tamaño del PR #39:** unas 2.550 líneas, por encima de las 400 de `08-git-workflow.md`, igual que #38. Está indicado en el PR.
+  - **Push:** esta sesión no puede hacer `git push`; lo hace el usuario.
+- **Siguiente paso:**
+  1. Cuando el usuario mergee #39: commitear este handoff en la rama de la próxima tarea y ejecutar `/task` con el siguiente issue abierto del milestone V0 que tenga las dependencias cerradas.
+  2. Preguntar al usuario si crea el issue del bump de dependencias (`shell-quote`, `source-map-js` y `esbuild`) y trabajarlo después del 2026-10-14T14:08Z, para incluir `source-map-js`.
+  3. Preguntar en qué fase va la tarea del resumen de errores internos (ADR-0006) y la de `detectRunContext` sin `Promise.all`.
+
 ### 2026-10-12 — #18 v0-17-cli-skeleton
 
 - **Hecho:**
