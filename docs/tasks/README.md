@@ -146,6 +146,8 @@ Criterio de la fase: docs/design/22-roadmap.md §30. v1-01 a v1-06 salen del `/a
 | [v1-40-lint-cache-bench](v1-40-lint-cache-bench.md) | Caché de ESLint y benchmark de 1,000 archivos | v1-31, v1-38 | [#80](https://github.com/CaDelTo/atium/issues/80) |
 | [v1-41-pr-annotations](v1-41-pr-annotations.md) | Anotaciones de lint en PRs de GitHub | v1-21, v1-38 | [#81](https://github.com/CaDelTo/atium/issues/81) |
 | [v1-42-v1-acceptance](v1-42-v1-acceptance.md) | Aceptación de V1 | todas las anteriores | [#82](https://github.com/CaDelTo/atium/issues/82) |
+| [v1-43-docs-callouts-mermaid](v1-43-docs-callouts-mermaid.md) | Callouts y diagramas Mermaid en la documentación | ninguna | [#110](https://github.com/CaDelTo/atium/issues/110) |
+| [v1-44-adr-frontmatter](v1-44-adr-frontmatter.md) | Frontmatter YAML en los ADRs | v1-43 | [#111](https://github.com/CaDelTo/atium/issues/111) |
 
 Orden sugerido:
 
@@ -171,8 +173,12 @@ v1-21 + v1-28 + v1-32…v1-37 → v1-38 → v1-39
                                       → v1-40 (con v1-31)
                                       → v1-41
 todas → v1-42
+
+v1-43 → v1-44                     independientes del resto; no bloquean v1-42
 ```
 
 Se pueden hacer en paralelo (`/parallel`): v1-01 a v1-07; v1-09 y v1-10; las reglas v1-11 a v1-19; v1-21 a v1-24; los reporters v1-25 a v1-27; las reglas cross-file v1-33 a v1-36; y v1-39 a v1-41.
 
 v1-07 concentra las decisiones de arquitectura (capas, catálogo de reglas, documentación de reglas, cómo funciona `atium lint` y contexto de los analizadores) y bloquea casi todo lo demás. v1-41 depende de una decisión del usuario: el repo es privado y las anotaciones SARIF requieren GitHub Advanced Security o un repo público.
+
+v1-43 y v1-44 salen de la petición del usuario de leer `docs/` tanto en GitHub como en Obsidian. Van después de v1-42 y no la bloquean. v1-44 necesita que una persona acepte antes el ADR del formato de los ADRs.
