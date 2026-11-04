@@ -146,11 +146,12 @@ Criterio de la fase: docs/design/22-roadmap.md §30. v1-01 a v1-06 salen del `/a
 | [v1-40-lint-cache-bench](v1-40-lint-cache-bench.md) | Caché de ESLint y benchmark de 1,000 archivos | v1-31, v1-38 | [#80](https://github.com/CaDelTo/atium/issues/80) |
 | [v1-41-pr-annotations](v1-41-pr-annotations.md) | Anotaciones de lint en PRs de GitHub | v1-21, v1-38 | [#81](https://github.com/CaDelTo/atium/issues/81) |
 | [v1-42-v1-acceptance](v1-42-v1-acceptance.md) | Aceptación de V1 | todas las anteriores | [#82](https://github.com/CaDelTo/atium/issues/82) |
+| [v1-45-dependency-advisories-zod-vitest](v1-45-dependency-advisories-zod-vitest.md) | Avisos de seguridad en zod, vitest y fast-uri | ninguna | [#113](https://github.com/CaDelTo/atium/issues/113) |
 
 Orden sugerido:
 
 ```
-v1-01 … v1-06                     independientes del resto
+v1-01 … v1-06, v1-45              independientes del resto
 
 v1-07 → v1-08 → v1-09 → v1-11, v1-12, v1-15, v1-16, v1-17, v1-18
              │       └→ v1-13, v1-14 (con v1-10)
