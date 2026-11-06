@@ -148,11 +148,12 @@ Criterio de la fase: docs/design/22-roadmap.md §30. v1-01 a v1-06 salen del `/a
 | [v1-42-v1-acceptance](v1-42-v1-acceptance.md) | Aceptación de V1 | todas las anteriores | [#82](https://github.com/CaDelTo/atium/issues/82) |
 | [v1-43-docs-callouts-mermaid](v1-43-docs-callouts-mermaid.md) | Callouts y diagramas Mermaid en la documentación | ninguna | [#110](https://github.com/CaDelTo/atium/issues/110) |
 | [v1-44-adr-frontmatter](v1-44-adr-frontmatter.md) | Frontmatter YAML en los ADRs | v1-43 | [#111](https://github.com/CaDelTo/atium/issues/111) |
+| [v1-45-dependency-advisories-zod-vitest](v1-45-dependency-advisories-zod-vitest.md) | Avisos de seguridad en zod, vitest y fast-uri | ninguna | [#113](https://github.com/CaDelTo/atium/issues/113) |
 
 Orden sugerido:
 
 ```
-v1-01 … v1-06                     independientes del resto
+v1-01 … v1-06, v1-45              independientes del resto
 
 v1-07 → v1-08 → v1-09 → v1-11, v1-12, v1-15, v1-16, v1-17, v1-18
              │       └→ v1-13, v1-14 (con v1-10)

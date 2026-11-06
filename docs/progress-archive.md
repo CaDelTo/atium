@@ -4,6 +4,92 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-13 — #47 v1-07-linter-architecture
+
+- **Hecho:**
+  - **Rama, PR y merge:**
+    - Rama `docs/47-linter-architecture`, creada desde `origin/main` en `1eaeb06` (merge de #83, `/plan-phase v1`).
+    - Commit `38b16cd` `docs(repo): decide the linter architecture in ADR-0023`. El push lo hizo esta sesión con `git -C <repo> push -u origin <rama>`.
+    - PR #84 con `Closes #47`. El usuario ya lo mergeó (`25f1140`, 2026-10-13T20:35Z) y el issue #47 está cerrado.
+  - **CI del PR #84 al consultarla:**
+    - Pasan 5 de los 6 jobs `verify`.
+    - `verify (windows-latest, Node 22)` seguía `IN_PROGRESS` cuando se mergeó.
+    - `audit` falla, igual que en `main`; ver Problemas.
+  - **ADR-0023** (`docs/adr/0023-arquitectura-linter.md`), en estado Aceptada e indexado en `docs/adr/README.md`. Fija las seis decisiones de v1-07:
+    1. **Capas:**
+       - Entrada interna `@atium/core/pure`, solo con módulos sin I/O: `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result` y `assert-never`. El plugin de ESLint solo importa esa entrada.
+       - `@atium/eslint-plugin/syntax`, también interna, guarda la lógica E2E compartida. `suite-index` y `analyzers/*` solo pueden importar ese subpath del plugin.
+    2. **Nombres en ESLint:** descriptivos (`atium/no-hard-wait`, etc.). El código (`E2E001`) es el ID estable. Las reglas cross-file no tienen nombre en ESLint.
+    3. **Catálogo:**
+       - Tabla en `docs/design/03-linter.md` §11.8.
+       - La severidad del Finding sale del catálogo, no del nivel de ESLint. Los presets activan las reglas `error` como `"error"` y las `warning` e `info` como `"warn"`.
+       - E2E011 y E2E013 vienen desactivadas por defecto.
+       - E2E012 usa la categoría `maintainability`, porque no existe `security`.
+    4. **Documentación:**
+       - Páginas en inglés en `docs/rules/<código en minúsculas>.md`.
+       - La tabla de equivalencias de los presets va en `docs/rules/presets.md`.
+       - La URL la construye `ruleDocsUrl(code)` en `core/findings` y apunta a `https://github.com/CaDelTo/atium/blob/main/docs/rules/<código>.md`.
+    5. **`atium lint`:**
+       - Usa el `eslint.config.*` del usuario. Si no hay ninguno, usa el preset interno `recommended` y lo avisa por stderr.
+       - Sección nueva y estricta `lint: { include, exclude }` en `atium.config`, con defaults `["."]` y `[]`. Los argumentos `[paths...]` reemplazan a `include`.
+       - Los mensajes de reglas externas equivalentes (según la tabla de los presets) se convierten al código propio; los demás se ignoran. Los errores de parseo se avisan por stderr.
+       - Las reglas cross-file van en `analyzers["lint-crossfile"]`, con `rules: { E2E011: "on" }`.
+       - Sale con 1 si hay Findings nuevos de severidad `error`.
+    6. **Contexto de los analizadores:**
+       - `AnalysisContext.storage` pasa a ser opcional y solo está presente con la capacidad `history`.
+       - El índice no va en el contexto: el CLI crea `createLintCrossfileAnalyzer({ index })`.
+  - **Diseño y estándares actualizados:**
+    - `03-linter.md`: §11.1, el ejemplo de §11.2 y las secciones nuevas §11.8 a §11.10.
+    - `14-architecture.md` §22.2.
+    - `15-storage.md` §23.2.2.
+    - `16-repository-structure.md` §24.
+    - `18-cli-config.md` §26.2 y §26.3.
+    - `engineering/02-code-design.md`: tabla de capas y nombres.
+    - `03-errors-logging.md`: se quitó `atium.dev` del ejemplo.
+    - `07-public-api.md`: nombres de ESLint públicos, subpaths internos y alias de reglas renombradas.
+    - `09-documentation.md`: ruta de las páginas.
+  - **Tareas V1:**
+    - v1-08 a v1-38 citan ADR-0023 o §11.8 en lugar de "v1-07"; las líneas `Depende de: v1-07` se mantienen.
+    - v1-08 añade crear `@atium/core/pure` y `ruleDocsUrl`, y cambiar `atium.dev` en `packages/core/src/findings/samples.test-support.ts`.
+    - v1-37 añade:
+      - la sección `lint` del esquema;
+      - los avisos y el `overrideConfigFile`;
+      - el comentario de `gateFailed` en `packages/cli/src/exit-codes.ts`.
+    - v1-38 añade los `settings.atium` por archivo para el índice.
+    - v1-32 añade la clave `rules`.
+    - v1-20 añade `docs/rules/presets.md`.
+  - **Verificado:**
+    - `pnpm verify` en verde dos veces, antes y después de las correcciones del review: core 907 tests, cli 220 y sqlite 61.
+    - `/review` con code-reviewer, duplication-auditor y docs-checker, sin bloqueantes. Se corrigieron los 5 importantes y las 8 sugerencias.
+    - Se descartaron:
+      - repetir valores entre el ADR y el diseño (mismo patrón que ADR-0022);
+      - añadir la firma `atium lint [paths...]` a §26.1 (lo hace v1-37);
+      - el riesgo de I/O en `findings/` por el baseline (v1-28 solo define el esquema, y la regla de dependency-cruiser sobre `pure` lo detectaría).
+- **En curso:** nada. El repo principal quedó en la rama `docs/47-linter-architecture`, ya mergeada. Esta entrada está sin commitear.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan** ("Apruebo todo"):
+    - las seis recomendaciones;
+    - los valores del catálogo;
+    - los defaults de `lint`;
+    - el nombre `@atium/core/pure`;
+    - actualizar las referencias de las tareas.
+    Todo quedó en ADR-0023 y en el diseño.
+  - **Tomadas por mí tras "Corrige todo lo que puedas" en el review**, también escritas en ADR-0023, `03-linter.md` §11.8 a §11.10 y las tareas:
+    - la forma de `analyzers["lint-crossfile"].rules` (código a `"on"` u `"off"`, con los defaults del catálogo);
+    - el motivo de que E2E011 y E2E013 vengan desactivadas;
+    - la ubicación `docs/rules/presets.md`;
+    - reexportar `errors`, `result` y `assert-never` en `pure`.
+  - **No decidido:** cómo muestra el reporter de consola los hallazgos que ya están en el baseline. Quedó como "Decisión abierta" en `docs/tasks/v1-25-reporter-console.md`.
+- **Problemas:**
+  - **El job `audit` de CI sigue en rojo en `main`:** `shell-quote` es crítico y `source-map-js` es alto. `source-map-js` no cumple `minimumReleaseAge` hasta el 2026-10-14T14:08Z. El detalle está en `docs/tasks/v1-01-dependency-security-bump.md`.
+  - **Job de Windows sin terminar:** `verify (windows-latest, Node 22)` del PR #84 no había terminado al mergear. Como el cambio es solo de docs, no se espera fallo, pero no está comprobado.
+  - **Enlaces de documentación:** dan 404 mientras el repo sea privado (ADR-0023, Consecuencias).
+  - **Umbral de cobertura de cli** (de la entrada de #20): sigue sin decidir si se alinea en 80 % (`04-testing.md`) o en 90 % (`vitest.config.ts`).
+- **Siguiente paso:**
+  1. `git fetch origin` y empezar la siguiente tarea con `/task 41` (v1-01, el issue abierto más antiguo de V1, sin dependencias).
+  2. Commitear esta entrada en la rama de esa tarea.
+  3. Antes del 2026-10-14T14:08Z, `source-map-js` todavía no cumple `minimumReleaseAge`; si se empieza antes, revisar el plan de v1-01.
+
 ### 2026-10-13 — #20 v0-19-v0-acceptance
 
 - **Hecho:**
