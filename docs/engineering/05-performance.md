@@ -11,7 +11,7 @@ Los objetivos están en [01-requirements.md](../design/01-requirements.md). Se m
 - **Streaming:** archivos NDJSON y gzip se leen línea por línea con streams; nunca se carga el historial completo en memoria con `readFile`.
 - **Límites de tamaño** ([ADR-0018](../adr/0018-formato-archivos-run.md)). Los textos se miden en bytes UTF-8 del valor ya escapado para JSON, y los códigos ANSI se eliminan al escribir.
   - Por resultado: 20 intentos, 50 tags, `titlePath` de 20 niveles y 200 pasos BDD (`text` 512 B, `definition` 256 B).
-  - Por intento: mensajes de error 2 KB, stacks 8 KB, 5 muestras de consola de 1 KiB, 20 `pageErrors` de 2 KiB, 200 `NetworkCall` y 200 endpoints. `matcher.expected` y `matcher.actual`, 2 KiB cada uno.
+  - Por intento: mensajes de error 2 KiB, stacks 8 KiB, 5 muestras de consola de 1 KiB, 20 `pageErrors` de 2 KiB, 200 `NetworkCall` y 200 endpoints. `matcher.expected` y `matcher.actual`, 2 KiB cada uno.
   - Por run: 100 proyectos de 256 B.
   - Cualquier otro string: 2 KiB.
   - Líneas de los archivos de run: 768 KiB al escribir y 1 MiB al leer.

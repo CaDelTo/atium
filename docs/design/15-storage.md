@@ -49,8 +49,11 @@ El formato, los topes y los límites están en [ADR-0018](../adr/0018-formato-ar
   - Garantía final, pasos 2 y 3: `callsDropped` desaparece con `calls`, y `pageErrorsDropped` con `pageErrors`, porque los conteos solo describen lo que descartan los topes. `console.samples` queda como `[]`. El paso 4 no cambia `stepsDropped`.
   - Si la entrada ya trae conteos `*Dropped`, se les suma lo que se descarta. `detailTruncated: true` se conserva. Así, reescribir un run leído no lo cambia.
   - Las claves de `statuses` que quedan iguales al truncarlas suman sus conteos.
+  - Endpoints: tiene fallos el que tiene `failures > 0` o alguna clave de `statuses` ≥ 400, aunque su conteo sea 0. Los que tienen fallos también se ordenan entre sí por `count` descendente.
+  - Garantía final de 768 KiB: una línea de exactamente 768 KiB no se recorta.
 - **Lectura:**
   - Divide las líneas sobre los bytes descomprimidos y comprueba cada límite antes de juntar la línea.
+  - Los límites son inclusivos: se aceptan un encabezado de exactamente 64 KiB, una línea de exactamente 1 MiB y un total de exactamente 256 MiB.
   - Decodifica UTF-8 en modo estricto.
   - Lee `schemaVersion` antes de validar el encabezado.
   - Acepta una última línea sin `\n` y rechaza las líneas vacías intermedias.

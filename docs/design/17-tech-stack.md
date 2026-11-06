@@ -21,7 +21,7 @@
 | Parser CSS | parsel-js | Analiza selectores CSS para E2E002 |
 | Similitud | fastest-levenshtein | Renombres y duplicados |
 | Archivos | tinyglobby | Búsqueda rápida de tests |
-| Compresión | fflate | Runs `.ndjson.gz` y datos del reporte HTML |
+| Compresión | `node:zlib` para los runs `.ndjson.gz`; fflate, previsto para los datos del reporte HTML | zlib: stream nativo, sin dependencia, que el lector de líneas consume mientras comprueba los límites de bytes descomprimidos (gzip bomb, [ADR-0018](../adr/0018-formato-archivos-run.md)); fflate: funciona en el navegador |
 | Concurrencia | p-limit | Límite de uploads y analizadores en paralelo |
 | IDs | uuid v7 | Ordenables por tiempo |
 | Base de datos local | SQLite (better-sqlite3) + Drizzle | Migraciones; camino a PostgreSQL |

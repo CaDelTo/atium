@@ -98,8 +98,8 @@ interface ErrorOccurrence {
   fingerprint: string;                // sección 13
   family: string;                     // agrupación gruesa: tipo + ubicación
   type: string;                       // TimeoutError, AssertionError, ...
-  message: string;                    // redactado, texto plano sin ANSI, máx. 2 KB
-  stack?: string;                     // redactado, texto plano sin ANSI, máx. 8 KB
+  message: string;                    // redactado, texto plano sin ANSI, máx. 2 KiB
+  stack?: string;                     // redactado, texto plano sin ANSI, máx. 8 KiB
   locator?: string;                   // si el error involucra un locator
   matcher?: { name: string; expected?: string; actual?: string };   // expected y actual: máx. 2 KiB
   failedAtMs: number;                 // offset desde el inicio del intento
@@ -144,7 +144,7 @@ Los topes de listas y textos, los conteos `*Dropped` y `detailTruncated` están 
 - Al escribir se eliminan los códigos ANSI de `message`, `stack`, las muestras de consola y `pageErrors`.
 - Al aplicar un tope se conservan los elementos más cercanos al fallo. Las llamadas de red que seguían pendientes en el momento del fallo se conservan siempre.
 - Los conteos `*Dropped` son enteros positivos y se omiten cuando valen 0.
-- Si después de los topes la línea de un `TestResult` supera 768 KiB, el escritor recorta detalle en el orden del ADR y marca `detailTruncated: true`. Con los topes actuales, el resultado siempre queda por debajo.
+- Si después de los topes la línea de un `TestResult` supera 768 KiB, el escritor recorta detalle en el orden del ADR y marca `detailTruncated: true`. Con los topes actuales, el resultado nunca supera ese límite.
 
 ### 9.3 Identidad de un test (`testId`)
 
@@ -184,7 +184,7 @@ Atium detecta automáticamente el proveedor de CI y completa `git` y `ci` del `R
 | Proveedor | Commit | Rama | PR | Run / intento |
 |---|---|---|---|---|
 | GitHub Actions | `GITHUB_SHA` | `GITHUB_HEAD_REF` / `GITHUB_REF_NAME` | payload del evento (`GITHUB_EVENT_PATH`) | `GITHUB_RUN_ID` / `GITHUB_RUN_ATTEMPT` |
-| GitLab CI | `CI_COMMIT_SHA` | `CI_COMMIT_REF_NAME` | `CI_MERGE_REQUEST_IID` | `CI_PIPELINE_ID` / `CI_JOB_ID` |
+| GitLab CI | `CI_COMMIT_SHA` | `CI_COMMIT_REF_NAME` | `CI_MERGE_REQUEST_IID` | `CI_PIPELINE_ID` (`CI_JOB_ID` es el `jobId`, no el intento) |
 | Jenkins | `GIT_COMMIT` | `GIT_BRANCH` / `CHANGE_BRANCH` | `CHANGE_ID` | `BUILD_TAG` |
 | CircleCI | `CIRCLE_SHA1` | `CIRCLE_BRANCH` | `CIRCLE_PULL_REQUEST` | `CIRCLE_WORKFLOW_ID` |
 | Azure Pipelines | `BUILD_SOURCEVERSION` | `BUILD_SOURCEBRANCHNAME` | `SYSTEM_PULLREQUEST_PULLREQUESTID` | `BUILD_BUILDID` |
@@ -201,12 +201,12 @@ Detalles que afectan la calidad del análisis:
 `detectRunContext({ env, cwd, git, logger })`, en `core/src/ci`, devuelve las secciones `git` y `ci` del `Run`. `git` es la interfaz `GitClient` (`headCommit`, `currentBranch`, `isDirty`); `createGitClient` la implementa con simple-git.
 
 1. **Proveedor:**
-   - Primero, las reglas propias de la tabla para GitHub Actions, GitLab CI, Jenkins, CircleCI y Azure Pipelines. Cada uno se detecta con la misma variable que usa env-ci: `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI` y `BUILD_BUILDURI`.
-   - Si ninguno coincide y `CI` está definida, se usa env-ci, importado de forma diferida, para el resto de proveedores (Travis CI, Buildkite, Bitbucket…). Su `service` pasa a ser el `provider`. En un PR, `prBranch` es la rama y `branch` la base.
+   - Primero, las reglas propias de la tabla para GitHub Actions, GitLab CI, Jenkins, CircleCI y Azure Pipelines. Cada uno se detecta con la misma variable que usa env-ci: `GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `CIRCLECI` y `BUILD_BUILDURI`. Si están las variables de varios, gana el primero en el orden de la tabla.
+   - Si ninguno coincide y `CI` está definida, se usa env-ci, importado de forma diferida, para el resto de proveedores (Travis CI, Buildkite, Bitbucket…). Su `service` pasa a ser el `provider`, `build` el `runId`, `job` el `jobId` y `pr` el `prNumber`. En un PR, `prBranch` es la rama y `branch` la base.
    - Si tampoco, el run es `local`.
 2. **Campos por proveedor:** los de la tabla, más estos:
    - `runId`: `CI_PIPELINE_ID` en GitLab, `BUILD_TAG` en Jenkins, `CIRCLE_WORKFLOW_ID` en CircleCI y `BUILD_BUILDID` en Azure.
-   - `jobId`: solo en GitLab (`CI_JOB_ID`).
+   - `jobId`: entre las reglas propias, solo en GitLab (`CI_JOB_ID`).
    - `baseBranch`:
      - `GITHUB_BASE_REF` en GitHub;
      - `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` en GitLab;
@@ -216,7 +216,7 @@ Detalles que afectan la calidad del análisis:
      - En Jenkins, `CHANGE_BRANCH` va antes que `GIT_BRANCH`, que en un PR vale `PR-<n>`.
      - En Azure, `SYSTEM_PULLREQUEST_SOURCEBRANCH` sin `refs/heads/` va antes que `BUILD_SOURCEBRANCHNAME`, que en un PR vale `merge`.
    - CircleCI: el número de PR es el último segmento de la URL de `CIRCLE_PULL_REQUEST`.
-3. **Payload de GitHub:** si existe `GITHUB_EVENT_PATH`, se lee con cualquier nombre de evento. Si trae `pull_request`, de ahí salen `prNumber` (`pull_request.number`) y `headSha` (`pull_request.head.sha`). Antes de parsearlo se mide: si supera `GITHUB_EVENT_MAX_BYTES` (10 MiB, `defaults.ts` de core), no se lee. Un payload demasiado grande, ilegible, que no es JSON o con un `pull_request` inválido (por ejemplo, un `head.sha` por encima del tope de bytes de `headSha`) se registra como aviso y el run se guarda sin esos dos campos.
+3. **Payload de GitHub:** si el proveedor es `github` y existe `GITHUB_EVENT_PATH`, se lee con cualquier nombre de evento. Con otro proveedor no se lee. Si trae `pull_request`, de ahí salen `prNumber` (`pull_request.number`) y `headSha` (`pull_request.head.sha`). Antes de parsearlo se mide: si supera `GITHUB_EVENT_MAX_BYTES` (10 MiB, `defaults.ts` de core), no se lee. Un payload demasiado grande, ilegible, que no es JSON o con un `pull_request` inválido (por ejemplo, un `head.sha` por encima del tope de bytes de `headSha`) se registra como aviso y el run se guarda sin esos dos campos.
 4. **Overrides:** `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH` mandan sobre el proveedor.
 5. **Git:**
    - Solo se consulta si el commit no viene del entorno; así un job de CI sin Git funciona.

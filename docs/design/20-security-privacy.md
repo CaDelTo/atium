@@ -22,7 +22,7 @@
 
 Se aplica con `createRedactor` de `@atium/core` (`packages/core/src/redact`) antes de persistir y antes de registrar en logs. Cada valor redactado se reemplaza por el marcador fijo `[REDACTED]`. La configuración es la sección `redact` ([18-cli-config.md](18-cli-config.md) §26.3). Cada lista que se omite toma su valor por defecto; una lista dada **reemplaza** al valor por defecto, no lo amplía.
 
-`headers` y `bodyFields` contienen **fragmentos de nombre**. Un nombre es sensible si, normalizado (minúsculas y sin nada que no sea letra o dígito, en cualquier alfabeto), contiene algún fragmento normalizado de la lista: `token` cubre `accessToken`, `refresh_token` y `X-Auth-Token`; `apikey` cubre `x-api-key` y `API_KEY_ID`. Se eligió así, como el scrubbing por defecto de Sentry, porque un falso negativo filtra un secreto y un falso positivo solo oculta un dato de depuración (`tokenCount`, `passwordPolicy`). Un fragmento debe tener al menos una letra o un dígito: uno vacío tras normalizar coincidiría con todo. No se usa `auth` como fragmento por defecto porque cubriría `author`.
+`headers` y `bodyFields` contienen **fragmentos de nombre**. Un nombre es sensible si, normalizado (minúsculas y sin nada que no sea letra o número Unicode, `\p{L}` o `\p{N}`: `²` también cuenta), contiene algún fragmento normalizado de la lista: `token` cubre `accessToken`, `refresh_token` y `X-Auth-Token`; `apikey` cubre `x-api-key` y `API_KEY_ID`. Se eligió así, como el scrubbing por defecto de Sentry, porque un falso negativo filtra un secreto y un falso positivo solo oculta un dato de depuración (`tokenCount`, `passwordPolicy`). Un fragmento debe tener al menos una letra o un dígito: uno vacío tras normalizar coincidiría con todo. No se usa `auth` como fragmento por defecto porque cubriría `author`.
 
 | Lista | Por defecto | Efecto |
 |---|---|---|
@@ -34,7 +34,7 @@ Se aplica con `createRedactor` de `@atium/core` (`packages/core/src/redact`) ant
 |---|---|---|
 | `jwt` | `eyJ<…>.eyJ<…>.<firma>`: header y payload base64url de un JSON; la firma puede estar vacía pero el segundo `.` es obligatorio | Todo el token |
 | `bearer` | `bearer` (sin distinguir mayúsculas), espacios o tabs y un token | El token hasta el primer delimitador: `Bearer [REDACTED]` |
-| `aws-key` | Access key id de AWS: `AKIA`, `ASIA`, `ABIA`, `ACCA` o `A3T` más una letra o dígito, seguido de exactamente 16 caracteres base32 | Todo |
+| `aws-key` | Access key id de AWS: un prefijo (`AKIA`, `ASIA`, `ABIA`, `ACCA`, o `A3T` seguido de una letra mayúscula o un dígito) y exactamente 16 caracteres base32 | Todo |
 | `gcp-key` | API key de Google Cloud: `AIza` y exactamente 35 caracteres base64url | Todo |
 | `azure-key` | `AccountKey` o `SharedAccessKey` (sin distinguir mayúsculas, como los parsers de Azure), `=` con espacios opcionales y un valor | El valor hasta el primer delimitador |
 
