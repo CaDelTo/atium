@@ -149,6 +149,23 @@ Criterio de la fase: docs/design/22-roadmap.md §30. v1-01 a v1-06 salen del `/a
 | [v1-43-docs-callouts-mermaid](v1-43-docs-callouts-mermaid.md) | Callouts y diagramas Mermaid en la documentación | ninguna | [#110](https://github.com/CaDelTo/atium/issues/110) |
 | [v1-44-adr-frontmatter](v1-44-adr-frontmatter.md) | Frontmatter YAML en los ADRs | v1-43 | [#111](https://github.com/CaDelTo/atium/issues/111) |
 | [v1-45-dependency-advisories-zod-vitest](v1-45-dependency-advisories-zod-vitest.md) | Avisos de seguridad en zod, vitest y fast-uri | ninguna | [#113](https://github.com/CaDelTo/atium/issues/113) |
+| [v1-46-sqlite-migration-race](v1-46-sqlite-migration-race.md) | Carrera al migrar una base SQLite nueva | ninguna | [#116](https://github.com/CaDelTo/atium/issues/116) |
+| [v1-47-azure-branch-name](v1-47-azure-branch-name.md) | Rama completa en Azure Pipelines | ninguna | [#117](https://github.com/CaDelTo/atium/issues/117) |
+| [v1-48-redact-basic-userinfo-github](v1-48-redact-basic-userinfo-github.md) | Redacción de Basic, credenciales en URL y tokens de GitHub | ninguna | [#118](https://github.com/CaDelTo/atium/issues/118) |
+| [v1-49-test-guard-commands](v1-49-test-guard-commands.md) | test-guard: comandos que borran tests y falsos positivos | ninguna | [#119](https://github.com/CaDelTo/atium/issues/119) |
+| [v1-50-storage-error-hints](v1-50-storage-error-hints.md) | Pistas de error de storage y ejecuciones ilegibles en listRuns | ninguna | [#120](https://github.com/CaDelTo/atium/issues/120) |
+| [v1-51-git-timeout](v1-51-git-timeout.md) | Timeout en las llamadas a git | ninguna | [#121](https://github.com/CaDelTo/atium/issues/121) |
+| [v1-52-sqlite-list-runs-batch](v1-52-sqlite-list-runs-batch.md) | Lectura por lotes en listRuns y tope de limit | ninguna | [#122](https://github.com/CaDelTo/atium/issues/122) |
+| [v1-53-storage-contract-concurrency](v1-53-storage-contract-concurrency.md) | Tests de concurrencia reales en el storage | ninguna | [#123](https://github.com/CaDelTo/atium/issues/123) |
+| [v1-54-cli-exit-epipe](v1-54-cli-exit-epipe.md) | Código de salida del CLI ante EPIPE y errores fuera de run | ninguna | [#124](https://github.com/CaDelTo/atium/issues/124) |
+| [v1-55-init-manifest-bom](v1-55-init-manifest-bom.md) | BOM en package.json al detectar frameworks | ninguna | [#125](https://github.com/CaDelTo/atium/issues/125) |
+| [v1-56-run-file-temp-cleanup](v1-56-run-file-temp-cleanup.md) | Temporales huérfanos en .atium/runs | ninguna | [#126](https://github.com/CaDelTo/atium/issues/126) |
+| [v1-57-analyzer-findings-spread](v1-57-analyzer-findings-spread.md) | Hallazgos de analizadores sin spread | ninguna | [#127](https://github.com/CaDelTo/atium/issues/127) |
+| [v1-58-format-hook-scope](v1-58-format-hook-scope.md) | Hook de formato solo dentro del proyecto | ninguna | [#128](https://github.com/CaDelTo/atium/issues/128) |
+| [v1-59-push-branch-origin](v1-59-push-branch-origin.md) | push-branch sin remoto origin | ninguna | [#129](https://github.com/CaDelTo/atium/issues/129) |
+| [v1-60-eslint-syntax-shapes](v1-60-eslint-syntax-shapes.md) | Helpers de sintaxis: claves con template y test.only<T> | v1-09 | [#130](https://github.com/CaDelTo/atium/issues/130) |
+| [v1-61-terminal-text-invisibles](v1-61-terminal-text-invisibles.md) | terminalText y caracteres invisibles | ninguna | [#131](https://github.com/CaDelTo/atium/issues/131) |
+| [v1-62-unexport-internal-types](v1-62-unexport-internal-types.md) | Tipos internos exportados sin uso | ninguna | [#132](https://github.com/CaDelTo/atium/issues/132) |
 
 Orden sugerido:
 
@@ -176,6 +193,8 @@ v1-21 + v1-28 + v1-32…v1-37 → v1-38 → v1-39
 todas → v1-42
 
 v1-43 → v1-44                     independientes del resto; no bloquean v1-42
+
+v1-46 … v1-62                     independientes del resto; no bloquean v1-42
 ```
 
 Se pueden hacer en paralelo (`/parallel`): v1-01 a v1-07; v1-09 y v1-10; las reglas v1-11 a v1-19; v1-21 a v1-24; los reporters v1-25 a v1-27; las reglas cross-file v1-33 a v1-36; y v1-39 a v1-41.
@@ -183,3 +202,5 @@ Se pueden hacer en paralelo (`/parallel`): v1-01 a v1-07; v1-09 y v1-10; las reg
 v1-07 concentra las decisiones de arquitectura (capas, catálogo de reglas, documentación de reglas, cómo funciona `atium lint` y contexto de los analizadores) y bloquea casi todo lo demás. v1-41 depende de una decisión del usuario: el repo es privado y las anotaciones SARIF requieren GitHub Advanced Security o un repo público.
 
 v1-43 y v1-44 salen de la petición del usuario de leer `docs/` tanto en GitHub como en Obsidian. Van después de v1-42 y no la bloquean. v1-44 necesita que una persona acepte antes el ADR del formato de los ADRs.
+
+v1-46 a v1-62 salen de la auditoría del repositorio del 2026-11-06, una tarea por hallazgo. No bloquean v1-42 y se pueden hacer en cualquier momento; v1-46 y v1-48 son las más urgentes. v1-49 y v1-58 tocan `.claude/hooks/`, que el agente no puede editar: las implementa una persona. v1-48 y v1-50 necesitan que una persona apruebe antes el cambio de diseño.
