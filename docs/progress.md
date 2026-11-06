@@ -269,6 +269,85 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   3. Preparar el worktree `../atium-loop` y el token del loop (`12-ai-workflow.md`, "Loop de desarrollo").
   4. Lanzar `/dev-loop V1 --dry-run`.
 
+### 2026-10-14 — #49 v1-09-e2e-syntax
+
+- **Hecho:**
+  - **Al empezar la sesión, en el repo principal:**
+    - `/parallel 48 63 61`: worktrees `atium-48`, `atium-63` y `atium-61`.
+    - `/parallel --cleanup`, con los PRs #88, #87 y #85 mergeados: los tres worktrees retirados. Las ramas no se borraron.
+    - `git pull` de `main` a `8abd59e`. Después hizo falta `pnpm install`, porque faltaba `p-limit` y el build de core fallaba.
+  - **Rama, commit y PR:**
+    - Rama `feat/49-e2e-syntax`, creada desde `origin/main` en `8abd59e`, en el repo principal (sin worktree).
+    - Commit `0c23523` `feat(eslint-plugin): add the shared E2E syntax helpers`. El push lo hizo el usuario.
+    - PR #89 con `Closes #49`, sin mergear.
+  - **`@atium/eslint-plugin/syntax`** (`packages/eslint-plugin/src/syntax/`): funciones puras sobre el AST de typescript-eslint.
+    - `ast.ts`:
+      - `unwrap` hace transparentes `!`, `as`, `<T>`, `satisfies` y `ChainExpression`;
+      - `memberPath`, `calleePath`, `calleeName`;
+      - `chainOf` devuelve las llamadas anteriores de la cadena y su raíz;
+      - `isMethodCall`, `isCypressChain`, `isOneOf`, `isFunctionNode`, `isStringLiteral`.
+    - `framework.ts`: `detectFramework(program, configured?)` y `FRAMEWORKS`, que se reexporta desde `defaults.ts`. `settings.ts` usa ahora esta lista.
+    - `structure.ts`: `classifyBlock(call)` devuelve un `TestBlock` con `kind`, `name`, `runner` (`playwright` o `mocha`), `modifiers`, `title` y `callback`.
+    - `context.ts`: `enclosingBlocks`, `titlePathOf` y `testContextOf`, que dan `titles`, `fullTitle` (unido con `TITLE_PATH_SEPARATOR` de `@atium/core/pure`) e `isStatic`.
+    - `title.ts`: `titleOf(expr)`. Un título no estático se reconstruye desde el AST.
+    - `actions.ts` (`actionOf`), `assertions.ts` (`assertionOf` y `createNameMatcher`, con `*` como único comodín), `locators.ts` (`locatorOf`, que da query o refinement con `base` y `hasName`) y `waits.ts` (`fixedWaitOf`).
+    - `index.ts`: la entrada, con `@packageDocumentation`.
+  - **Listas de nombres en `src/defaults.ts`**, en un bloque al final y cada una con su cita: `FRAMEWORKS`, `FRAMEWORK_MODULES`, `PLAYWRIGHT_ROOT`, `TEST_DECLARATIONS`, `DESCRIBE_DECLARATIONS`, `HOOK_DECLARATIONS`, `STEP_DECLARATIONS`, `BLOCK_MODIFIERS`, `PLAYWRIGHT_ACTIONS`, `CYPRESS_ROOT`, `EXPECT_CALLS`, `CHAINED_ASSERTIONS`, `LOCATOR_QUERIES`, `GET_BY_PREFIX`, `CYPRESS_QUERY`, `ROLE_LOCATOR`, `LOCATOR_REFINEMENTS`, `INDEXED_REFINEMENT` y `FIXED_WAITS`.
+  - **Paquete:**
+    - export `./syntax` en `package.json`, y entrada `syntax/index` en `tsup.config.ts`;
+    - dependencia `@typescript-eslint/types` 8.70.1;
+    - devDependencies `@typescript-eslint/typescript-estree` 8.70.1 y `fast-check` 4.10.2.
+  - **Capas:**
+    - `.dependency-cruiser.cjs`: regla `eslint-plugin-syntax-no-rules`, con `reachable`. `src/syntax/` no alcanza `rules/`, `plugin.ts`, `create-rule.ts`, `settings.ts` ni `index.ts`.
+    - `eslint.config.js`: override de `no-restricted-imports` para `packages/eslint-plugin/src/syntax/**`, con `allowTypeImports`. Prohíbe `eslint`, `@typescript-eslint/utils`, `@typescript-eslint/parser` y `@typescript-eslint/typescript-estree`.
+    - La regla de npm va en ESLint porque `exclude` saca `node_modules` del grafo de dependency-cruiser. Está explicado en `10-tooling.md`.
+  - **Tests:**
+    - Un `*.test.ts` por helper, 237 tests en el plugin.
+    - `test/parse.ts`: `parseSource(code)` parsea con typescript-estree, fija los `parent` con `simpleTraverse(..., true)` y busca nodos por su texto exacto.
+    - Property-based en `context.test.ts`: el `titlePath` es estable ante espacios y saltos de línea entre tokens.
+  - **Documentación:**
+    - `03-linter.md` §11.3.1 "Reconocimiento de sintaxis", nueva;
+    - `17-tech-stack.md`;
+    - `02-code-design.md`, que ahora dice que los selectores llegan en v1-10;
+    - `10-tooling.md`;
+    - el README del plugin.
+  - **Verificado:**
+    - `pnpm verify` en verde: core 958, cli 220, sqlite 61 y eslint-plugin 237 tests; `src/syntax` con 100 % de líneas.
+    - `pnpm --filter @atium/eslint-plugin pkg:check` en verde para `./syntax`.
+    - Las dos reglas de capas fallan con imports prohibidos temporales.
+    - `dist/syntax/index.js` solo importa `@typescript-eslint/types` y `@atium/core/pure`.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor): sin bloqueantes. El usuario pidió "Corrige todo lo que puedas" y se corrigieron los 4 importantes y las sugerencias.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan ("si"):** las escribí en `03-linter.md` §11.3.1.
+    - un título no estático se reconstruye desde el AST, en lugar de un marcador fijo;
+    - el framework se detecta por imports y la estructura no depende de él;
+    - las listas de nombres y modificadores;
+    - solo las 6 acciones de §11.3, y cada comando de una cadena `cy`;
+    - `fixedWaitOf` mínimo aquí; la regla es v1-12;
+    - las assertions y los globs con `*`;
+    - `testContextOf` da `undefined` fuera de un test.
+  - **Propuesta mía, aplicada tras "Corrige todo lo que puedas"** (escrita en §11.3.1): un describe de Playwright titulado `""` no añade nivel, como hace Playwright 1.63 (comprobado en `lib/runner/index.js`, `Suite.titlePath`). En Mocha sí lo añade.
+    - Lo de Mocha es de memoria; no se comprobó en código porque Mocha no está instalado.
+  - **Tomadas por mí**, escritas en §11.3.1:
+    - los envoltorios TS son transparentes;
+    - un `+` solo une texto si un lado es texto;
+    - `test.step(title, body, { box: true })` no es step;
+    - solo cuentan las declaraciones `import`;
+    - `.wait(n)` vale en cualquier punto de una cadena `cy`;
+    - E2E009 no tiene helper.
+  - **Solo en el código y en el PR:** `@typescript-eslint/types` en lugar de `@typescript-eslint/utils`, porque la raíz de `utils` carga `eslint` vía `TSESLint`. También está en 17-tech-stack.
+- **Problemas:**
+  - **Tamaño del PR:** #89 tiene unas 2 100 líneas, unas 870 de tests y lockfile, frente a la guía de 400 de 08-git-workflow. Sigue abierta la decisión del usuario sobre esa guía, que ya anotó #63.
+  - **Test ajustado:** la propiedad de `titlePath` falló al aplicar la regla del `""` y se ajustó lo que esperaba. Es un test de esta misma tarea, no uno que existiera en `main`.
+  - **Logs de turbo:** al repetir logs de caché, turbo muestra rutas de `atium-63`. Son de la caché, no un problema de resolución.
+  - **CI del PR #89:** no se comprobó. `audit` seguirá en rojo como en `main` (v1-01).
+  - **Sin consumidores todavía:** los exports de `syntax` solo los usan sus tests hasta v1-10 y v1-11.
+- **Siguiente paso:**
+  1. Revisar `gh pr checks 89` y corregir lo que falle, salvo `audit`.
+  2. Cuando una persona mergee #89, empezar el siguiente issue de V1 con `/task`. Con #49 cerrado se desbloquean v1-10 (#50) y las reglas por archivo (#51 a #58).
+  3. v1-10 trabaja en el mismo módulo `syntax/`: no conviene en paralelo con reglas que lo modifiquen.
+
 ### 2026-10-13 — #63 v1-23-analyzer-pipeline
 
 - **Hecho:**
@@ -481,89 +560,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   1. Revisar `gh pr checks 85` y corregir lo que falle, salvo `audit`.
   2. Si otra tarea paralela se mergea antes: `git fetch origin && git merge origin/main`, resolver según 12-ai-workflow.md "Cuando otra tarea se mergea antes" y luego `/verify`.
   3. Cuando el PR #85 esté mergeado: `/parallel --cleanup` en el repo principal y `/task` con el siguiente issue de V1 según CLAUDE.md.
-
-### 2026-10-13 — #47 v1-07-linter-architecture
-
-- **Hecho:**
-  - **Rama, PR y merge:**
-    - Rama `docs/47-linter-architecture`, creada desde `origin/main` en `1eaeb06` (merge de #83, `/plan-phase v1`).
-    - Commit `38b16cd` `docs(repo): decide the linter architecture in ADR-0023`. El push lo hizo esta sesión con `git -C <repo> push -u origin <rama>`.
-    - PR #84 con `Closes #47`. El usuario ya lo mergeó (`25f1140`, 2026-10-13T20:35Z) y el issue #47 está cerrado.
-  - **CI del PR #84 al consultarla:**
-    - Pasan 5 de los 6 jobs `verify`.
-    - `verify (windows-latest, Node 22)` seguía `IN_PROGRESS` cuando se mergeó.
-    - `audit` falla, igual que en `main`; ver Problemas.
-  - **ADR-0023** (`docs/adr/0023-arquitectura-linter.md`), en estado Aceptada e indexado en `docs/adr/README.md`. Fija las seis decisiones de v1-07:
-    1. **Capas:**
-       - Entrada interna `@atium/core/pure`, solo con módulos sin I/O: `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result` y `assert-never`. El plugin de ESLint solo importa esa entrada.
-       - `@atium/eslint-plugin/syntax`, también interna, guarda la lógica E2E compartida. `suite-index` y `analyzers/*` solo pueden importar ese subpath del plugin.
-    2. **Nombres en ESLint:** descriptivos (`atium/no-hard-wait`, etc.). El código (`E2E001`) es el ID estable. Las reglas cross-file no tienen nombre en ESLint.
-    3. **Catálogo:**
-       - Tabla en `docs/design/03-linter.md` §11.8.
-       - La severidad del Finding sale del catálogo, no del nivel de ESLint. Los presets activan las reglas `error` como `"error"` y las `warning` e `info` como `"warn"`.
-       - E2E011 y E2E013 vienen desactivadas por defecto.
-       - E2E012 usa la categoría `maintainability`, porque no existe `security`.
-    4. **Documentación:**
-       - Páginas en inglés en `docs/rules/<código en minúsculas>.md`.
-       - La tabla de equivalencias de los presets va en `docs/rules/presets.md`.
-       - La URL la construye `ruleDocsUrl(code)` en `core/findings` y apunta a `https://github.com/CaDelTo/atium/blob/main/docs/rules/<código>.md`.
-    5. **`atium lint`:**
-       - Usa el `eslint.config.*` del usuario. Si no hay ninguno, usa el preset interno `recommended` y lo avisa por stderr.
-       - Sección nueva y estricta `lint: { include, exclude }` en `atium.config`, con defaults `["."]` y `[]`. Los argumentos `[paths...]` reemplazan a `include`.
-       - Los mensajes de reglas externas equivalentes (según la tabla de los presets) se convierten al código propio; los demás se ignoran. Los errores de parseo se avisan por stderr.
-       - Las reglas cross-file van en `analyzers["lint-crossfile"]`, con `rules: { E2E011: "on" }`.
-       - Sale con 1 si hay Findings nuevos de severidad `error`.
-    6. **Contexto de los analizadores:**
-       - `AnalysisContext.storage` pasa a ser opcional y solo está presente con la capacidad `history`.
-       - El índice no va en el contexto: el CLI crea `createLintCrossfileAnalyzer({ index })`.
-  - **Diseño y estándares actualizados:**
-    - `03-linter.md`: §11.1, el ejemplo de §11.2 y las secciones nuevas §11.8 a §11.10.
-    - `14-architecture.md` §22.2.
-    - `15-storage.md` §23.2.2.
-    - `16-repository-structure.md` §24.
-    - `18-cli-config.md` §26.2 y §26.3.
-    - `engineering/02-code-design.md`: tabla de capas y nombres.
-    - `03-errors-logging.md`: se quitó `atium.dev` del ejemplo.
-    - `07-public-api.md`: nombres de ESLint públicos, subpaths internos y alias de reglas renombradas.
-    - `09-documentation.md`: ruta de las páginas.
-  - **Tareas V1:**
-    - v1-08 a v1-38 citan ADR-0023 o §11.8 en lugar de "v1-07"; las líneas `Depende de: v1-07` se mantienen.
-    - v1-08 añade crear `@atium/core/pure` y `ruleDocsUrl`, y cambiar `atium.dev` en `packages/core/src/findings/samples.test-support.ts`.
-    - v1-37 añade:
-      - la sección `lint` del esquema;
-      - los avisos y el `overrideConfigFile`;
-      - el comentario de `gateFailed` en `packages/cli/src/exit-codes.ts`.
-    - v1-38 añade los `settings.atium` por archivo para el índice.
-    - v1-32 añade la clave `rules`.
-    - v1-20 añade `docs/rules/presets.md`.
-  - **Verificado:**
-    - `pnpm verify` en verde dos veces, antes y después de las correcciones del review: core 907 tests, cli 220 y sqlite 61.
-    - `/review` con code-reviewer, duplication-auditor y docs-checker, sin bloqueantes. Se corrigieron los 5 importantes y las 8 sugerencias.
-    - Se descartaron:
-      - repetir valores entre el ADR y el diseño (mismo patrón que ADR-0022);
-      - añadir la firma `atium lint [paths...]` a §26.1 (lo hace v1-37);
-      - el riesgo de I/O en `findings/` por el baseline (v1-28 solo define el esquema, y la regla de dependency-cruiser sobre `pure` lo detectaría).
-- **En curso:** nada. El repo principal quedó en la rama `docs/47-linter-architecture`, ya mergeada. Esta entrada está sin commitear.
-- **Decisiones:**
-  - **Aprobadas por el usuario en el plan** ("Apruebo todo"):
-    - las seis recomendaciones;
-    - los valores del catálogo;
-    - los defaults de `lint`;
-    - el nombre `@atium/core/pure`;
-    - actualizar las referencias de las tareas.
-    Todo quedó en ADR-0023 y en el diseño.
-  - **Tomadas por mí tras "Corrige todo lo que puedas" en el review**, también escritas en ADR-0023, `03-linter.md` §11.8 a §11.10 y las tareas:
-    - la forma de `analyzers["lint-crossfile"].rules` (código a `"on"` u `"off"`, con los defaults del catálogo);
-    - el motivo de que E2E011 y E2E013 vengan desactivadas;
-    - la ubicación `docs/rules/presets.md`;
-    - reexportar `errors`, `result` y `assert-never` en `pure`.
-  - **No decidido:** cómo muestra el reporter de consola los hallazgos que ya están en el baseline. Quedó como "Decisión abierta" en `docs/tasks/v1-25-reporter-console.md`.
-- **Problemas:**
-  - **El job `audit` de CI sigue en rojo en `main`:** `shell-quote` es crítico y `source-map-js` es alto. `source-map-js` no cumple `minimumReleaseAge` hasta el 2026-10-14T14:08Z. El detalle está en `docs/tasks/v1-01-dependency-security-bump.md`.
-  - **Job de Windows sin terminar:** `verify (windows-latest, Node 22)` del PR #84 no había terminado al mergear. Como el cambio es solo de docs, no se espera fallo, pero no está comprobado.
-  - **Enlaces de documentación:** dan 404 mientras el repo sea privado (ADR-0023, Consecuencias).
-  - **Umbral de cobertura de cli** (de la entrada de #20): sigue sin decidir si se alinea en 80 % (`04-testing.md`) o en 90 % (`vitest.config.ts`).
-- **Siguiente paso:**
-  1. `git fetch origin` y empezar la siguiente tarea con `/task 41` (v1-01, el issue abierto más antiguo de V1, sin dependencias).
-  2. Commitear esta entrada en la rama de esa tarea.
-  3. Antes del 2026-10-14T14:08Z, `source-map-js` todavía no cumple `minimumReleaseAge`; si se empieza antes, revisar el plan de v1-01.
