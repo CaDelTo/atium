@@ -9,6 +9,7 @@ import { FakeLogger } from "../testing/fake-logger.js";
 import { rejectedAtiumError } from "../testing/thrown-error.js";
 import type { EnvVars } from "../env.js";
 import { detectRunContext } from "./detect-run-context.js";
+import { writeEvent as writeEventIn } from "./fakes.test-support.js";
 import type { RunContext } from "./detect-run-context.js";
 
 const MERGE_SHA = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
@@ -32,10 +33,8 @@ function detect(env: EnvVars): Promise<RunContext> {
   return detectRunContext({ env, cwd, git, logger });
 }
 
-async function writeEvent(payload: unknown): Promise<string> {
-  const file = path.join(cwd, "event.json");
-  await writeFile(file, JSON.stringify(payload));
-  return file;
+function writeEvent(payload: unknown): Promise<string> {
+  return writeEventIn(cwd, payload);
 }
 
 describe("detectRunContext on GitHub Actions", () => {

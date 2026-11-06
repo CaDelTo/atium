@@ -59,8 +59,8 @@ const RunCiSchema = RunSchema.unwrap().shape.ci.unwrap();
  * @param options - Environment, working directory, Git client and logger.
  * @returns The `git` and `ci` sections of the run.
  * @throws {@link AtiumError} `GIT_UNAVAILABLE` if the commit has to come from
- * Git and Git cannot give it, and `MODEL_INVALID` if a variable holds a value
- * the run cannot store, such as a branch name over the size cap.
+ * Git and Git cannot give it, and `MODEL_INVALID` if a variable or Git gives a
+ * value the run cannot store, such as a branch name over the size cap.
  *
  * @example
  * ```ts

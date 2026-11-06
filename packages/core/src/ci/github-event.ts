@@ -47,7 +47,9 @@ export interface ReadGitHubPullRequestOptions {
  *
  * @param options - Where the payload is and where to warn.
  * @returns The pull request, or `undefined` if the event is not about one or
- * the payload cannot be read.
+ * the payload cannot be read or parsed. A pull request with a field the run
+ * cannot store, such as a head commit over the size cap, is left out whole,
+ * number included.
  */
 export async function readGitHubPullRequest(
   options: ReadGitHubPullRequestOptions,

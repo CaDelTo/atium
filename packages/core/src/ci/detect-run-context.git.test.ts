@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -6,7 +6,7 @@ import { MODEL_TEXT_CAPS_BYTES } from "../defaults.js";
 import { FakeLogger } from "../testing/fake-logger.js";
 import { rejectedAtiumError } from "../testing/thrown-error.js";
 import { detectRunContext } from "./detect-run-context.js";
-import { RecordingGitClient } from "./fakes.test-support.js";
+import { RecordingGitClient, writeEvent } from "./fakes.test-support.js";
 
 let cwd: string;
 let logger: FakeLogger;
@@ -102,8 +102,7 @@ describe("detectRunContext pull request head commit size", () => {
   const cap = MODEL_TEXT_CAPS_BYTES.default;
 
   async function detectWithHead(sha: string) {
-    const eventPath = path.join(cwd, "event.json");
-    await writeFile(eventPath, JSON.stringify({ pull_request: { number: 42, head: { sha } } }));
+    const eventPath = await writeEvent(cwd, { pull_request: { number: 42, head: { sha } } });
     return detectRunContext({
       env: { ...github, GITHUB_EVENT_PATH: eventPath },
       cwd,
