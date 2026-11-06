@@ -206,7 +206,7 @@ Detalles que afectan la calidad del análisis:
    - Si tampoco, el run es `local`.
 2. **Campos por proveedor:** los de la tabla, más estos:
    - `runId`: `CI_PIPELINE_ID` en GitLab, `BUILD_TAG` en Jenkins, `CIRCLE_WORKFLOW_ID` en CircleCI y `BUILD_BUILDID` en Azure.
-   - `jobId`: solo en GitLab (`CI_JOB_ID`).
+   - `jobId`: entre las reglas propias, solo en GitLab (`CI_JOB_ID`).
    - `baseBranch`:
      - `GITHUB_BASE_REF` en GitHub;
      - `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` en GitLab;

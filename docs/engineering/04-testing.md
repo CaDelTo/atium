@@ -147,7 +147,7 @@ Otras propiedades útiles: la normalización de mensajes es idempotente; dos men
 | `analyzers/*`, `eslint-plugin` | 85% |
 | Resto | 80% |
 
-La tabla es el mínimo: un paquete puede exigir más en su `vitest.config.ts`. Hoy `core`, `cli`, `eslint-plugin` y `storage/sqlite` exigen 90 % en líneas, ramas, funciones y sentencias.
+La tabla es el mínimo: un paquete puede exigir más en su `vitest.config.ts`, que es la fuente de su umbral.
 
 - La cobertura es un piso, no un objetivo: un test que ejecuta código sin verificar nada no cuenta.
 - **Stryker** corre de forma nocturna sobre `core` y `analyzers/*`. Objetivo: mutation score ≥ 70% en `core`. Es dogfooding: es la misma herramienta que el proyecto integra.

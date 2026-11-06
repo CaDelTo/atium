@@ -34,7 +34,7 @@ Se aplica con `createRedactor` de `@atium/core` (`packages/core/src/redact`) ant
 |---|---|---|
 | `jwt` | `eyJ<…>.eyJ<…>.<firma>`: header y payload base64url de un JSON; la firma puede estar vacía pero el segundo `.` es obligatorio | Todo el token |
 | `bearer` | `bearer` (sin distinguir mayúsculas), espacios o tabs y un token | El token hasta el primer delimitador: `Bearer [REDACTED]` |
-| `aws-key` | Access key id de AWS: `AKIA`, `ASIA`, `ABIA`, `ACCA` o `A3T` más una letra mayúscula o dígito, seguido de exactamente 16 caracteres base32 | Todo |
+| `aws-key` | Access key id de AWS: un prefijo (`AKIA`, `ASIA`, `ABIA`, `ACCA`, o `A3T` seguido de una letra mayúscula o un dígito) y exactamente 16 caracteres base32 | Todo |
 | `gcp-key` | API key de Google Cloud: `AIza` y exactamente 35 caracteres base64url | Todo |
 | `azure-key` | `AccountKey` o `SharedAccessKey` (sin distinguir mayúsculas, como los parsers de Azure), `=` con espacios opcionales y un valor | El valor hasta el primer delimitador |
 
