@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GITHUB_EVENT_MAX_BYTES } from "../defaults.js";
+import { GITHUB_EVENT_MAX_BYTES, MODEL_TEXT_CAPS_BYTES } from "../defaults.js";
 import { aRun } from "../testing/run-builder.js";
 import { FakeGitClient } from "../testing/fake-git-client.js";
 import { FakeLogger } from "../testing/fake-logger.js";
@@ -172,6 +172,28 @@ describe("detectRunContext on GitHub Actions", () => {
     expect(context.ci.prNumber).toBeUndefined();
     expect(context.git.headSha).toBeUndefined();
     expect(logger.entries.map((entry) => entry.level)).toEqual(["warn"]);
+  });
+
+  it("AC-2: warns and leaves out the pull request when its head commit is over the size cap", async () => {
+    const eventPath = await writeEvent({
+      pull_request: { number: 42, head: { sha: "a".repeat(MODEL_TEXT_CAPS_BYTES.default + 1) } },
+    });
+
+    const context = await detect({ ...github, GITHUB_EVENT_PATH: eventPath });
+
+    expect(context.ci.prNumber).toBeUndefined();
+    expect(context.git.headSha).toBeUndefined();
+    expect(logger.entries.map((entry) => entry.level)).toEqual(["warn"]);
+  });
+
+  it("AC-2: keeps a pull request whose head commit is exactly the size cap", async () => {
+    const headSha = "a".repeat(MODEL_TEXT_CAPS_BYTES.default);
+    const eventPath = await writeEvent({ pull_request: { number: 42, head: { sha: headSha } } });
+
+    const context = await detect({ ...github, GITHUB_EVENT_PATH: eventPath });
+
+    expect(context.ci.prNumber).toBe(42);
+    expect(context.git.headSha).toBe(headSha);
   });
 
   it("leaves out a run attempt that is not a positive integer", async () => {
