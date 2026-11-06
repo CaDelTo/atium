@@ -4,6 +4,69 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-13 — #61 v1-21-playwright-demo
+
+- **Hecho:**
+  - **Rama, commit y PR:**
+    - `/task 61 en paralelo con #48 #63`, en el worktree `atium-61`.
+    - Rama `feat/61-playwright-demo`, creada desde `origin/main` en `15abdf6`.
+    - Commit `861e997` `feat(repo): add the Playwright demo with seeded problems`. El push lo hizo el usuario.
+    - PR #85 con `Closes #61`, sin mergear. Su CI estaba `pending` al cerrar la sesión.
+  - **`examples/playwright-demo`** (`@atium/example-playwright-demo`, privado):
+    - `tests/*.spec.ts`, Page Objects en `tests/pages/` (`pageObjectDirs`) y helpers en `tests/helpers/`.
+    - `tsconfig.json` autónomo, con `moduleResolution: Bundler`, para el project service.
+    - 17 hallazgos sembrados que cubren las 14 reglas, más casos "no detecta" y archivos limpios (`home.spec.ts`, `pages/cart-page.ts`, `helpers/assertions.ts`).
+    - `expected-findings.json` con `{ findings: [{ ruleId, file, line, titlePath }] }`. `file` es relativo al demo y el orden es `file`, `line`, `ruleId`.
+    - README en inglés: problema por archivo, casos que no deben reportarse, configuración supuesta, convenciones y cómo ejecutar los scripts.
+  - **`verify/`**, código del repo dentro del demo:
+    - `expected-findings.test.ts` (15 tests) comprueba:
+      - el formato, con un esquema Zod y casos negativos;
+      - que están exactamente las 14 reglas;
+      - el orden y que no hay duplicados;
+      - que el archivo existe y la línea no está vacía;
+      - que el `titlePath` es el del `test(` más cercano antes de la línea y que los `test.describe` previos existen.
+    - `tsconfig.json`, que extiende `tsconfig.base.json`.
+    - `vitest.config.ts`, con `root: import.meta.dirname` para no recoger los `*.spec.ts` de Playwright.
+  - **Configuración raíz:**
+    - `eslint.config.js` ignora `examples/*/*` salvo `!examples/*/verify/`.
+    - `knip.json` ignora `examples/*/tests/**`.
+    - `vitest.config.ts` añade `examples/*/verify/vitest.config.ts` a `projects`.
+    - `turbo.json` añade `@atium/example-playwright-demo#test` con `outputs: []`.
+  - **Dependencias del demo:** `@playwright/test` 1.63.0, `@types/node`, `typescript`, `vitest` y `zod`, con las mismas versiones que el resto del repo.
+  - **Docs:** `10-tooling.md` (exclusiones y override de turbo), `04-testing.md` (fila End-to-end), `16-repository-structure.md` §24 (la app llega en V2, `verify/`) y la tarea v1-21 (sección "Decisiones tomadas en esta tarea").
+  - **Verificado:**
+    - `pnpm verify` pasa en Node 22: core 907 tests, cli 220, storage-sqlite 61 y demo 15.
+    - Mutaciones del JSON (línea, título, describe o archivo inexistente) hacen fallar el test con el hallazgo nombrado.
+    - Una pasada de `eslint` sin la exclusión mostró que las reglas de sonarjs detectan varios problemas sembrados.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker) sin bloqueantes. Se corrigieron los 2 importantes:
+      - `login.spec.ts` "signs in with valid credentials" ahora solo tiene el assert en un helper importado a 2 niveles;
+      - `CartPage.checkout` pasó a `private`.
+      También se corrigieron las 8 sugerencias.
+- **En curso:** nada.
+- **Decisiones:**
+  - Aprobadas por el usuario en el plan:
+    - `@playwright/test` como devDependency exacta.
+    - Los casos de Cypress, en `examples/cypress-demo` (V6).
+    - El demo no trae `eslint.config.js` ni `atium.config`: los crea v1-38 con preset `strict`, `pageObjectDirs: ["tests/pages/**"]` y `E2E011`/`E2E013` en `"on"`.
+    Están en `docs/tasks/v1-21-playwright-demo.md` y en el README del demo.
+  - Convenciones de `expected-findings.json` que el diseño no fija, también aprobadas. Solo están en el README del demo y en la tarea, no en el diseño:
+    - `line` es la del nodo, o la del `test(` en las reglas de test (E2E005, E2E006, E2E006b, E2E013).
+    - `titlePath` es `[]` fuera de un test (v1-22 lo tiene abierto).
+    - E2E007 genera un hallazgo por uso.
+    - E2E013 se reporta en el segundo test del par.
+    - Un test cuyos asserts solo están en helpers importados lo decide E2E006b, no E2E006 (v1-33 lo tiene abierto).
+    Las tareas v1-22, v1-32, v1-33, v1-35 y v1-36 deben actualizar el JSON y el README si deciden otra cosa.
+  - Sin decisión del usuario: el override de `turbo.json` y la estructura `verify/` dentro del demo. Quedaron en `10-tooling.md` y `16-repository-structure.md`.
+- **Problemas:**
+  - El CI del PR #85 estaba `pending` al cerrar. `audit` fallará como en `main`, por `shell-quote` y `source-map-js` (v1-01).
+  - El hook de pre-commit lanza ESLint sobre los archivos en stage y da avisos "File ignored" con los archivos del demo. No falla. Se arregla con `--no-warn-ignored` en `lefthook.yml`; no se hizo porque está fuera de alcance.
+  - jscpd reporta un clon `core/vitest.config.ts` ↔ `storage/sqlite/vitest.config.ts`. No es de esta tarea y no hace fallar `verify`.
+  - Conflictos esperados con #48 y #63, que van en paralelo: `pnpm-lock.yaml`, `knip.json` y `docs/progress.md`/`docs/progress-archive.md`.
+- **Siguiente paso:**
+  1. Revisar `gh pr checks 85` y corregir lo que falle, salvo `audit`.
+  2. Si otra tarea paralela se mergea antes: `git fetch origin && git merge origin/main`, resolver según 12-ai-workflow.md "Cuando otra tarea se mergea antes" y luego `/verify`.
+  3. Cuando el PR #85 esté mergeado: `/parallel --cleanup` en el repo principal y `/task` con el siguiente issue de V1 según CLAUDE.md.
+
 ### 2026-10-13 — #47 v1-07-linter-architecture
 
 - **Hecho:**
