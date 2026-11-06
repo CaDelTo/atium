@@ -8,6 +8,55 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-06 — #45 v1-05-design-alignment
+
+- **Hecho:**
+  - **Rama y PR:**
+    - Rama `docs/45-design-alignment`, creada desde `origin/main` (`c165711`).
+    - PR #135 en borrador, con `Closes #45` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **`a694d84` `docs(docs): align design with V0 implementation`:**
+    - `17-tech-stack.md`, fila Compresión: los runs `.ndjson.gz` usan `node:zlib`; fflate queda previsto para los datos del reporte HTML.
+    - `02-data-model.md`:
+      - Tabla de CI: en GitLab, `CI_JOB_ID` es el `jobId`, no el intento.
+      - §9.2: `message` 2 KiB y `stack` 8 KiB; tras la garantía final, la línea "nunca supera" 768 KiB.
+      - §10.1: si hay variables de varios proveedores, gana el orden de la tabla.
+      - §10.1: mapeo de env-ci `build` → `runId`, `job` → `jobId` y `pr` → `prNumber`.
+      - §10.1: el payload de GitHub solo se lee con el proveedor `github`.
+    - `15-storage.md` §23.2.1:
+      - Endpoints: cuenta como fallo una clave de `statuses` ≥ 400 aunque su conteo sea 0, y los que tienen fallos se ordenan entre sí por `count`.
+      - Una línea de exactamente 768 KiB no se recorta.
+      - Los tres límites del lector (64 KiB de encabezado, 1 MiB por línea y 256 MiB en total) son inclusivos.
+    - `20-security-privacy.md`: en `aws-key`, una letra mayúscula o un dígito tras `A3T`; la normalización de nombres conserva `\p{L}` y `\p{N}`.
+    - `05-performance.md`: 2 KiB y 8 KiB.
+    - `04-testing.md`: la tabla de cobertura es un mínimo.
+    - `packages/cli/src/defaults.ts`: la cita pasa a `engineering/03-errors-logging.md`.
+  - **`29fb3bf` `docs(docs): clarify compression, aws-key and coverage wording`:** corrige los hallazgos de `/review`.
+    - I1 y I2: zlib no limita bytes, lo hace el lector de líneas; fflate es un uso previsto.
+    - S1: el carácter extra de `aws-key` solo va tras `A3T`.
+    - S2: "`jobId` solo en GitLab" vale para las reglas propias.
+    - S3: 04-testing.md remite a `vitest.config.ts` en lugar de listar paquetes.
+  - **Puertas:**
+    - `plan-reviewer`: REQUIERE PERSONA, por las tres decisiones de abajo.
+    - `/verify`: PASS.
+    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO, con `pnpm verify` en exit 0 sobre `29fb3bf`.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #45.
+- **En curso:** PR #135 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 135` cuando estén en verde.
+- **Decisiones** (de la persona, 2026-11-06; están en el comentario "Plan aprobado" de #45 y en el PR):
+  - Documentar `node:zlib` en lugar de migrar a fflate.
+  - La tabla de cobertura es un mínimo; no se tocan los `vitest.config.ts`, que exigen 90 %.
+  - Documentar el comportamiento actual de los 8 puntos de la tarea, sin tareas de cambio de código.
+  - ADR-0018 no se edita, aunque diga "2 KB"/"8 KB" y "queda por debajo": remite la unidad a §9.2 y su "supera 768 KiB" hace compatible el `<=`. Quedó escrito en el PR y en el comentario de entrega de #45.
+- **Problemas:** imprecisiones que ya existían, fuera del alcance de #45. Las encontró `design-auditor` y no tienen issue:
+  - La fila de Jenkins de `02-data-model.md` pone `GIT_BRANCH` / `CHANGE_BRANCH`, al revés que la precedencia del código.
+  - "Paso 5" en `15-storage.md:46` es ambiguo junto a una lista de 4 pasos.
+  - El encabezado del run no se mide contra los 64 KiB del lector (`run-file-writer.ts`).
+  - Las claves de `statuses` se interpretan con `Number()` (`cap-run.ts`), así que `"4e2"` cuenta como 400.
+  - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
+  - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
+- **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.
+
 ### 2026-11-06 — #44 v1-04-run-context-robustness
 
 - **Hecho:**
@@ -431,92 +480,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - **Archivo de progreso:** esta entrada movió a `docs/progress-archive.md` la de #13 (v0-12-config).
 - **Siguiente paso:** revisar la CI del PR #87 y, cuando una persona lo mergee, retirar el worktree con `/parallel --cleanup`. Después, empezar la siguiente tarea Pendiente de V1 con `/task`. v1-32 (`lint-crossfile`) ya puede usar `runAnalyzers`.
 
-### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
-
-- **Hecho:**
-  - **Rama, commits y PR:**
-    - `/task 48 en paralelo con #63 #61`, en el worktree `atium-48`.
-    - Rama `feat/48-eslint-plugin-skeleton`, creada desde `origin/main` en `15abdf6`.
-    - Commit `e0c0691` `feat(core): add the pure entry point and ruleDocsUrl`.
-    - Commit `e83322c` `feat(eslint-plugin): add the plugin skeleton`.
-    - Merge de `origin/main` (`e4475e3`), que trae #61 ya mergeado (PR #85). No hubo conflictos.
-    - Los dos push los hizo el usuario.
-    - PR #86 con `Closes #48`. El usuario lo mergeó (`402f6b1`, 2026-10-14T03:41Z) y el issue #48 está cerrado.
-  - **`@atium/core`:**
-    - `src/pure/index.ts`: entrada interna `@atium/core/pure`.
-      - Reexporta `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never` y `zod-issues`.
-      - Tiene su entrada en `tsup.config.ts` y el export `./pure` en `package.json`.
-      - `src/pure/index.test.ts` comprueba que cada export de `pure` existe en la raíz con el mismo valor.
-    - `src/findings/docs-url.ts`: `ruleDocsUrl(code)` = `RULE_DOCS_BASE_URL` + código en minúsculas + `.md`, sin codificar.
-      - `RULE_DOCS_BASE_URL` está en un bloque al final de `defaults.ts`.
-      - Se exporta desde la raíz y desde `pure`.
-    - `samples.test-support.ts` usa `ruleDocsUrl("E2E001")` en lugar de `atium.dev`.
-  - **`packages/eslint-plugin`** (`@atium/eslint-plugin`, privado):
-    - Dependencias: peer `eslint ^9.0.0` y `typescript >=4.8.4 <6.1.0`, este último igual que `@typescript-eslint/utils`.
-    - El build es tsup en ESM y CJS, con `cjsInterop: true` y `splitting: true` para que `require()` devuelva el objeto del plugin.
-    - `src/settings.ts`: `readSettings(context.settings)`.
-      - Zod con `strictObject`.
-      - `framework` es `"playwright" | "cypress"` y opcional; `undefined` cuenta como ausente.
-      - Cada problema sale con su ruta completa (`settings.atium.<clave>`), también cada clave desconocida.
-      - Un valor inválido lanza `AtiumError("CONFIG_INVALID")` con un hint que lista las claves válidas.
-    - `src/defaults.ts`: `SETTINGS_DEFAULTS` = `pageObjectDirs: []`, `assertFunctionNames: []`, `i18n: false`.
-    - `src/create-rule.ts`: `createRule`, con `ESLintUtils.RuleCreator`.
-      - Fija `meta.docs.url = ruleDocsUrl(meta.docs.code)`.
-      - `AtiumRuleDocs` exige `code`.
-    - `src/plugin.ts`: `createPlugin(rules)` y `plugin`, con `{ meta: { name, version }, rules, configs: {} }`.
-      - Las reglas se exponen como `Rule.RuleModule` de ESLint mediante `toEslintRule`, el único cast `as unknown as`, documentado.
-      - `src/index.ts` hace `export default plugin`, con `eslint-disable-next-line no-restricted-syntax` y su motivo.
-    - `src/rules/index.ts`: `rules = {}`.
-    - `src/rules/rule-docs.test.ts` comprueba en cada regla:
-      - que tiene página en `docs/rules/<código>.md`, con el nombre de archivo sacado de la URL;
-      - que la página tiene las 5 secciones;
-      - que `meta.docs.url` y `meta.messages` son correctos.
-      El comprobador se prueba con reglas ficticias.
-    - `test/rule-tester.ts`: `createRuleTester(settings)`, sobre `@typescript-eslint/rule-tester` y conectado a Vitest.
-    - README en inglés.
-  - **Raíz y docs:**
-    - `.dependency-cruiser.cjs`:
-      - regla `core-pure-has-no-io`, con `reachable`, que excluye los `.test.ts`;
-      - regla `eslint-plugin-only-core-pure`, cuyos tests pueden usar `@atium/core/testing`;
-      - la constante `TEST_FILE`, que también usa ahora `no-test-code-in-src`.
-    - `docs/rules/_template.md`: tabla con nombre, severidad, categoría, confianza, `Source` y presets, más las 5 secciones en inglés.
-    - Diseño actualizado:
-      - `03-linter.md` §11.1: defaults y validación;
-      - `16-repository-structure.md`: `core/src/pure/`, el subárbol de `eslint-plugin/` y la plantilla;
-      - `17-tech-stack.md`: `@typescript-eslint/rule-tester` y `RuleCreator`;
-      - ADR-0023 §1 y `02-code-design.md`: `zod-issues` en `pure`;
-      - README de core.
-  - **Verificado:**
-    - `pnpm verify` en verde después del merge con `main` (Node 22): core 912 tests, eslint-plugin 25 (100 % de cobertura), cli 220, sqlite 61 y demo 15.
-    - `pnpm pkg:check` en verde: 8 de 8 tareas, con publint y attw.
-    - Las dos reglas de dependency-cruiser fallan con imports temporales de `node:fs`, `stderr-logger`, `config/` y la raíz de `@atium/core`. Esos imports ya se quitaron.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor):
-      - Se descartó un bloqueante: el export de `ruleDocsUrl` en la raíz es un añadido y v1-37 lo necesita.
-      - Se corrigieron el importante (16-repository-structure) y las sugerencias 1 a 8 y 10.
-- **En curso:** nada.
-- **Decisiones:**
-  - **Aprobadas por el usuario en el plan** ("si"):
-    - los defaults de `settings.atium`;
-    - el esquema estricto;
-    - `describeIssues` en `pure`, con ADR-0023 enmendado;
-    - `export default plugin`;
-    - reutilizar `CONFIG_INVALID`.
-  - **Tomadas por mí tras "Corrige todo lo que puedas"**, escritas en 03-linter.md §11.1:
-    - `framework: undefined` cuenta como ausente;
-    - las claves desconocidas salen cada una con su ruta;
-    - `ruleDocsUrl` sin `encodeURIComponent`, como en §11.9.
-  - **Solo en el código, en los comentarios de `plugin.ts` y `tsup.config.ts`, y en este PR:**
-    - usar `@typescript-eslint/rule-tester` en lugar del `RuleTester` de ESLint (también en 17-tech-stack);
-    - el cast en el borde hacia `Rule.RuleModule`;
-    - `cjsInterop` + `splitting`.
-  - **Sin escribir en ningún documento:** `readSettings` no tiene caché. Cada regla validará en cada archivo; si cuesta, se medirá en las tareas de reglas.
-- **Problemas:**
-  - **CI del PR #86:** estaba `pending` al mergear y no se comprobó. `audit` sigue en rojo en `main`, por `shell-quote` y `source-map-js` (v1-01).
-  - **Umbral de cobertura del plugin:** está en 90 % y `04-testing.md` pide al menos 85 %. Sigue ligado a la decisión abierta sobre el umbral de cli.
-  - **`settings.atium` inválido:** no se detecta hasta que exista una regla que llame a `readSettings`, desde v1-09.
-  - **`@atium/core/pure`:** reexporta símbolos que todavía nadie consume; está previsto en ADR-0023.
-- **Siguiente paso:**
-  1. `/parallel --cleanup` desde el repo principal, para retirar el worktree `atium-48` (PR #86 y el PR de esta entrada mergeados).
-  2. `git fetch origin` y `/task` con el siguiente issue de V1 cuyas dependencias estén cerradas. v1-09 (`@atium/eslint-plugin/syntax`) ya está desbloqueado.
-     - Al crear `src/syntax/`, añadir en `.dependency-cruiser.cjs` la regla de ADR-0023: `syntax` no importa las reglas ni ESLint en runtime.
-     - Exportar `./syntax` en `package.json` y en `tsup.config.ts`.

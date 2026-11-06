@@ -4,6 +4,96 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - `/task 48 en paralelo con #63 #61`, en el worktree `atium-48`.
+    - Rama `feat/48-eslint-plugin-skeleton`, creada desde `origin/main` en `15abdf6`.
+    - Commit `e0c0691` `feat(core): add the pure entry point and ruleDocsUrl`.
+    - Commit `e83322c` `feat(eslint-plugin): add the plugin skeleton`.
+    - Merge de `origin/main` (`e4475e3`), que trae #61 ya mergeado (PR #85). No hubo conflictos.
+    - Los dos push los hizo el usuario.
+    - PR #86 con `Closes #48`. El usuario lo mergeó (`402f6b1`, 2026-10-14T03:41Z) y el issue #48 está cerrado.
+  - **`@atium/core`:**
+    - `src/pure/index.ts`: entrada interna `@atium/core/pure`.
+      - Reexporta `model/`, `findings/`, `redact/`, `identity`, `paths`, `errors`, `result`, `assert-never` y `zod-issues`.
+      - Tiene su entrada en `tsup.config.ts` y el export `./pure` en `package.json`.
+      - `src/pure/index.test.ts` comprueba que cada export de `pure` existe en la raíz con el mismo valor.
+    - `src/findings/docs-url.ts`: `ruleDocsUrl(code)` = `RULE_DOCS_BASE_URL` + código en minúsculas + `.md`, sin codificar.
+      - `RULE_DOCS_BASE_URL` está en un bloque al final de `defaults.ts`.
+      - Se exporta desde la raíz y desde `pure`.
+    - `samples.test-support.ts` usa `ruleDocsUrl("E2E001")` en lugar de `atium.dev`.
+  - **`packages/eslint-plugin`** (`@atium/eslint-plugin`, privado):
+    - Dependencias: peer `eslint ^9.0.0` y `typescript >=4.8.4 <6.1.0`, este último igual que `@typescript-eslint/utils`.
+    - El build es tsup en ESM y CJS, con `cjsInterop: true` y `splitting: true` para que `require()` devuelva el objeto del plugin.
+    - `src/settings.ts`: `readSettings(context.settings)`.
+      - Zod con `strictObject`.
+      - `framework` es `"playwright" | "cypress"` y opcional; `undefined` cuenta como ausente.
+      - Cada problema sale con su ruta completa (`settings.atium.<clave>`), también cada clave desconocida.
+      - Un valor inválido lanza `AtiumError("CONFIG_INVALID")` con un hint que lista las claves válidas.
+    - `src/defaults.ts`: `SETTINGS_DEFAULTS` = `pageObjectDirs: []`, `assertFunctionNames: []`, `i18n: false`.
+    - `src/create-rule.ts`: `createRule`, con `ESLintUtils.RuleCreator`.
+      - Fija `meta.docs.url = ruleDocsUrl(meta.docs.code)`.
+      - `AtiumRuleDocs` exige `code`.
+    - `src/plugin.ts`: `createPlugin(rules)` y `plugin`, con `{ meta: { name, version }, rules, configs: {} }`.
+      - Las reglas se exponen como `Rule.RuleModule` de ESLint mediante `toEslintRule`, el único cast `as unknown as`, documentado.
+      - `src/index.ts` hace `export default plugin`, con `eslint-disable-next-line no-restricted-syntax` y su motivo.
+    - `src/rules/index.ts`: `rules = {}`.
+    - `src/rules/rule-docs.test.ts` comprueba en cada regla:
+      - que tiene página en `docs/rules/<código>.md`, con el nombre de archivo sacado de la URL;
+      - que la página tiene las 5 secciones;
+      - que `meta.docs.url` y `meta.messages` son correctos.
+      El comprobador se prueba con reglas ficticias.
+    - `test/rule-tester.ts`: `createRuleTester(settings)`, sobre `@typescript-eslint/rule-tester` y conectado a Vitest.
+    - README en inglés.
+  - **Raíz y docs:**
+    - `.dependency-cruiser.cjs`:
+      - regla `core-pure-has-no-io`, con `reachable`, que excluye los `.test.ts`;
+      - regla `eslint-plugin-only-core-pure`, cuyos tests pueden usar `@atium/core/testing`;
+      - la constante `TEST_FILE`, que también usa ahora `no-test-code-in-src`.
+    - `docs/rules/_template.md`: tabla con nombre, severidad, categoría, confianza, `Source` y presets, más las 5 secciones en inglés.
+    - Diseño actualizado:
+      - `03-linter.md` §11.1: defaults y validación;
+      - `16-repository-structure.md`: `core/src/pure/`, el subárbol de `eslint-plugin/` y la plantilla;
+      - `17-tech-stack.md`: `@typescript-eslint/rule-tester` y `RuleCreator`;
+      - ADR-0023 §1 y `02-code-design.md`: `zod-issues` en `pure`;
+      - README de core.
+  - **Verificado:**
+    - `pnpm verify` en verde después del merge con `main` (Node 22): core 912 tests, eslint-plugin 25 (100 % de cobertura), cli 220, sqlite 61 y demo 15.
+    - `pnpm pkg:check` en verde: 8 de 8 tareas, con publint y attw.
+    - Las dos reglas de dependency-cruiser fallan con imports temporales de `node:fs`, `stderr-logger`, `config/` y la raíz de `@atium/core`. Esos imports ya se quitaron.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor):
+      - Se descartó un bloqueante: el export de `ruleDocsUrl` en la raíz es un añadido y v1-37 lo necesita.
+      - Se corrigieron el importante (16-repository-structure) y las sugerencias 1 a 8 y 10.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan** ("si"):
+    - los defaults de `settings.atium`;
+    - el esquema estricto;
+    - `describeIssues` en `pure`, con ADR-0023 enmendado;
+    - `export default plugin`;
+    - reutilizar `CONFIG_INVALID`.
+  - **Tomadas por mí tras "Corrige todo lo que puedas"**, escritas en 03-linter.md §11.1:
+    - `framework: undefined` cuenta como ausente;
+    - las claves desconocidas salen cada una con su ruta;
+    - `ruleDocsUrl` sin `encodeURIComponent`, como en §11.9.
+  - **Solo en el código, en los comentarios de `plugin.ts` y `tsup.config.ts`, y en este PR:**
+    - usar `@typescript-eslint/rule-tester` en lugar del `RuleTester` de ESLint (también en 17-tech-stack);
+    - el cast en el borde hacia `Rule.RuleModule`;
+    - `cjsInterop` + `splitting`.
+  - **Sin escribir en ningún documento:** `readSettings` no tiene caché. Cada regla validará en cada archivo; si cuesta, se medirá en las tareas de reglas.
+- **Problemas:**
+  - **CI del PR #86:** estaba `pending` al mergear y no se comprobó. `audit` sigue en rojo en `main`, por `shell-quote` y `source-map-js` (v1-01).
+  - **Umbral de cobertura del plugin:** está en 90 % y `04-testing.md` pide al menos 85 %. Sigue ligado a la decisión abierta sobre el umbral de cli.
+  - **`settings.atium` inválido:** no se detecta hasta que exista una regla que llame a `readSettings`, desde v1-09.
+  - **`@atium/core/pure`:** reexporta símbolos que todavía nadie consume; está previsto en ADR-0023.
+- **Siguiente paso:**
+  1. `/parallel --cleanup` desde el repo principal, para retirar el worktree `atium-48` (PR #86 y el PR de esta entrada mergeados).
+  2. `git fetch origin` y `/task` con el siguiente issue de V1 cuyas dependencias estén cerradas. v1-09 (`@atium/eslint-plugin/syntax`) ya está desbloqueado.
+     - Al crear `src/syntax/`, añadir en `.dependency-cruiser.cjs` la regla de ADR-0023: `syntax` no importa las reglas ni ESLint en runtime.
+     - Exportar `./syntax` en `package.json` y en `tsup.config.ts`.
+
 ### 2026-10-13 — #61 v1-21-playwright-demo
 
 - **Hecho:**
