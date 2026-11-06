@@ -2,7 +2,7 @@
  * Namespace of the CLI's logger: it starts every log line and is what
  * `DEBUG=atium:*` matches.
  *
- * Source: 03-errors-logging.md, "Logging".
+ * Source: engineering/03-errors-logging.md, "Logging".
  */
 export const LOG_NAMESPACE = "atium:cli";
 
