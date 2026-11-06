@@ -216,10 +216,11 @@ Detalles que afectan la calidad del análisis:
      - En Jenkins, `CHANGE_BRANCH` va antes que `GIT_BRANCH`, que en un PR vale `PR-<n>`.
      - En Azure, `SYSTEM_PULLREQUEST_SOURCEBRANCH` sin `refs/heads/` va antes que `BUILD_SOURCEBRANCHNAME`, que en un PR vale `merge`.
    - CircleCI: el número de PR es el último segmento de la URL de `CIRCLE_PULL_REQUEST`.
-3. **Payload de GitHub:** si existe `GITHUB_EVENT_PATH`, se lee con cualquier nombre de evento. Si trae `pull_request`, de ahí salen `prNumber` (`pull_request.number`) y `headSha` (`pull_request.head.sha`). Antes de parsearlo se mide: si supera `GITHUB_EVENT_MAX_BYTES` (10 MiB, `defaults.ts` de core), no se lee. Un payload demasiado grande, ilegible, que no es JSON o con un `pull_request` inválido se registra como aviso y el run se guarda sin esos dos campos.
+3. **Payload de GitHub:** si existe `GITHUB_EVENT_PATH`, se lee con cualquier nombre de evento. Si trae `pull_request`, de ahí salen `prNumber` (`pull_request.number`) y `headSha` (`pull_request.head.sha`). Antes de parsearlo se mide: si supera `GITHUB_EVENT_MAX_BYTES` (10 MiB, `defaults.ts` de core), no se lee. Un payload demasiado grande, ilegible, que no es JSON o con un `pull_request` inválido (por ejemplo, un `head.sha` por encima del tope de bytes de `headSha`) se registra como aviso y el run se guarda sin esos dos campos.
 4. **Overrides:** `ATIUM_COMMIT_SHA` y `ATIUM_BRANCH` mandan sobre el proveedor.
 5. **Git:**
    - Solo se consulta si el commit no viene del entorno; así un job de CI sin Git funciona.
+   - Las consultas van en serie (commit, rama, `dirty`), y ninguna se lanza después de un fallo: un proceso `git` que sigue vivo bloquea el directorio en Windows.
    - Si la rama tampoco se conoce, sale de `git branch --show-current`. Con HEAD separado se omite.
    - `dirty` solo se calcula en un run `local`: es `git status --porcelain` no vacío, así que los archivos sin seguimiento cuentan y los ignorados no. En CI y con `ATIUM_COMMIT_SHA` vale `false`.
 6. **Run local:** `ci` es `{ provider: "local" }`, sin `runId`. El uuid de la tabla es el `Run.id`.
@@ -229,6 +230,6 @@ Casos límite:
 - Una variable vacía cuenta como no definida.
 - Los números (`runAttempt`, `prNumber`) que no son enteros positivos en decimal se omiten.
 - Git ausente, un directorio que no es un repositorio o un repositorio sin commits dan `GIT_UNAVAILABLE`, con un `hint` distinto si falta el binario. Solo pasa cuando hace falta Git.
-- Un valor que no cabe en el `Run`, como una rama por encima del tope de bytes, da `MODEL_INVALID`.
+- Un valor de las variables de entorno o de Git que no cabe en el `Run`, como una rama por encima del tope de bytes, da `MODEL_INVALID`. No se aplica al payload de GitHub: un valor suyo que no cabe es un aviso (paso 3).
 - En `pull_request_target`, `GITHUB_SHA` es el último commit de la rama base, no un merge commit. Se usa igualmente como `commitSha`; si el workflow hace checkout del head del PR, hay que forzarlo con `ATIUM_COMMIT_SHA`.
 - En Jenkins sin Multibranch, `GIT_BRANCH` puede venir como `origin/main`; se guarda tal cual.

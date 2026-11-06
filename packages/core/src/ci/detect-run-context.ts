@@ -128,11 +128,11 @@ async function readGit(
   git: GitClient,
   known: { readonly branch: string | undefined; readonly local: boolean },
 ): Promise<GitState> {
-  const [commitSha, branch, dirty] = await Promise.all([
-    git.headCommit(),
-    known.branch ?? git.currentBranch(),
-    known.local && git.isDirty(),
-  ]);
+  // One after the other: if one fails, no other `git` process is left running
+  // in the directory (on Windows it would keep it locked).
+  const commitSha = await git.headCommit();
+  const branch = known.branch ?? (await git.currentBranch());
+  const dirty = known.local && (await git.isDirty());
   return { commitSha, branch, dirty };
 }
 
