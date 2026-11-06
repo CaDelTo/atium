@@ -27,7 +27,7 @@ Estándares: docs/engineering/09-documentation.md
   - `docs/design/07-flaky.md:93-103` (`stateDiagram-v2`; "falla" va de `recovering` a `quarantined`, como dice su etiqueta)
   - `docs/design/03-linter.md:9-12`
   - `docs/engineering/12-ai-workflow.md:66-82` y `147-159`
-  - `docs/tasks/README.md:86-97` y `154-178`
+  - `docs/tasks/README.md:86-97` y `155-179`
 - Añadir a `.claude/commands/plan-phase.md` que el "Orden sugerido" de una fase nueva va en Mermaid.
 - Un commit por archivo convertido.
 
