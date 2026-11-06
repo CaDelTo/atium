@@ -8,6 +8,29 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-06 — #44 v1-04-run-context-robustness
+
+- **Hecho:**
+  - Rama `fix/44-run-context-robustness`, creada desde `origin/main` (`fdef091` más los merges de #133). PR #134 en borrador con `Closes #44`, sin mergear. Plan aprobado por la persona y comentado en el issue (etiqueta `plan:approved`).
+  - `ad220a0` `test(core): specify run context robustness`: tests `AC-1:` en `packages/core/src/ci/detect-run-context.git.test.ts` (archivo nuevo, porque `detect-run-context.test.ts` pasaba de 400 líneas de `max-lines`) y `AC-2:` en `detect-run-context.test.ts`. Fake `RecordingGitClient` en `packages/core/src/ci/fakes.test-support.ts`: registra `start:`/`end:` de cada consulta con un `setImmediate` entre ambos. No se tocó `FakeGitClient` (`@atium/core/testing`). Rojo verificado: AC-1 por consultas solapadas, AC-2 por `MODEL_INVALID`.
+  - `0c474be` `fix(core): query git in series and warn on an oversized head sha`:
+    - `readGit` (`detect-run-context.ts`) consulta en serie: `headCommit`; `currentBranch` solo si la rama no se conoce; `isDirty` solo en run `local`. Ninguna consulta después de un fallo.
+    - `github-event.ts`: `head.sha` usa `TextSchema.min(1)` (tope de 2 KiB, `MODEL_TEXT_CAPS_BYTES.default`). Uno más largo invalida el `pull_request`: aviso existente "unexpected pull request…" y run sin `prNumber` ni `headSha`.
+    - `docs/design/02-data-model.md` §10.1: paso 3 (head commit demasiado largo = `pull_request` inválido), paso 5 (consultas a Git en serie) y caso límite de `MODEL_INVALID` (solo variables de entorno y Git, no el payload de GitHub).
+  - `6b8e407` `test(core): cover git query order and head sha byte size edge cases` (`test-writer`): fallo en la segunda consulta, rama del entorno, sin Git si el entorno da el commit, `head.sha` que cabe en caracteres pero no en bytes escapados para JSON, y el aviso sin el valor.
+  - `29e2951` `docs(core): clarify detectRunContext and pull request reader TSDoc`: correcciones de `/review` (`@returns` de `readGitHubPullRequest`, `@throws` de `detectRunContext`, TSDoc de `RecordingGitClient` y helper compartido `writeEvent(directory, payload)` en `fakes.test-support.ts`; el `writeEvent` local de `detect-run-context.test.ts` delega en él sin tocar las líneas de los tests AC).
+  - Puertas: `plan-reviewer` APROBADO; `/verify` PASS dos veces (la segunda sobre `29e2951`); `/review` sin bloqueantes, segunda pasada de `code-reviewer` APROBADO; `delivery-auditor` APROBADO. Push con `push-branch.mjs`. Resumen de entrega comentado en #44.
+  - Otros de la sesión, ya mergeados: #109 (`.obsidian/` en `.gitignore`), #114 (avisos de zod, vitest y fast-uri), #115 (handoff de #49), #112 (tareas v1-43 y v1-44) y #133 (tareas v1-46 a v1-62, issues #116 a #132, de la auditoría del repositorio del 2026-11-06).
+- **En curso:** PR #134 en borrador: al crearlo, los 7 checks de CI (`verify` en 3 SO × Node 22/24 y `audit`) estaban pendientes. Falta pasarlo a listo (`gh pr ready 134`) cuando estén en verde.
+- **Decisiones:**
+  - `headSha` demasiado largo = aviso y run sin `prNumber` ni `headSha` (decidido por la persona el 2026-10-15, en la tarea; ahora también en 02-data-model.md §10.1).
+  - Los tests de AC-1 van en `detect-run-context.git.test.ts` y el fake en `fakes.test-support.ts`, no en `@atium/core/testing`, para no cambiar API pública. No quedó en ningún documento salvo este handoff y el PR.
+- **Problemas:**
+  - No se reprodujo el bloqueo en Windows: los tests comprueban la causa (consultas solapadas), no el bloqueo.
+  - Avisos preexistentes fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
+  - La rama local `docs/audit-tasks` (PR #133 ya mergeado) sigue en el checkout principal; se puede borrar.
+- **Siguiente paso:** con la CI de #134 en verde, `gh pr ready 134` y que una persona lo revise y mergee. Después, la siguiente tarea Pendiente de V1 es #45 (v1-05 Alinear el diseño con lo implementado en V0); las de auditoría más urgentes son #116 (v1-46, carrera de migración SQLite) y #118 (v1-48, redacción de secretos).
+
 ### 2026-10-22 — #105 Avisos de seguridad en vite y launch-editor
 
 - **Hecho:**
@@ -497,66 +520,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   2. `git fetch origin` y `/task` con el siguiente issue de V1 cuyas dependencias estén cerradas. v1-09 (`@atium/eslint-plugin/syntax`) ya está desbloqueado.
      - Al crear `src/syntax/`, añadir en `.dependency-cruiser.cjs` la regla de ADR-0023: `syntax` no importa las reglas ni ESLint en runtime.
      - Exportar `./syntax` en `package.json` y en `tsup.config.ts`.
-
-### 2026-10-13 — #61 v1-21-playwright-demo
-
-- **Hecho:**
-  - **Rama, commit y PR:**
-    - `/task 61 en paralelo con #48 #63`, en el worktree `atium-61`.
-    - Rama `feat/61-playwright-demo`, creada desde `origin/main` en `15abdf6`.
-    - Commit `861e997` `feat(repo): add the Playwright demo with seeded problems`. El push lo hizo el usuario.
-    - PR #85 con `Closes #61`, sin mergear. Su CI estaba `pending` al cerrar la sesión.
-  - **`examples/playwright-demo`** (`@atium/example-playwright-demo`, privado):
-    - `tests/*.spec.ts`, Page Objects en `tests/pages/` (`pageObjectDirs`) y helpers en `tests/helpers/`.
-    - `tsconfig.json` autónomo, con `moduleResolution: Bundler`, para el project service.
-    - 17 hallazgos sembrados que cubren las 14 reglas, más casos "no detecta" y archivos limpios (`home.spec.ts`, `pages/cart-page.ts`, `helpers/assertions.ts`).
-    - `expected-findings.json` con `{ findings: [{ ruleId, file, line, titlePath }] }`. `file` es relativo al demo y el orden es `file`, `line`, `ruleId`.
-    - README en inglés: problema por archivo, casos que no deben reportarse, configuración supuesta, convenciones y cómo ejecutar los scripts.
-  - **`verify/`**, código del repo dentro del demo:
-    - `expected-findings.test.ts` (15 tests) comprueba:
-      - el formato, con un esquema Zod y casos negativos;
-      - que están exactamente las 14 reglas;
-      - el orden y que no hay duplicados;
-      - que el archivo existe y la línea no está vacía;
-      - que el `titlePath` es el del `test(` más cercano antes de la línea y que los `test.describe` previos existen.
-    - `tsconfig.json`, que extiende `tsconfig.base.json`.
-    - `vitest.config.ts`, con `root: import.meta.dirname` para no recoger los `*.spec.ts` de Playwright.
-  - **Configuración raíz:**
-    - `eslint.config.js` ignora `examples/*/*` salvo `!examples/*/verify/`.
-    - `knip.json` ignora `examples/*/tests/**`.
-    - `vitest.config.ts` añade `examples/*/verify/vitest.config.ts` a `projects`.
-    - `turbo.json` añade `@atium/example-playwright-demo#test` con `outputs: []`.
-  - **Dependencias del demo:** `@playwright/test` 1.63.0, `@types/node`, `typescript`, `vitest` y `zod`, con las mismas versiones que el resto del repo.
-  - **Docs:** `10-tooling.md` (exclusiones y override de turbo), `04-testing.md` (fila End-to-end), `16-repository-structure.md` §24 (la app llega en V2, `verify/`) y la tarea v1-21 (sección "Decisiones tomadas en esta tarea").
-  - **Verificado:**
-    - `pnpm verify` pasa en Node 22: core 907 tests, cli 220, storage-sqlite 61 y demo 15.
-    - Mutaciones del JSON (línea, título, describe o archivo inexistente) hacen fallar el test con el hallazgo nombrado.
-    - Una pasada de `eslint` sin la exclusión mostró que las reglas de sonarjs detectan varios problemas sembrados.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker) sin bloqueantes. Se corrigieron los 2 importantes:
-      - `login.spec.ts` "signs in with valid credentials" ahora solo tiene el assert en un helper importado a 2 niveles;
-      - `CartPage.checkout` pasó a `private`.
-      También se corrigieron las 8 sugerencias.
-- **En curso:** nada.
-- **Decisiones:**
-  - Aprobadas por el usuario en el plan:
-    - `@playwright/test` como devDependency exacta.
-    - Los casos de Cypress, en `examples/cypress-demo` (V6).
-    - El demo no trae `eslint.config.js` ni `atium.config`: los crea v1-38 con preset `strict`, `pageObjectDirs: ["tests/pages/**"]` y `E2E011`/`E2E013` en `"on"`.
-    Están en `docs/tasks/v1-21-playwright-demo.md` y en el README del demo.
-  - Convenciones de `expected-findings.json` que el diseño no fija, también aprobadas. Solo están en el README del demo y en la tarea, no en el diseño:
-    - `line` es la del nodo, o la del `test(` en las reglas de test (E2E005, E2E006, E2E006b, E2E013).
-    - `titlePath` es `[]` fuera de un test (v1-22 lo tiene abierto).
-    - E2E007 genera un hallazgo por uso.
-    - E2E013 se reporta en el segundo test del par.
-    - Un test cuyos asserts solo están en helpers importados lo decide E2E006b, no E2E006 (v1-33 lo tiene abierto).
-    Las tareas v1-22, v1-32, v1-33, v1-35 y v1-36 deben actualizar el JSON y el README si deciden otra cosa.
-  - Sin decisión del usuario: el override de `turbo.json` y la estructura `verify/` dentro del demo. Quedaron en `10-tooling.md` y `16-repository-structure.md`.
-- **Problemas:**
-  - El CI del PR #85 estaba `pending` al cerrar. `audit` fallará como en `main`, por `shell-quote` y `source-map-js` (v1-01).
-  - El hook de pre-commit lanza ESLint sobre los archivos en stage y da avisos "File ignored" con los archivos del demo. No falla. Se arregla con `--no-warn-ignored` en `lefthook.yml`; no se hizo porque está fuera de alcance.
-  - jscpd reporta un clon `core/vitest.config.ts` ↔ `storage/sqlite/vitest.config.ts`. No es de esta tarea y no hace fallar `verify`.
-  - Conflictos esperados con #48 y #63, que van en paralelo: `pnpm-lock.yaml`, `knip.json` y `docs/progress.md`/`docs/progress-archive.md`.
-- **Siguiente paso:**
-  1. Revisar `gh pr checks 85` y corregir lo que falle, salvo `audit`.
-  2. Si otra tarea paralela se mergea antes: `git fetch origin && git merge origin/main`, resolver según 12-ai-workflow.md "Cuando otra tarea se mergea antes" y luego `/verify`.
-  3. Cuando el PR #85 esté mergeado: `/parallel --cleanup` en el repo principal y `/task` con el siguiente issue de V1 según CLAUDE.md.

@@ -3,6 +3,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { GITHUB_EVENT_MAX_BYTES } from "../defaults.js";
 import type { Logger } from "../logger.js";
+import { TextSchema } from "../model/fields.js";
 
 // I/O edge of `core`: reads the event payload GitHub Actions writes for each
 // job (02-code-design.md).
@@ -20,7 +21,9 @@ const PullRequestEventSchema = z.looseObject({
   pull_request: z
     .looseObject({
       number: z.int().positive(),
-      head: z.looseObject({ sha: z.string().min(1) }).optional(),
+      // Same cap as `headSha` in the run, so a head that cannot be stored
+      // makes the pull request invalid instead of failing the run.
+      head: z.looseObject({ sha: TextSchema.min(1) }).optional(),
     })
     .optional(),
 });
@@ -44,7 +47,9 @@ export interface ReadGitHubPullRequestOptions {
  *
  * @param options - Where the payload is and where to warn.
  * @returns The pull request, or `undefined` if the event is not about one or
- * the payload cannot be read.
+ * the payload cannot be read or parsed. A pull request with a field the run
+ * cannot store, such as a head commit over the size cap, is left out whole,
+ * number included.
  */
 export async function readGitHubPullRequest(
   options: ReadGitHubPullRequestOptions,

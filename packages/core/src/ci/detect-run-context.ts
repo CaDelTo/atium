@@ -59,8 +59,8 @@ const RunCiSchema = RunSchema.unwrap().shape.ci.unwrap();
  * @param options - Environment, working directory, Git client and logger.
  * @returns The `git` and `ci` sections of the run.
  * @throws {@link AtiumError} `GIT_UNAVAILABLE` if the commit has to come from
- * Git and Git cannot give it, and `MODEL_INVALID` if a variable holds a value
- * the run cannot store, such as a branch name over the size cap.
+ * Git and Git cannot give it, and `MODEL_INVALID` if a variable or Git gives a
+ * value the run cannot store, such as a branch name over the size cap.
  *
  * @example
  * ```ts
@@ -128,11 +128,11 @@ async function readGit(
   git: GitClient,
   known: { readonly branch: string | undefined; readonly local: boolean },
 ): Promise<GitState> {
-  const [commitSha, branch, dirty] = await Promise.all([
-    git.headCommit(),
-    known.branch ?? git.currentBranch(),
-    known.local && git.isDirty(),
-  ]);
+  // One after the other: if one fails, no other `git` process is left running
+  // in the directory (on Windows it would keep it locked).
+  const commitSha = await git.headCommit();
+  const branch = known.branch ?? (await git.currentBranch());
+  const dirty = known.local && (await git.isDirty());
   return { commitSha, branch, dirty };
 }
 

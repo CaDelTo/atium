@@ -2,13 +2,14 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { GITHUB_EVENT_MAX_BYTES } from "../defaults.js";
+import { GITHUB_EVENT_MAX_BYTES, MODEL_TEXT_CAPS_BYTES } from "../defaults.js";
 import { aRun } from "../testing/run-builder.js";
 import { FakeGitClient } from "../testing/fake-git-client.js";
 import { FakeLogger } from "../testing/fake-logger.js";
 import { rejectedAtiumError } from "../testing/thrown-error.js";
 import type { EnvVars } from "../env.js";
 import { detectRunContext } from "./detect-run-context.js";
+import { writeEvent as writeEventIn } from "./fakes.test-support.js";
 import type { RunContext } from "./detect-run-context.js";
 
 const MERGE_SHA = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
@@ -32,10 +33,8 @@ function detect(env: EnvVars): Promise<RunContext> {
   return detectRunContext({ env, cwd, git, logger });
 }
 
-async function writeEvent(payload: unknown): Promise<string> {
-  const file = path.join(cwd, "event.json");
-  await writeFile(file, JSON.stringify(payload));
-  return file;
+function writeEvent(payload: unknown): Promise<string> {
+  return writeEventIn(cwd, payload);
 }
 
 describe("detectRunContext on GitHub Actions", () => {
@@ -172,6 +171,28 @@ describe("detectRunContext on GitHub Actions", () => {
     expect(context.ci.prNumber).toBeUndefined();
     expect(context.git.headSha).toBeUndefined();
     expect(logger.entries.map((entry) => entry.level)).toEqual(["warn"]);
+  });
+
+  it("AC-2: warns and leaves out the pull request when its head commit is over the size cap", async () => {
+    const eventPath = await writeEvent({
+      pull_request: { number: 42, head: { sha: "a".repeat(MODEL_TEXT_CAPS_BYTES.default + 1) } },
+    });
+
+    const context = await detect({ ...github, GITHUB_EVENT_PATH: eventPath });
+
+    expect(context.ci.prNumber).toBeUndefined();
+    expect(context.git.headSha).toBeUndefined();
+    expect(logger.entries.map((entry) => entry.level)).toEqual(["warn"]);
+  });
+
+  it("AC-2: keeps a pull request whose head commit is exactly the size cap", async () => {
+    const headSha = "a".repeat(MODEL_TEXT_CAPS_BYTES.default);
+    const eventPath = await writeEvent({ pull_request: { number: 42, head: { sha: headSha } } });
+
+    const context = await detect({ ...github, GITHUB_EVENT_PATH: eventPath });
+
+    expect(context.ci.prNumber).toBe(42);
+    expect(context.git.headSha).toBe(headSha);
   });
 
   it("leaves out a run attempt that is not a positive integer", async () => {
