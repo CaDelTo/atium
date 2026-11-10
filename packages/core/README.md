@@ -47,8 +47,9 @@ and `RunHeader`, and `ATIUM_DIRECTORY`, the directory of Atium's local files.
 For file system errors, `errnoCode` reads the code of a Node.js error and
 `isMissingFileError` tells whether it means that nothing is at the path.
 For paths, `toPosixRelative` turns an absolute path into a POSIX path relative
-to a root, `displayPath` shows a path in a message relative to where the user ran Atium,
-and `resolveInside` resolves a relative path and throws if it leaves its root.
+to a root, `displayPath` shows a path in a message relative to where the user
+ran Atium, and `resolveInside` resolves a relative path and throws if it
+leaves its root.
 For storage backends it provides the `StorageReader`, `StorageWriter` and
 `Storage` interfaces with `ListRunsQuery`, and `parseListRunsQuery` with
 `ParsedListRunsQuery`. For error messages, `describeIssues` summarizes Zod
@@ -73,7 +74,8 @@ Not published yet. Inside this repository, add it as a workspace dependency:
 ```
 
 Requires Node.js 22 or later. The package ships both ESM and CommonJS builds
-with type declarations.
+with type declarations, except `@atium/core/test-contracts`, which is ESM
+only.
 
 ## Usage
 
