@@ -1,7 +1,7 @@
 /**
  * Shared E2E syntax of the linter (ADR-0023): pure functions over the ESTree
  * AST of typescript-eslint that recognize the framework, tests and their
- * `titlePath`, actions, assertions, locators and fixed waits. The rules of
+ * `titlePath`, actions, assertions, locators, selectors and fixed waits. The rules of
  * `@atium/eslint-plugin`, `@atium/suite-index` and the analyzers use them.
  *
  * Internal: not part of the public API. It never loads ESLint.
@@ -18,6 +18,15 @@ export type { Framework } from "./framework.js";
 export { detectFramework, FRAMEWORKS } from "./framework.js";
 export type { LocatorCall, LocatorQuery, LocatorRefinement } from "./locators.js";
 export { locatorOf } from "./locators.js";
+export type {
+  ClassifyOptions,
+  CssAnalysis,
+  SelectorAnalysis,
+  SelectorLevel,
+  UnknownSelector,
+  XPathAnalysis,
+} from "./selectors.js";
+export { analyzeSelector, classifyLocator, normalizeSelector, selectorText } from "./selectors.js";
 export type { BlockKind, BlockModifier, BlockRunner, TestBlock } from "./structure.js";
 export { classifyBlock } from "./structure.js";
 export type { Title } from "./title.js";
