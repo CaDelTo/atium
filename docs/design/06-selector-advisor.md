@@ -25,7 +25,7 @@ Casos que la tabla no cubre (decididos en #50):
 - Un `getBy*` se clasifica por su método, sea cual sea su argumento: `getByTestId(id)` es 3. `getByRole` sin `name`, `getByAltText` y `getByTitle` son 4. Un `getBy*` que no está en la tabla no se clasifica.
 - Atributos de test id (nivel 3): `data-testid`, `data-test-id`, `data-test`, `data-cy` y `data-qa`, en CSS y en XPath.
 - `locator()`, `$()` y `cy.get()` se clasifican por su selector (sección 11.3.1):
-  - 1 si usa algún patrón de E2E002 o E2E003 (pseudoclase posicional, clase generada, id con secuencia numérica, predicado posicional, ruta absoluta);
+  - 1 si usa alguno de estos patrones de E2E002 o E2E003: pseudoclase posicional, clase generada, id con secuencia numérica, predicado posicional o ruta absoluta. La lista es cerrada: el número de combinadores no cuenta, porque su umbral lo fija E2E002 (v1-13);
   - si no, 3 si usa un atributo de test id;
   - si no, 2 si usa un id o cualquier otro atributo (`#submit`, `button[name=submit]`, `//button[@name='x']`);
   - si no, 1: solo tipos y clases (`.btn`, `div > span`).

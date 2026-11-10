@@ -1,24 +1,27 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { Token } from "parsel-js";
 import {
   LOCATOR_METHOD_LEVELS,
-  GET_BY_PREFIX,
   ROLE_LOCATOR,
   SELECTOR_LEVELS,
+  SELECTOR_MAX_LENGTH,
   TEST_ID_ATTRIBUTES,
   VISIBLE_TEXT_LOCATORS,
 } from "../defaults.js";
 import { isOneOf, isStringLiteral, unwrap } from "./ast.js";
 import { cssSegments, cssTokens, serializeCss } from "./css-selector.js";
 import type { CssSegment } from "./css-selector.js";
+import { isGetByMethod } from "./locators.js";
 import type { LocatorQuery } from "./locators.js";
-import { collapseWhitespace, isXPath, scanXPath } from "./xpath-selector.js";
+import { collapseWhitespace } from "./whitespace.js";
+import { isXPath, scanXPath, xpathPath } from "./xpath-selector.js";
 import type { XPathScan } from "./xpath-selector.js";
 
 /**
  * Level of a locator in the selector hierarchy (06-selector-advisor.md §14.1),
  * from 5, the most robust, to 1, the most fragile.
  */
-export type SelectorLevel = 1 | 2 | 3 | 4 | 5;
+export type SelectorLevel = (typeof SELECTOR_LEVELS)[keyof typeof SELECTOR_LEVELS];
 
 /**
  * What a CSS selector uses, for E2E002 and the classification
@@ -31,18 +34,15 @@ export interface CssAnalysis extends CssSegment {
 }
 
 /** What an XPath selector uses, for E2E003 and the classification (03-linter.md §11.3). */
-export interface XPathAnalysis {
+export interface XPathAnalysis extends XPathScan {
   /** Discriminant. */
   readonly kind: "xpath";
-  /** Predicates that pick by position, such as `[2]`, `[last()]` or `[position()=1]`. */
-  readonly positionalPredicates: number;
-  /** Whether the path starts at the root of the document, such as `/html/body/div`. */
-  readonly absolute: boolean;
-  /** The name of every attribute it tests, such as `data-testid` in `[@data-testid='x']`. */
-  readonly attributes: readonly string[];
 }
 
-/** A selector that is neither CSS that parses nor XPath, such as `text=Pay` or `a >> b`. */
+/**
+ * A selector that is neither CSS that parses nor XPath, such as `text=Pay` or
+ * `a >> b`, or one longer than `SELECTOR_MAX_LENGTH`.
+ */
 export interface UnknownSelector {
   /** Discriminant. */
   readonly kind: "unknown";
@@ -80,25 +80,60 @@ export function selectorText(query: LocatorQuery): string | undefined {
   return undefined;
 }
 
+/** A selector read once: the engine that reads it and what it holds. */
+type ReadSelector =
+  | { readonly kind: "xpath"; readonly path: string; readonly scan: XPathScan }
+  | {
+      readonly kind: "css";
+      readonly tokens: readonly Token[];
+      readonly segments: readonly CssSegment[];
+    }
+  | { readonly kind: "unknown"; readonly text: string };
+
+/**
+ * Trims and collapses a selector, and reads it as XPath, CSS or unknown
+ * (03-linter.md §11.3.1). A text longer than `SELECTOR_MAX_LENGTH` is
+ * unknown, so no step costs more than linear time.
+ */
+function readSelector(text: string): ReadSelector {
+  const selector = collapseWhitespace(text);
+  if (selector.length > SELECTOR_MAX_LENGTH) {
+    return { kind: "unknown", text: selector };
+  }
+  if (isXPath(selector)) {
+    const path = xpathPath(selector);
+    const scan = scanXPath(path);
+    return scan === undefined ? { kind: "unknown", text: selector } : { kind: "xpath", path, scan };
+  }
+  const tokens = cssTokens(selector);
+  return tokens === undefined
+    ? { kind: "unknown", text: selector }
+    : { kind: "css", tokens, segments: cssSegments(tokens) };
+}
+
 /**
  * Analyzes a selector string as CSS or XPath (03-linter.md §11.3, E2E002 and
  * E2E003). A text is XPath when it starts with `xpath=`, `/`, `(` or `..`, as
  * Playwright reads it; otherwise it is CSS, with an optional `css=` prefix.
  *
  * It never throws: a selector that does not parse, another Playwright engine
- * such as `text=` or `role=`, a chain with `>>` or a Cypress alias such as
- * `@user` is `unknown`. It runs in time linear in the length of the text.
+ * such as `text=` or `role=`, a chain with `>>`, a Cypress alias such as
+ * `@user` or a text longer than `SELECTOR_MAX_LENGTH` is `unknown`. It runs in
+ * time linear in the length of the text.
  *
  * @param text - The selector.
  * @returns What the selector uses.
  */
 export function analyzeSelector(text: string): SelectorAnalysis {
-  const selector = collapseWhitespace(text);
-  if (isXPath(selector)) {
-    return { kind: "xpath", ...scanXPath(selector) };
+  const read = readSelector(text);
+  switch (read.kind) {
+    case "xpath":
+      return { kind: "xpath", ...read.scan };
+    case "css":
+      return mergeSegments(read.segments);
+    case "unknown":
+      return { kind: "unknown" };
   }
-  const tokens = cssTokens(selector);
-  return tokens === undefined ? { kind: "unknown" } : mergeSegments(cssSegments(tokens));
 }
 
 function mergeSegments(segments: readonly CssSegment[]): CssAnalysis {
@@ -115,8 +150,25 @@ function mergeSegments(segments: readonly CssSegment[]): CssAnalysis {
   };
 }
 
-function hasTestId(attributes: readonly string[]): boolean {
-  return attributes.some((name) => isOneOf(TEST_ID_ATTRIBUTES, name));
+/**
+ * The level of a CSS or XPath selector (06-selector-advisor.md §14.1): 1 with
+ * any fragile pattern, otherwise 3 with a test id attribute, 2 with any other
+ * id or attribute, and 1 with neither.
+ */
+function selectorLevelOf(
+  fragile: boolean,
+  attributes: readonly string[],
+  hasId: boolean,
+): SelectorLevel {
+  if (fragile) {
+    return SELECTOR_LEVELS.structural;
+  }
+  if (attributes.some((name) => isOneOf(TEST_ID_ATTRIBUTES, name.toLowerCase()))) {
+    return SELECTOR_LEVELS.testId;
+  }
+  return hasId || attributes.length > 0
+    ? SELECTOR_LEVELS.stableAttribute
+    : SELECTOR_LEVELS.structural;
 }
 
 function cssSegmentLevel(segment: CssSegment): SelectorLevel {
@@ -124,41 +176,30 @@ function cssSegmentLevel(segment: CssSegment): SelectorLevel {
     segment.positionalPseudoClasses.length > 0 ||
     segment.generatedClasses.length > 0 ||
     segment.numericIds.length > 0;
-  if (fragile) {
-    return SELECTOR_LEVELS.structural;
-  }
-  if (hasTestId(segment.attributes)) {
-    return SELECTOR_LEVELS.testId;
-  }
-  return segment.ids.length > 0 || segment.attributes.length > 0
-    ? SELECTOR_LEVELS.stableAttribute
-    : SELECTOR_LEVELS.structural;
-}
-
-function xpathLevel(scan: XPathScan): SelectorLevel {
-  if (scan.positionalPredicates > 0 || scan.absolute) {
-    return SELECTOR_LEVELS.structural;
-  }
-  if (hasTestId(scan.attributes)) {
-    return SELECTOR_LEVELS.testId;
-  }
-  return scan.attributes.length > 0 ? SELECTOR_LEVELS.stableAttribute : SELECTOR_LEVELS.structural;
+  return selectorLevelOf(fragile, segment.attributes, segment.ids.length > 0);
 }
 
 function selectorLevel(text: string): SelectorLevel | undefined {
-  const selector = collapseWhitespace(text);
-  if (isXPath(selector)) {
-    return xpathLevel(scanXPath(selector));
+  const read = readSelector(text);
+  switch (read.kind) {
+    case "xpath": {
+      const { scan } = read;
+      return selectorLevelOf(
+        scan.positionalPredicates > 0 || scan.absolute,
+        scan.attributes,
+        false,
+      );
+    }
+    case "css":
+      return read.segments
+        .map(cssSegmentLevel)
+        .reduce<SelectorLevel>(
+          (lowest, level) => (level < lowest ? level : lowest),
+          SELECTOR_LEVELS.roleWithName,
+        );
+    case "unknown":
+      return undefined;
   }
-  const tokens = cssTokens(selector);
-  if (tokens === undefined) {
-    return undefined;
-  }
-  const levels = cssSegments(tokens).map(cssSegmentLevel);
-  return levels.reduce<SelectorLevel>(
-    (lowest, level) => (level < lowest ? level : lowest),
-    SELECTOR_LEVELS.roleWithName,
-  );
 }
 
 function isListedMethod(method: string): method is keyof typeof LOCATOR_METHOD_LEVELS {
@@ -198,7 +239,7 @@ export function classifyLocator(
   query: LocatorQuery,
   options: ClassifyOptions,
 ): SelectorLevel | undefined {
-  if (query.framework === "playwright" && query.method.startsWith(GET_BY_PREFIX)) {
+  if (query.framework === "playwright" && isGetByMethod(query.method)) {
     return methodLevel(query, options);
   }
   const text = selectorText(query);
@@ -207,13 +248,13 @@ export function classifyLocator(
 
 /**
  * Normalizes a selector so that E2E007 finds the same selector across files
- * (03-linter.md §11.4).
+ * (03-linter.md §11.3.1 and §11.4).
  *
  * CSS is serialized again from its tokens, without the `css=` prefix:
  * whitespace collapsed, one space around combinators and after commas,
  * attribute values in double quotes, and type and attribute names in
- * lowercase. Classes, ids and values
- * keep their case, and nothing is reordered. XPath and unknown selectors are
+ * lowercase. Classes, ids and values keep their case, and nothing is
+ * reordered. XPath loses its `xpath=` prefix. XPath and unknown selectors are
  * trimmed, with runs of whitespace outside quotes collapsed to one space.
  *
  * It never throws, it is idempotent and it runs in time linear in the length
@@ -223,10 +264,13 @@ export function classifyLocator(
  * @returns The normalized selector.
  */
 export function normalizeSelector(text: string): string {
-  const selector = collapseWhitespace(text);
-  if (isXPath(selector)) {
-    return selector;
+  const read = readSelector(text);
+  switch (read.kind) {
+    case "xpath":
+      return read.path;
+    case "css":
+      return serializeCss(read.tokens);
+    case "unknown":
+      return read.text;
   }
-  const tokens = cssTokens(selector);
-  return tokens === undefined ? selector : serializeCss(tokens);
 }

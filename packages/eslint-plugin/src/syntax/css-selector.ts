@@ -58,8 +58,13 @@ function emptySegment(): MutableSegment {
  * or a combinator at the start, at the end or next to another one, as in
  * Playwright's `a >> b`.
  *
- * Only parsel's tokenizer runs, which is linear; its `parse` nests the tree
- * with a cost quadratic in the number of combinators.
+ * Only parsel's tokenizer runs: its `parse` nests the tree with a cost
+ * quadratic in the number of combinators. The tokenizer is also superlinear
+ * with many strings or parentheses, so callers cap the length of the text
+ * first (`SELECTOR_MAX_LENGTH`).
+ *
+ * @param text - The selector, trimmed.
+ * @returns The tokens, or `undefined` when the text is not a CSS selector list.
  */
 export function cssTokens(text: string): readonly Token[] | undefined {
   const selector = text.startsWith(SELECTOR_PREFIXES.css)
@@ -133,14 +138,19 @@ function addClass(segment: MutableSegment, name: string): void {
  * Splits the tokens of a selector list into its complex selectors and
  * records what each one uses. Pseudo-class arguments, such as the `li` of
  * `:has(li)`, are not analyzed.
+ *
+ * @param tokens - Tokens of a selector list, from {@link cssTokens}.
+ * @returns One segment per complex selector of the list.
  */
 export function cssSegments(tokens: readonly Token[]): readonly CssSegment[] {
-  const segments: MutableSegment[] = [emptySegment()];
+  let current = emptySegment();
+  const segments: MutableSegment[] = [current];
   for (const token of tokens) {
     if (token.type === "comma") {
-      segments.push(emptySegment());
+      current = emptySegment();
+      segments.push(current);
     } else {
-      addToken(segments[segments.length - 1] ?? emptySegment(), token);
+      addToken(current, token);
     }
   }
   return segments;
@@ -190,7 +200,12 @@ function serializeToken(token: Token): string {
 /**
  * Serializes the tokens of a selector list in a canonical form: one space
  * around combinators and after commas, attribute values in double quotes, and
- * type and attribute names in lowercase.
+ * type and attribute names in lowercase. Kept as written: an attribute with a
+ * namespace or an escape, a single-quoted value that contains a double quote,
+ * a type with a namespace, and pseudo-classes with their arguments.
+ *
+ * @param tokens - Tokens of a selector list, from {@link cssTokens}.
+ * @returns The normalized selector.
  */
 export function serializeCss(tokens: readonly Token[]): string {
   return tokens.map(serializeToken).join("");

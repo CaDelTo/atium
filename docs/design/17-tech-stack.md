@@ -18,7 +18,7 @@
 | Logs de depuración | Sintaxis de `DEBUG` del paquete debug (`DEBUG=atium:*`), leída por el logger de core sin la dependencia | Estándar en Node; el paquete usa estado global y escribe solo en stderr, sin redacción ni stream inyectado ([ADR-0022](../adr/0022-logger-reloj-en-core.md)) |
 | Detección de CI | env-ci + reglas propias | Cubre los proveedores comunes |
 | Linter | ESLint 9 + typescript-eslint (project service); reglas con `RuleCreator` de `@typescript-eslint/utils`; los helpers de `@atium/eslint-plugin/syntax` usan `@typescript-eslint/types`, que no carga ESLint, y sus tests parsean con `@typescript-eslint/typescript-estree` | Editor, autofix, resolución entre archivos |
-| Parser CSS | parsel-js | Analiza selectores CSS para E2E002 |
+| Parser CSS | parsel-js | Tokeniza selectores CSS para E2E002, E2E007 y la clasificación de §14.1 |
 | Similitud | fastest-levenshtein | Renombres y duplicados |
 | Archivos | tinyglobby | Búsqueda rápida de tests |
 | Compresión | `node:zlib` para los runs `.ndjson.gz`; fflate, previsto para los datos del reporte HTML | zlib: stream nativo, sin dependencia, que el lector de líneas consume mientras comprueba los límites de bytes descomprimidos (gzip bomb, [ADR-0018](../adr/0018-formato-archivos-run.md)); fflate: funciona en el navegador |

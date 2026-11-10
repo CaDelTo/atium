@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parseSource } from "../../test/parse.js";
 import type { LocatorQuery } from "./locators.js";
 import { locatorOf } from "./locators.js";
+import { SELECTOR_MAX_LENGTH } from "../defaults.js";
 import { analyzeSelector, classifyLocator, normalizeSelector } from "./selectors.js";
 
 // Fixed seed, so a failure reproduces (04-testing.md, "Determinismo").
@@ -141,9 +142,9 @@ describe("analyzeSelector XPath edge cases", () => {
     expect(() => analyzeSelector("//a[[[[")).not.toThrow();
   });
 
-  it("handles a very long predicate chain in reasonable time", () => {
-    const long = `//a${"[b".repeat(20000)}${"]".repeat(20000)}`;
-    expect(analyzeSelector(long)).toMatchObject({ kind: "xpath" });
+  it("handles deeply nested predicates within the length cap", () => {
+    const deep = `//a${"[b".repeat(500)}${"]".repeat(500)}`;
+    expect(analyzeSelector(deep)).toMatchObject({ kind: "xpath" });
   });
 });
 
@@ -208,5 +209,61 @@ describe("selector properties", () => {
       }),
       runOptions,
     );
+  });
+});
+
+describe("length cap (SELECTOR_MAX_LENGTH)", () => {
+  it("analyzes a selector of exactly the cap", () => {
+    const atCap = `.${"a".repeat(SELECTOR_MAX_LENGTH - 1)}`;
+    expect(analyzeSelector(atCap)).toMatchObject({ kind: "css" });
+  });
+
+  it("treats a longer selector as unknown, measured after collapsing whitespace", () => {
+    expect(analyzeSelector(`.${"a".repeat(SELECTOR_MAX_LENGTH)}`)).toEqual({ kind: "unknown" });
+    expect(analyzeSelector(`  .a${" ".repeat(SELECTOR_MAX_LENGTH)}`)).toMatchObject({
+      kind: "css",
+    });
+  });
+
+  it("leaves a selector over the cap only trimmed and collapsed", () => {
+    const long = "a  ".repeat(SELECTOR_MAX_LENGTH);
+    expect(normalizeSelector(long)).toBe(long.replaceAll("  ", " ").trimEnd());
+  });
+
+  it("does not classify a selector over the cap", () => {
+    const code = `page.locator("[data-testid=${"x".repeat(SELECTOR_MAX_LENGTH)}]")`;
+    expect(classifyLocator(queryIn(code), noI18n)).toBeUndefined();
+  });
+
+  // parsel's tokenizer is superlinear with many strings or parentheses: 1 MiB
+  // of `[a="x"]` took about two minutes before the cap.
+  it.each([
+    ["many quoted attributes", '[a="x"]'],
+    ["many pseudo-classes with arguments", "a:is(b) "],
+  ])("stays fast on 1 MiB of %s", (_case, unit) => {
+    const text = unit.repeat(Math.ceil((1024 * 1024) / unit.length));
+    const start = performance.now();
+    analyzeSelector(text);
+    normalizeSelector(text);
+    expect(performance.now() - start).toBeLessThan(2000);
+  });
+});
+
+describe("XPath prefixes, chains and attributes", () => {
+  it("drops the xpath= prefix when normalizing, as with css=", () => {
+    expect(normalizeSelector("xpath=//a")).toBe(normalizeSelector("//a"));
+  });
+
+  it("treats a Playwright chain after XPath as unknown", () => {
+    expect(analyzeSelector("//a >> nth=1")).toEqual({ kind: "unknown" });
+    expect(analyzeSelector("//a[@title='x >> y']")).toMatchObject({ kind: "xpath" });
+  });
+
+  it("ignores @ without a name", () => {
+    expect(analyzeSelector("//*[@*='x']")).toMatchObject({ kind: "xpath", attributes: [] });
+  });
+
+  it("recognizes a test id attribute in any case", () => {
+    expect(classifyLocator(queryIn("page.locator(\"//a[@DATA-TESTID='x']\")"), noI18n)).toBe(3);
   });
 });
