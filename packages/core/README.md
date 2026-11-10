@@ -10,13 +10,24 @@ interface with `LogLevel`, `LOG_LEVELS` and `LogContext`, the stderr logger
 `createStderrLogger` with `StderrLoggerOptions` and `LogStream`, the `Clock`
 interface with `systemClock`, the `Scheduler` interface with
 `systemScheduler`, and the `failOpen` helper with its
-`FailOpenOptions`. It also defines the data model: Zod schemas for `Run`,
-`TestResult`, `TestCase`, `Attempt`, `ErrorOccurrence`, `NetworkSummary`,
-`NetworkCall` and `BddContext`, the branded IDs `RunId`, `TestId` and
-`Fingerprint`, and `truncateUtf8`. Every analyzer reports a `Finding`
-(`FindingSchema`, with `FINDING_SEVERITIES`, `FINDING_CATEGORIES`,
-`FINDING_SOURCES` and `FINDING_CONFIDENCES`), identified by a
-`FindingFingerprint` from `fingerprintOf` and ordered with `compareFindings`.
+`FailOpenOptions`. It also defines the data model: the Zod schemas
+`RunSchema`, `TestResultSchema`, `TestCaseSchema`, `AttemptSchema`,
+`ErrorOccurrenceSchema`, `NetworkSummarySchema`, `NetworkCallSchema` and
+`BddContextSchema` with their types `Run`, `TestResult`, `TestCase`,
+`Attempt`, `ErrorOccurrence`, `NetworkSummary`, `NetworkCall` and
+`BddContext`; `SCHEMA_VERSION`, the version of the run schema written today;
+the allowed values `FRAMEWORK_NAMES` with `FrameworkName`, `TEST_OUTCOMES`
+with `TestOutcome` and `ATTEMPT_STATUSES` with `AttemptStatus`; the branded
+IDs `RunId`, `TestId` and `Fingerprint` with `RunIdSchema`, `TestIdSchema`
+and `FingerprintSchema`; and `truncateUtf8`. `computeTestId` computes the
+`TestId` of a `TestIdentity`, joining its title levels with
+`TITLE_PATH_SEPARATOR`. Every analyzer reports a `Finding` (`FindingSchema`,
+with `FINDING_SEVERITIES` and `FindingSeverity`, `FINDING_CATEGORIES` and
+`FindingCategory`, `FINDING_SOURCES` and `FindingSource`, and
+`FINDING_CONFIDENCES` and `FindingConfidence`), identified by a
+`FindingFingerprint` (`FindingFingerprintSchema`) from `fingerprintOf`,
+ordered with `compareFindings` and linked to its rule's page with
+`ruleDocsUrl`.
 For redaction it provides `createRedactor` with its `Redactor` type,
 `RedactConfigSchema` with `RedactConfig`, the pattern ids
 `REDACT_PATTERN_IDS` with `RedactPatternId`, and `HeaderValue`.
@@ -35,6 +46,9 @@ For run files it provides `writeRunFile` with `WriteRunFileOptions`,
 and `RunHeader`, and `ATIUM_DIRECTORY`, the directory of Atium's local files.
 For file system errors, `errnoCode` reads the code of a Node.js error and
 `isMissingFileError` tells whether it means that nothing is at the path.
+For paths, `toPosixRelative` turns an absolute path into a POSIX path relative
+to a root, `displayPath` shows a path in a message relative to where the user ran Atium,
+and `resolveInside` resolves a relative path and throws if it leaves its root.
 For storage backends it provides the `StorageReader`, `StorageWriter` and
 `Storage` interfaces with `ListRunsQuery`, and `parseListRunsQuery` with
 `ParsedListRunsQuery`. For error messages, `describeIssues` summarizes Zod
@@ -417,8 +431,10 @@ Atium's own tests:
   builders of the data model. Every method returns a new builder, and
   `build()` validates the result with its Zod schema and returns it frozen.
   Defaults are deterministic: a fixed start time, a run id derived from a seed
-  (`withSeed`) and test ids and fingerprints derived from the content.
-- `FakeLogger`: a `Logger` that records every call.
+  (`withSeed`) and test ids and fingerprints derived from the content. Their
+  types are `RunBuilder`, `TestResultBuilder`, `TestCaseBuilder`,
+  `AttemptBuilder` and `ErrorBuilder`.
+- `FakeLogger`: a `Logger` that records every call as a `LogEntry`.
 - `FakeGitClient`: a `GitClient` that answers from memory (a `FakeGitState`)
   and records every query as a `GitQuery`; `new FakeGitClient("unavailable")`
   throws `GIT_UNAVAILABLE`.
@@ -434,6 +450,8 @@ Atium's own tests:
   `AtiumError` thrown or rejected with, and fail the test on anything else.
 - `unwrap(result)`: returns the value of an `ok` `Result`, and fails the test
   with the code and message of the error otherwise.
+- `HEAVY_TEST_TIMEOUT_MS`: the timeout, passed as the third argument of `it`,
+  of a test that is slow by nature, such as a property with hundreds of runs.
 
 ```ts
 import { aRun, aTestResult } from "@atium/core/testing";
