@@ -4,6 +4,66 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-13 — #63 v1-23-analyzer-pipeline
+
+- **Hecho:**
+  - **Rama, commits y PR:**
+    - Rama `feat/63-analyzer-pipeline`, creada desde `origin/main` en `15abdf6`, en el worktree `atium-63`. Se trabajó en paralelo con #48 y #61.
+    - Commit `a0690ee` `feat(core): add the analyzer interface and orchestrator`.
+    - Commit `032924b`: merge de `origin/main` después de #85 (#61) y #86 (#48).
+      - Hubo un solo conflicto, en `packages/core/src/defaults.ts`, entre bloques añadidos al final. Se conservaron los dos: primero `RULE_DOCS_BASE_URL`, luego `ANALYZER_TIMEOUT_MS` y `ANALYZER_CONCURRENCY`.
+    - El push lo hizo el usuario.
+    - PR #87 abierto con `Closes #63`. Sin mergear; al cerrar la sesión, la CI estaba en curso.
+  - **Código en `packages/core`:**
+    - `src/pipeline/analyzer.ts`: `Analyzer<C>`, `AnalysisContext<C>`, `Capability`/`CAPABILITIES`, `AnalyzerKind`/`ANALYZER_KINDS` y `ResolvedProject` (solo `root`).
+      - `analyze` usa sintaxis de método a propósito: su parámetro es bivariante y así un `Analyzer<C>` cabe en `readonly Analyzer[]`.
+    - `src/pipeline/run-analyzers.ts`: `runAnalyzers(analyzers, context)`, con los tipos `RunAnalyzersContext`, `AnalysisResult`, `SkippedAnalyzer` y `SkipReason`. `SkipReason` es una unión: `missing-capabilities`, `duplicate-id`, `invalid-config`, `timeout`, `failed`, `aborted`.
+      - El timer y el listener de abort se arman antes de validar la config. La validación cuenta dentro del timeout.
+      - No usa `failOpen`, porque su fallback fijo y su aviso incondicional no encajan con el timeout. El motivo está en un comentario sobre `runOne`.
+    - `src/scheduler.ts`: `Scheduler` y `systemScheduler`.
+    - `src/testing/manual-scheduler.ts`: `ManualScheduler`, con `advance(ms)`, `elapsed` y `pending`.
+    - `defaults.ts`: `ANALYZER_TIMEOUT_MS = 60_000` y `ANALYZER_CONCURRENCY = 4`.
+    - Dependencia `p-limit` 7.3.3. Es solo ESM, igual que `env-ci`.
+    - Exports añadidos en `src/index.ts` y `src/testing/index.ts`.
+  - **Tests:**
+    - `pipeline/run-analyzers.test.ts`: selección, capacidades, config, ids duplicados, Findings inválidos y `RangeError`.
+    - `pipeline/run-analyzers.resilience.test.ts`: timeout, fail-open, cancelación (incluida la que ocurre mientras se valida la config), concurrencia, y un test property-based de que el orden de terminación no cambia la salida.
+    - `pipeline/run-analyzers.cleanup.test.ts`: liberación del hueco tras un timeout, resultados tardíos ignorados y retirada de los listeners.
+    - Fakes en `pipeline/fakes.test-support.ts`.
+  - **Documentación:**
+    - `docs/design/14-architecture.md` §22.2: subsección "Implementación" y tabla "Valores del orquestador".
+    - `docs/design/01-requirements.md` §8: el "aviso" por capacidades que faltan es la lista de omitidos que muestra el comando.
+    - `packages/core/README.md`.
+  - **Verificado:**
+    - `pnpm verify` en verde antes y después del merge con `main`: core 953 tests, cli 220, sqlite 61 y demo 15.
+    - `/review` con code-reviewer, duplication-auditor, docs-checker y design-auditor, sin bloqueantes. Se corrigieron los 4 importantes y las 9 sugerencias.
+    - Una segunda pasada de code-reviewer sobre las correcciones no dio bloqueantes ni importantes.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan ("Si"):** las tres quedaron en §22.2 y en el TSDoc.
+    - Timeout de 60 000 ms y concurrencia 4.
+    - Un Finding inválido descarta solo ese Finding, con un aviso `MODEL_INVALID` por analizador.
+    - Una config de analizador inválida omite el analizador con aviso y `CONFIG_INVALID`.
+  - **Elegida por el usuario en el review (opción B):** el orquestador no avisa cuando faltan capacidades. El aviso es la lista `skipped` que mostrará el CLI. Escrito en §22.2 y en 01-requirements §8.
+  - **Tomadas por mí:**
+    - `ResolvedProject` solo con `root`. El plan decía `{ root, frameworks }`, pero `FrameworkName` incluye `junit` y `ctrf`, que son formatos de reporte. `git`, `currentRun`, los frameworks y CODEOWNERS los añaden las tareas que los definan. Escrito en §22.2.
+    - Un `Scheduler` nuevo en lugar de ampliar `Clock`.
+    - El tope de `timeoutMs` es 2^31 - 1, el máximo de un timer de Node.
+    - Al vencer el timeout se libera el hueco de p-limit aunque el analizador siga trabajando.
+    - Las dos últimas están escritas en §22.2 y en el TSDoc.
+  - **Sin escribir en ningún lado:** el PR supera la guía de 400 líneas de 08-git-workflow (unas 1 700, de ellas unas 1 060 de tests). Se dejó en un solo PR, como los PRs de features anteriores, y se explica en la descripción de #87.
+- **Problemas y dudas abiertas:**
+  - **Tamaño de los PRs:** conviene que el usuario decida si la guía de 400 líneas sigue vigente para las features (08-git-workflow.md, "Pull requests") o si se ajusta.
+  - **Atribución de Findings:** `Finding.analyzer` no se compara con `analyzer.id`, así que un plugin puede atribuir Findings a otro analizador. Falta decidirlo; no está escrito en ninguna tarea.
+  - **Omitidos del CLI:** ningún `SkipReason` sirve para que el CLI reporte un `lint-crossfile` sin índice (§22.2). Habrá que ampliar la unión, que es API pública, o que el CLI use su propio tipo. Afecta a v1-32 y v1-37.
+  - **Aviso en el CLI:** el CLI tendrá que mostrar `skipped` con su motivo, que es el aviso de 01-requirements §8.
+  - **Límites conocidos, ya documentados en §22.2:**
+    - el timeout no interrumpe bloqueos síncronos;
+    - los avisos propios de cada analizador salen cuando los emite.
+  - **`test-guard`:** bloqueó la división de `run-analyzers.test.ts` en dos archivos, aunque no se perdía ningún caso. El usuario lo aprobó y copió el archivo él mismo con `!`.
+  - **Archivo de progreso:** esta entrada movió a `docs/progress-archive.md` la de #13 (v0-12-config).
+- **Siguiente paso:** revisar la CI del PR #87 y, cuando una persona lo mergee, retirar el worktree con `/parallel --cleanup`. Después, empezar la siguiente tarea Pendiente de V1 con `/task`. v1-32 (`lint-crossfile`) ya puede usar `runAnalyzers`.
+
 ### 2026-10-13 — #48 v1-08-eslint-plugin-skeleton
 
 - **Hecho:**
