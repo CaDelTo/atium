@@ -14,14 +14,20 @@ export const ErrorOccurrenceSchema = z
     family: TextSchema,
     /** Such as `TimeoutError` or `AssertionError`. */
     type: TextSchema,
+    /** Error message, up to 2 KiB. */
     message: cappedString(MODEL_TEXT_CAPS_BYTES.errorMessage),
+    /** Stack trace, up to 8 KiB. */
     stack: cappedString(MODEL_TEXT_CAPS_BYTES.errorStack).exactOptional(),
     /** Present when the error involves a locator. */
     locator: TextSchema.exactOptional(),
+    /** Assertion matcher that failed. */
     matcher: z
       .strictObject({
+        /** Name of the matcher. */
         name: TextSchema,
+        /** Expected value, up to 2 KiB. */
         expected: MatcherValueSchema.exactOptional(),
+        /** Actual value, up to 2 KiB. */
         actual: MatcherValueSchema.exactOptional(),
       })
       .readonly()

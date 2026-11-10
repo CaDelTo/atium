@@ -44,7 +44,15 @@ export const AtiumConfigSchema = z
     /** How quarantined tests are handled (07-flaky.md). */
     quarantine: z
       .strictObject({
+        /**
+         * What happens to a quarantined test; `run-and-ignore` by default.
+         * See {@link QUARANTINE_MODES}.
+         */
         mode: z.enum(QUARANTINE_MODES).default(QUARANTINE_DEFAULTS.mode),
+        /**
+         * Whether a test detected as flaky enters quarantine automatically,
+         * instead of only by hand (07-flaky.md §15.7).
+         */
         auto: z.boolean().optional(),
       })
       .readonly()

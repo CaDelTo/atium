@@ -1,3 +1,12 @@
+/**
+ * Contract suite that every `Storage` backend passes, exposed as
+ * `@atium/core/test-contracts`.
+ *
+ * ESM only, because it imports Vitest, which the tests of the calling package
+ * provide. Internal to Atium's own tests: it may change without notice.
+ *
+ * @packageDocumentation
+ */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { RunId } from "../src/model/ids.js";
 import type { Run } from "../src/model/run.js";

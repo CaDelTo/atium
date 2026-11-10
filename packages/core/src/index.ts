@@ -1,3 +1,14 @@
+/**
+ * Shared foundation of Atium: the data model, findings, configuration, CI
+ * detection, run files, storage interfaces, redaction, the analysis pipeline
+ * and the error, logging and time helpers every other package builds on.
+ *
+ * Other entry points: `@atium/core/pure` re-exports only the modules without
+ * I/O, and `@atium/core/testing` and `@atium/core/test-contracts` hold test
+ * helpers. The three are internal to Atium's own packages.
+ *
+ * @packageDocumentation
+ */
 export { assertNever } from "./assert-never.js";
 export { detectRunContext, LOCAL_PROVIDER } from "./ci/detect-run-context.js";
 export type { DetectRunContextOptions, RunContext } from "./ci/detect-run-context.js";
