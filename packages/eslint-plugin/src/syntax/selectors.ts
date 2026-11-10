@@ -1,4 +1,18 @@
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import {
+  LOCATOR_METHOD_LEVELS,
+  GET_BY_PREFIX,
+  ROLE_LOCATOR,
+  SELECTOR_LEVELS,
+  TEST_ID_ATTRIBUTES,
+  VISIBLE_TEXT_LOCATORS,
+} from "../defaults.js";
+import { isOneOf, isStringLiteral, unwrap } from "./ast.js";
+import { cssSegments, cssTokens, serializeCss } from "./css-selector.js";
+import type { CssSegment } from "./css-selector.js";
 import type { LocatorQuery } from "./locators.js";
+import { collapseWhitespace, isXPath, scanXPath } from "./xpath-selector.js";
+import type { XPathScan } from "./xpath-selector.js";
 
 /**
  * Level of a locator in the selector hierarchy (06-selector-advisor.md §14.1),
@@ -64,7 +78,18 @@ export interface ClassifyOptions {
  *   not a literal.
  */
 export function selectorText(query: LocatorQuery): string | undefined {
-  throw new Error(`not implemented: ${query.method}`);
+  const { selector } = query;
+  if (selector === undefined || selector.type === AST_NODE_TYPES.SpreadElement) {
+    return undefined;
+  }
+  const node = unwrap(selector);
+  if (isStringLiteral(node)) {
+    return node.value;
+  }
+  if (node.type === AST_NODE_TYPES.TemplateLiteral && node.expressions.length === 0) {
+    return node.quasis[0]?.value.cooked ?? undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -80,7 +105,90 @@ export function selectorText(query: LocatorQuery): string | undefined {
  * @returns What the selector uses.
  */
 export function analyzeSelector(text: string): SelectorAnalysis {
-  throw new Error(`not implemented: ${text}`);
+  const selector = collapseWhitespace(text);
+  if (isXPath(selector)) {
+    return { kind: "xpath", ...scanXPath(selector) };
+  }
+  const tokens = cssTokens(selector);
+  return tokens === undefined ? { kind: "unknown" } : mergeSegments(cssSegments(tokens));
+}
+
+function mergeSegments(segments: readonly CssSegment[]): CssAnalysis {
+  return {
+    kind: "css",
+    positionalPseudoClasses: segments.flatMap((segment) => segment.positionalPseudoClasses),
+    combinators: segments.reduce((most, segment) => Math.max(most, segment.combinators), 0),
+    ids: segments.flatMap((segment) => segment.ids),
+    numericIds: segments.flatMap((segment) => segment.numericIds),
+    classes: segments.flatMap((segment) => segment.classes),
+    generatedClasses: segments.flatMap((segment) => segment.generatedClasses),
+    types: segments.flatMap((segment) => segment.types),
+    attributes: segments.flatMap((segment) => segment.attributes),
+  };
+}
+
+function hasTestId(attributes: readonly string[]): boolean {
+  return attributes.some((name) => isOneOf(TEST_ID_ATTRIBUTES, name));
+}
+
+function cssSegmentLevel(segment: CssSegment): SelectorLevel {
+  const fragile =
+    segment.positionalPseudoClasses.length > 0 ||
+    segment.generatedClasses.length > 0 ||
+    segment.numericIds.length > 0;
+  if (fragile) {
+    return SELECTOR_LEVELS.structural;
+  }
+  if (hasTestId(segment.attributes)) {
+    return SELECTOR_LEVELS.testId;
+  }
+  return segment.ids.length > 0 || segment.attributes.length > 0
+    ? SELECTOR_LEVELS.stableAttribute
+    : SELECTOR_LEVELS.structural;
+}
+
+function xpathLevel(scan: XPathScan): SelectorLevel {
+  if (scan.positionalPredicates > 0 || scan.absolute) {
+    return SELECTOR_LEVELS.structural;
+  }
+  if (hasTestId(scan.attributes)) {
+    return SELECTOR_LEVELS.testId;
+  }
+  return scan.attributes.length > 0 ? SELECTOR_LEVELS.stableAttribute : SELECTOR_LEVELS.structural;
+}
+
+function selectorLevel(text: string): SelectorLevel | undefined {
+  const selector = collapseWhitespace(text);
+  if (isXPath(selector)) {
+    return xpathLevel(scanXPath(selector));
+  }
+  const tokens = cssTokens(selector);
+  if (tokens === undefined) {
+    return undefined;
+  }
+  const levels = cssSegments(tokens).map(cssSegmentLevel);
+  return levels.reduce<SelectorLevel>(
+    (lowest, level) => (level < lowest ? level : lowest),
+    SELECTOR_LEVELS.roleWithName,
+  );
+}
+
+function isListedMethod(method: string): method is keyof typeof LOCATOR_METHOD_LEVELS {
+  return Object.hasOwn(LOCATOR_METHOD_LEVELS, method);
+}
+
+function methodLevel(query: LocatorQuery, options: ClassifyOptions): SelectorLevel | undefined {
+  const { method } = query;
+  if (!isListedMethod(method)) {
+    return undefined;
+  }
+  if (method === ROLE_LOCATOR.method && query.hasName) {
+    return SELECTOR_LEVELS.roleWithName;
+  }
+  if (options.i18n && isOneOf(VISIBLE_TEXT_LOCATORS, method)) {
+    return SELECTOR_LEVELS.visibleTextWithI18n;
+  }
+  return LOCATOR_METHOD_LEVELS[method];
 }
 
 /**
@@ -102,7 +210,11 @@ export function classifyLocator(
   query: LocatorQuery,
   options: ClassifyOptions,
 ): SelectorLevel | undefined {
-  throw new Error(`not implemented: ${query.method} ${String(options.i18n)}`);
+  if (query.framework === "playwright" && query.method.startsWith(GET_BY_PREFIX)) {
+    return methodLevel(query, options);
+  }
+  const text = selectorText(query);
+  return text === undefined ? undefined : selectorLevel(text);
 }
 
 /**
@@ -122,5 +234,10 @@ export function classifyLocator(
  * @returns The normalized selector.
  */
 export function normalizeSelector(text: string): string {
-  throw new Error(`not implemented: ${text}`);
+  const selector = collapseWhitespace(text);
+  if (isXPath(selector)) {
+    return selector;
+  }
+  const tokens = cssTokens(selector);
+  return tokens === undefined ? selector : serializeCss(tokens);
 }
