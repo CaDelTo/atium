@@ -82,7 +82,7 @@ export function selectorText(query: LocatorQuery): string | undefined {
 
 /** A selector read once: the engine that reads it and what it holds. */
 type ReadSelector =
-  | { readonly kind: "xpath"; readonly path: string; readonly scan: XPathScan }
+  | { readonly kind: "xpath"; readonly normalized: string; readonly scan: XPathScan }
   | {
       readonly kind: "css";
       readonly tokens: readonly Token[];
@@ -101,9 +101,15 @@ function readSelector(text: string): ReadSelector {
     return { kind: "unknown", text: selector };
   }
   if (isXPath(selector)) {
-    const path = xpathPath(selector);
+    const path = collapseWhitespace(xpathPath(selector));
     const scan = scanXPath(path);
-    return scan === undefined ? { kind: "unknown", text: selector } : { kind: "xpath", path, scan };
+    if (scan === undefined) {
+      return { kind: "unknown", text: selector };
+    }
+    // Without its prefix the path must still read as XPath, or a second pass
+    // would read it otherwise: then the prefix stays, as in `xpath=A`.
+    const canonical = isXPath(path) && xpathPath(path) === path;
+    return { kind: "xpath", normalized: canonical ? path : selector, scan };
   }
   const tokens = cssTokens(selector);
   return tokens === undefined
@@ -254,7 +260,8 @@ export function classifyLocator(
  * whitespace collapsed, one space around combinators and after commas,
  * attribute values in double quotes, and type and attribute names in
  * lowercase. Classes, ids and values keep their case, and nothing is
- * reordered. XPath loses its `xpath=` prefix. XPath and unknown selectors are
+ * reordered. XPath loses its `xpath=` prefix when the rest still reads as
+ * XPath (`xpath=A` keeps it). XPath and unknown selectors are
  * trimmed, with runs of whitespace outside quotes collapsed to one space.
  *
  * It never throws, it is idempotent and it runs in time linear in the length
@@ -267,7 +274,7 @@ export function normalizeSelector(text: string): string {
   const read = readSelector(text);
   switch (read.kind) {
     case "xpath":
-      return read.path;
+      return read.normalized;
     case "css":
       return serializeCss(read.tokens);
     case "unknown":

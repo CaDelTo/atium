@@ -254,6 +254,31 @@ describe("XPath prefixes, chains and attributes", () => {
     expect(normalizeSelector("xpath=//a")).toBe(normalizeSelector("//a"));
   });
 
+  it.each([
+    ["xpath= //a", "//a"],
+    ["xpath=  /html  ", "/html"],
+    ["xpath=A", "xpath=A"],
+    ["xpath=xpath=//a", "xpath=xpath=//a"],
+  ])("normalizes %j to %j, and normalizing again changes nothing", (selector, expected) => {
+    const once = normalizeSelector(selector);
+    expect(once).toBe(expected);
+    expect(normalizeSelector(once)).toBe(once);
+  });
+
+  it("reads the path after xpath= without its leading space", () => {
+    expect(analyzeSelector("xpath= /html/body")).toMatchObject({ kind: "xpath", absolute: true });
+  });
+
+  it("stays idempotent on xpath= followed by arbitrary text", () => {
+    fc.assert(
+      fc.property(fc.string(), (rest) => {
+        const once = normalizeSelector(`xpath=${rest}`);
+        expect(normalizeSelector(once)).toBe(once);
+      }),
+      runOptions,
+    );
+  });
+
   it("treats a Playwright chain after XPath as unknown", () => {
     expect(analyzeSelector("//a >> nth=1")).toEqual({ kind: "unknown" });
     expect(analyzeSelector("//a[@title='x >> y']")).toMatchObject({ kind: "xpath" });
