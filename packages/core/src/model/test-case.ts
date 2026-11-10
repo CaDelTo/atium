@@ -18,7 +18,12 @@ export const TestCaseSchema = z
     tags: cappedList(TextSchema, MODEL_LIST_CAPS.tags),
     /** 1-based position of the test in `file`. */
     location: z
-      .strictObject({ line: z.int().positive(), column: z.int().positive() })
+      .strictObject({
+        /** 1-based line. */
+        line: z.int().positive(),
+        /** 1-based column. */
+        column: z.int().positive(),
+      })
       .readonly()
       .exactOptional(),
   })

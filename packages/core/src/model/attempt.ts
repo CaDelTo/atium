@@ -22,14 +22,22 @@ export const AttemptSchema = z
   .strictObject({
     /** Original index, kept when attempts are capped so the gap stays visible. */
     index: NonNegativeIntSchema,
+    /** How the attempt ended. See {@link ATTEMPT_STATUSES}. */
     status: z.enum(ATTEMPT_STATUSES),
+    /** When the attempt started. */
     startedAt: TimestampSchema,
+    /** How long the attempt took. */
     durationMs: MillisecondsSchema,
+    /** Error the attempt failed with. */
     error: ErrorOccurrenceSchema.exactOptional(),
+    /** Network activity of the attempt. */
     network: NetworkSummarySchema.exactOptional(),
+    /** Browser console output of the attempt. */
     console: z
       .strictObject({
+        /** Number of console errors. */
         errors: NonNegativeIntSchema,
+        /** Number of console warnings. */
         warnings: NonNegativeIntSchema,
         /** Redacted, without ANSI codes. */
         samples: cappedList(
@@ -44,13 +52,18 @@ export const AttemptSchema = z
       cappedString(MODEL_TEXT_CAPS_BYTES.pageError),
       MODEL_LIST_CAPS.pageErrors,
     ).exactOptional(),
+    /** Page errors dropped by the cap. */
     pageErrorsDropped: DroppedCountSchema.exactOptional(),
     /** Paths to files, never their content. */
     artifacts: z
       .strictObject({
+        /** Path to the trace. */
         trace: TextSchema.exactOptional(),
+        /** Paths to the screenshots. */
         screenshots: z.array(TextSchema).readonly().exactOptional(),
+        /** Path to the ARIA snapshot, a file apart like the trace and the screenshots. */
         ariaSnapshot: TextSchema.exactOptional(),
+        /** Path to the video. */
         video: TextSchema.exactOptional(),
       })
       .readonly()

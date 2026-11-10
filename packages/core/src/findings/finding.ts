@@ -61,16 +61,24 @@ export const FindingSchema = z
     analyzer: NonEmptyTextSchema,
     /** Such as `E2E001`, `FLAKY001`, `TRIAGE003` or `GAP002`. Plugins choose their own format. */
     ruleId: NonEmptyTextSchema,
+    /** How serious the finding is. See {@link FINDING_SEVERITIES}. */
     severity: z.enum(FINDING_SEVERITIES),
+    /** Area of the suite the finding is about. See {@link FINDING_CATEGORIES}. */
     category: z.enum(FINDING_CATEGORIES),
+    /** What produced the finding. See {@link FindingSource}. */
     source: z.enum(FINDING_SOURCES),
+    /** How sure the analyzer is. See {@link FINDING_CONFIDENCES}. */
     confidence: z.enum(FINDING_CONFIDENCES),
+    /** What the finding says, for the user. */
     message: NonEmptyTextSchema,
     /** Where the finding is. `file` is a POSIX path relative to the repository root. */
     location: z
       .strictObject({
+        /** POSIX path relative to the repository root, like `TestCase.file`. */
         file: NonEmptyTextSchema,
+        /** 1-based line. */
         line: PositionSchema.exactOptional(),
+        /** 1-based column. */
         column: PositionSchema.exactOptional(),
       })
       .readonly()
@@ -79,8 +87,10 @@ export const FindingSchema = z
     testId: TestIdSchema.exactOptional(),
     /** Data that justifies the finding. Only JSON values, so every report can serialize it. */
     evidence: z.record(z.string(), z.json()).readonly().exactOptional(),
+    /** How to fix the finding. */
     suggestion: z
       .strictObject({
+        /** What to change. */
         description: NonEmptyTextSchema,
         /** Unified diff that applies the suggestion. */
         diff: NonEmptyTextSchema.exactOptional(),

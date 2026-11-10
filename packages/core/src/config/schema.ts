@@ -44,7 +44,15 @@ export const AtiumConfigSchema = z
     /** How quarantined tests are handled (07-flaky.md). */
     quarantine: z
       .strictObject({
+        /**
+         * What happens to a quarantined test; `run-and-ignore` by default.
+         * See {@link QUARANTINE_MODES}.
+         */
         mode: z.enum(QUARANTINE_MODES).default(QUARANTINE_DEFAULTS.mode),
+        /**
+         * Whether a test detected as flaky is proposed for quarantine without
+         * a manual request (07-flaky.md §15.7).
+         */
         auto: z.boolean().optional(),
       })
       .readonly()
@@ -58,7 +66,10 @@ export const AtiumConfigSchema = z
      * its provider is described in 14-architecture.md §22.5.
      */
     llm: z
-      .looseObject({ enabled: z.boolean().default(LLM_DEFAULTS.enabled) })
+      .looseObject({
+        /** Whether the LLM is used; `false` by default. */
+        enabled: z.boolean().default(LLM_DEFAULTS.enabled),
+      })
       .readonly()
       .prefault({}),
   })
