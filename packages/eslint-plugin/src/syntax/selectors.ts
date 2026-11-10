@@ -196,10 +196,10 @@ function methodLevel(query: LocatorQuery, options: ClassifyOptions): SelectorLev
  *
  * A `getBy*` is classified by its method, whatever its argument: a
  * `getByRole` with `name` is 5 and `getByTestId` is 3. `locator`, `$` and
- * `cy.get` are classified by their selector: a test id attribute is 3, a
- * stable id or attribute is 2, and a selector with only types and classes, or
- * with any pattern of E2E002 or E2E003, is 1. When parts of a selector have
- * different levels, the lowest wins.
+ * `cy.get` are classified by their selector (03-linter.md §11.3.1): 1 with
+ * any pattern of E2E002 or E2E003; otherwise 3 with a test id attribute, 2
+ * with any other id or attribute, and 1 with only types and classes. In a
+ * list, the item with the lowest level wins.
  *
  * @param query - A locator query.
  * @param options - Whether visible text is penalized (`i18n`).
