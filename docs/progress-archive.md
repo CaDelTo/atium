@@ -4,6 +4,85 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-14 — #49 v1-09-e2e-syntax
+
+- **Hecho:**
+  - **Al empezar la sesión, en el repo principal:**
+    - `/parallel 48 63 61`: worktrees `atium-48`, `atium-63` y `atium-61`.
+    - `/parallel --cleanup`, con los PRs #88, #87 y #85 mergeados: los tres worktrees retirados. Las ramas no se borraron.
+    - `git pull` de `main` a `8abd59e`. Después hizo falta `pnpm install`, porque faltaba `p-limit` y el build de core fallaba.
+  - **Rama, commit y PR:**
+    - Rama `feat/49-e2e-syntax`, creada desde `origin/main` en `8abd59e`, en el repo principal (sin worktree).
+    - Commit `0c23523` `feat(eslint-plugin): add the shared E2E syntax helpers`. El push lo hizo el usuario.
+    - PR #89 con `Closes #49`, sin mergear.
+  - **`@atium/eslint-plugin/syntax`** (`packages/eslint-plugin/src/syntax/`): funciones puras sobre el AST de typescript-eslint.
+    - `ast.ts`:
+      - `unwrap` hace transparentes `!`, `as`, `<T>`, `satisfies` y `ChainExpression`;
+      - `memberPath`, `calleePath`, `calleeName`;
+      - `chainOf` devuelve las llamadas anteriores de la cadena y su raíz;
+      - `isMethodCall`, `isCypressChain`, `isOneOf`, `isFunctionNode`, `isStringLiteral`.
+    - `framework.ts`: `detectFramework(program, configured?)` y `FRAMEWORKS`, que se reexporta desde `defaults.ts`. `settings.ts` usa ahora esta lista.
+    - `structure.ts`: `classifyBlock(call)` devuelve un `TestBlock` con `kind`, `name`, `runner` (`playwright` o `mocha`), `modifiers`, `title` y `callback`.
+    - `context.ts`: `enclosingBlocks`, `titlePathOf` y `testContextOf`, que dan `titles`, `fullTitle` (unido con `TITLE_PATH_SEPARATOR` de `@atium/core/pure`) e `isStatic`.
+    - `title.ts`: `titleOf(expr)`. Un título no estático se reconstruye desde el AST.
+    - `actions.ts` (`actionOf`), `assertions.ts` (`assertionOf` y `createNameMatcher`, con `*` como único comodín), `locators.ts` (`locatorOf`, que da query o refinement con `base` y `hasName`) y `waits.ts` (`fixedWaitOf`).
+    - `index.ts`: la entrada, con `@packageDocumentation`.
+  - **Listas de nombres en `src/defaults.ts`**, en un bloque al final y cada una con su cita: `FRAMEWORKS`, `FRAMEWORK_MODULES`, `PLAYWRIGHT_ROOT`, `TEST_DECLARATIONS`, `DESCRIBE_DECLARATIONS`, `HOOK_DECLARATIONS`, `STEP_DECLARATIONS`, `BLOCK_MODIFIERS`, `PLAYWRIGHT_ACTIONS`, `CYPRESS_ROOT`, `EXPECT_CALLS`, `CHAINED_ASSERTIONS`, `LOCATOR_QUERIES`, `GET_BY_PREFIX`, `CYPRESS_QUERY`, `ROLE_LOCATOR`, `LOCATOR_REFINEMENTS`, `INDEXED_REFINEMENT` y `FIXED_WAITS`.
+  - **Paquete:**
+    - export `./syntax` en `package.json`, y entrada `syntax/index` en `tsup.config.ts`;
+    - dependencia `@typescript-eslint/types` 8.70.1;
+    - devDependencies `@typescript-eslint/typescript-estree` 8.70.1 y `fast-check` 4.10.2.
+  - **Capas:**
+    - `.dependency-cruiser.cjs`: regla `eslint-plugin-syntax-no-rules`, con `reachable`. `src/syntax/` no alcanza `rules/`, `plugin.ts`, `create-rule.ts`, `settings.ts` ni `index.ts`.
+    - `eslint.config.js`: override de `no-restricted-imports` para `packages/eslint-plugin/src/syntax/**`, con `allowTypeImports`. Prohíbe `eslint`, `@typescript-eslint/utils`, `@typescript-eslint/parser` y `@typescript-eslint/typescript-estree`.
+    - La regla de npm va en ESLint porque `exclude` saca `node_modules` del grafo de dependency-cruiser. Está explicado en `10-tooling.md`.
+  - **Tests:**
+    - Un `*.test.ts` por helper, 237 tests en el plugin.
+    - `test/parse.ts`: `parseSource(code)` parsea con typescript-estree, fija los `parent` con `simpleTraverse(..., true)` y busca nodos por su texto exacto.
+    - Property-based en `context.test.ts`: el `titlePath` es estable ante espacios y saltos de línea entre tokens.
+  - **Documentación:**
+    - `03-linter.md` §11.3.1 "Reconocimiento de sintaxis", nueva;
+    - `17-tech-stack.md`;
+    - `02-code-design.md`, que ahora dice que los selectores llegan en v1-10;
+    - `10-tooling.md`;
+    - el README del plugin.
+  - **Verificado:**
+    - `pnpm verify` en verde: core 958, cli 220, sqlite 61 y eslint-plugin 237 tests; `src/syntax` con 100 % de líneas.
+    - `pnpm --filter @atium/eslint-plugin pkg:check` en verde para `./syntax`.
+    - Las dos reglas de capas fallan con imports prohibidos temporales.
+    - `dist/syntax/index.js` solo importa `@typescript-eslint/types` y `@atium/core/pure`.
+    - `/review` (code-reviewer, duplication-auditor, docs-checker, design-auditor): sin bloqueantes. El usuario pidió "Corrige todo lo que puedas" y se corrigieron los 4 importantes y las sugerencias.
+- **En curso:** nada.
+- **Decisiones:**
+  - **Aprobadas por el usuario en el plan ("si"):** las escribí en `03-linter.md` §11.3.1.
+    - un título no estático se reconstruye desde el AST, en lugar de un marcador fijo;
+    - el framework se detecta por imports y la estructura no depende de él;
+    - las listas de nombres y modificadores;
+    - solo las 6 acciones de §11.3, y cada comando de una cadena `cy`;
+    - `fixedWaitOf` mínimo aquí; la regla es v1-12;
+    - las assertions y los globs con `*`;
+    - `testContextOf` da `undefined` fuera de un test.
+  - **Propuesta mía, aplicada tras "Corrige todo lo que puedas"** (escrita en §11.3.1): un describe de Playwright titulado `""` no añade nivel, como hace Playwright 1.63 (comprobado en `lib/runner/index.js`, `Suite.titlePath`). En Mocha sí lo añade.
+    - Lo de Mocha es de memoria; no se comprobó en código porque Mocha no está instalado.
+  - **Tomadas por mí**, escritas en §11.3.1:
+    - los envoltorios TS son transparentes;
+    - un `+` solo une texto si un lado es texto;
+    - `test.step(title, body, { box: true })` no es step;
+    - solo cuentan las declaraciones `import`;
+    - `.wait(n)` vale en cualquier punto de una cadena `cy`;
+    - E2E009 no tiene helper.
+  - **Solo en el código y en el PR:** `@typescript-eslint/types` en lugar de `@typescript-eslint/utils`, porque la raíz de `utils` carga `eslint` vía `TSESLint`. También está en 17-tech-stack.
+- **Problemas:**
+  - **Tamaño del PR:** #89 tiene unas 2 100 líneas, unas 870 de tests y lockfile, frente a la guía de 400 de 08-git-workflow. Sigue abierta la decisión del usuario sobre esa guía, que ya anotó #63.
+  - **Test ajustado:** la propiedad de `titlePath` falló al aplicar la regla del `""` y se ajustó lo que esperaba. Es un test de esta misma tarea, no uno que existiera en `main`.
+  - **Logs de turbo:** al repetir logs de caché, turbo muestra rutas de `atium-63`. Son de la caché, no un problema de resolución.
+  - **CI del PR #89:** no se comprobó. `audit` seguirá en rojo como en `main` (v1-01).
+  - **Sin consumidores todavía:** los exports de `syntax` solo los usan sus tests hasta v1-10 y v1-11.
+- **Siguiente paso:**
+  1. Revisar `gh pr checks 89` y corregir lo que falle, salvo `audit`.
+  2. Cuando una persona mergee #89, empezar el siguiente issue de V1 con `/task`. Con #49 cerrado se desbloquean v1-10 (#50) y las reglas por archivo (#51 a #58).
+  3. v1-10 trabaja en el mismo módulo `syntax/`: no conviene en paralelo con reglas que lo modifiquen.
+
 ### 2026-10-13 — #63 v1-23-analyzer-pipeline
 
 - **Hecho:**
