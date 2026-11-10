@@ -221,9 +221,10 @@ export function classifyLocator(
  * Normalizes a selector so that E2E007 finds the same selector across files
  * (03-linter.md §11.4).
  *
- * CSS is serialized again from its syntax tree: whitespace collapsed, one
- * space around combinators and after commas, attribute values in double
- * quotes, and type and attribute names in lowercase. Classes, ids and values
+ * CSS is serialized again from its tokens, without the `css=` prefix:
+ * whitespace collapsed, one space around combinators and after commas,
+ * attribute values in double quotes, and type and attribute names in
+ * lowercase. Classes, ids and values
  * keep their case, and nothing is reordered. XPath and unknown selectors are
  * trimmed, with runs of whitespace outside quotes collapsed to one space.
  *
