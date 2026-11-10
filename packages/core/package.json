@@ -54,7 +54,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && tsup --config tsup.test-contracts.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "bench": "vitest bench --run",
