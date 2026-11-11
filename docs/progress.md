@@ -8,6 +8,45 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-11 — #119 v1-49-test-guard-commands
+
+- **Hecho:**
+  - **Origen:** una sesión pidió arreglar los falsos positivos de `.claude/hooks/test-guard.mjs` que bloquearon dos veces los tests de RuleTester en #51: `'test.only("t", …)'` en strings y `/re/u.test(code)`. La persona decidió meterlo en #119 (v1-49) en lugar de abrir un issue nuevo.
+  - **Rama y PR:**
+    - Rama `chore/119-test-guard-commands`, creada desde `origin/main` (`a6e55a6`).
+    - PR #141 **listo para revisión** (ya no está en borrador), con `Closes #119`. La CI pasa: los 6 `verify` y `audit`.
+    - Auto-fix activado en la app para el PR.
+  - **Commits:**
+    - `069146e` `chore(repo): make test-guard count only code and catch more test deletions`
+    - `3d6a55d` `chore(repo): close test-guard command gaps found in review`
+    - `00851f3` `chore(repo): name test-guard tests after the acceptance criteria`
+  - **Hook:**
+    - El escáner lineal `codeOnly` blanquea comentarios, strings, el texto de los template literals (los `${}` siguen siendo código) y regex antes de contar.
+    - El lookbehind en `testCases` evita que `x.test(` cuente como caso.
+    - `expect.soft(` y `expect.poll(` cuentan como assertion.
+    - Edit y MultiEdit comparan el archivo completo; si no aplican, comparan los fragmentos.
+    - Comandos: se ignoran las comillas y el cuerpo de los heredocs (salvo los que lee un shell), se unen las continuaciones con `\` y los borrados cuentan en cualquier posición del segmento.
+  - **Tests:** `.claude/hooks/test-guard.test.mjs`, 64 casos con nombres AC-1 a AC-6. Están en `pnpm test:claude`.
+  - **Docs:** `docs/engineering/12-ai-workflow.md` ("Cómo cuenta" y limitaciones), `docs/engineering/10-tooling.md` y `docs/tasks/v1-49-test-guard-commands.md` (alcance ampliado).
+  - **Puertas:**
+    - `pnpm verify` pasa (`test:claude` 95/95).
+    - `/review`: tres rondas, APROBADO en la tercera.
+    - `delivery-auditor`: RECHAZADO en la primera ronda (sin `AC-n`, más de 400 líneas, desvío del plan) y APROBADO en la segunda.
+- **En curso:** nada. El PR #141 espera la revisión y el merge de la persona.
+- **Decisiones:**
+  - Ampliar #119 en lugar de crear un issue: el task file y el cuerpo del issue están actualizados.
+  - La enmienda del plan (borrados en cualquier posición, heredocs, continuaciones; se acepta el falso positivo de `echo rm a.test.ts`) y la excepción de tamaño (unas 650 líneas) las aprobó la persona. Están en el comentario "## Plan aprobado (enmienda)" de #119.
+  - `expect.<x>(` se limitó a `soft|poll`, para no contar matchers asimétricos como `expect.any(`. Está en el task file.
+  - No se arreglaron, con la justificación en el cuerpo del PR:
+    - los smells de complejidad (`.claude/` está fuera de lint);
+    - unir `TEST_FILE` y `TEST_PATH`;
+    - los falsos positivos raros de `git checkout origin/test` y `git log --grep restore -- x.test.ts`.
+- **Problemas:**
+  - El agente no puede editar `.claude/hooks/**` (está denegado en `.claude/settings.json`) y un `cp` aprobado en el chat también lo bloquea el sistema de permisos. La persona copió los borradores desde el scratchpad de la sesión cuatro veces.
+  - Hasta el merge, el hook activo es el viejo del checkout principal (`$CLAUDE_PROJECT_DIR`, no el worktree). Bloquea comandos de Bash cuyo texto menciona borrar un test, también en mensajes de commit y heredocs. Para cuerpos de PR, issues o commits con ese texto, escribe el archivo con Write y pásalo con `--body-file` o `-F`.
+  - Un `code-reviewer` armó sus sondas concatenando strings para que el hook viejo no las bloqueara. Solo leía; no tocó tests. Se le informó a la persona.
+- **Siguiente paso:** que la persona revise y mergee #141, lo que cierra #119. Después, con el hook nuevo en `main`, retomar los tests de las reglas v1-12 a v1-19 sin el bloqueo de RuleTester.
+
 ### 2026-11-10 — #50 v1-10-selector-parsing
 
 - **Hecho:**
@@ -410,36 +449,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
      - si alguno falla, compararlo con el último PR mergeado a `main` (paso 8 de `/deliver`).
   2. Decidir en #42 dónde se exportan los helpers (raíz de core con changeset, un subpath `internal` nuevo, o `pure` con un ADR que reemplace la lista de ADR-0023) y qué hacer con `ATIUM_DIRECTORY` en cli.
   3. Antes de lanzar `/dev-loop`: `git -C ../atium-loop switch --detach origin/main`, y crear las etiquetas `loop:blocked` y `loop` o dejar que las cree el loop.
-
-### 2026-10-14 — #91 Loop de desarrollo, pipeline de entrega y push del agente
-
-- **Hecho:**
-  - **Issue y PRs.** Issue de seguimiento #91. El trabajo se divide en tres PRs apilados, ninguno mergeado y todos con push hecho por el usuario mediante el script:
-    - #92 (`chore/91-push-script`, `0eb7ae8`, base `main`): ADR-0025, `.claude/scripts/push-branch.mjs` con 31 tests (`pnpm test:claude`, dentro de `pnpm verify`) y `.claude/settings.json`. El usuario editó los permisos: permite el script y los comandos de git y gh del pipeline, deniega editar `.claude/scripts/**` y `.claude/loop-settings.json`, y mantiene el `deny` de `git push`.
-    - #93 (`chore/91-delivery-pipeline`, `953c846`, base `chore/91-push-script`): pipeline de entrega. Incluye `plan-reviewer`, `spec-tester` (TDD), `delivery-auditor`, `test-writer` como endurecimiento, `/deliver`, `/task`, la sección TDD de `04-testing.md` y dos puntos nuevos en la DoD.
-    - #94 (`chore/91-dev-loop`, `cef5b34`, base `chore/91-delivery-pipeline`, `Closes #91`): `/dev-loop`, `.claude/loop-settings.json`, el modo loop de `/handoff`, las etiquetas `loop:blocked` y `loop`, y la sección "Loop de desarrollo" de `12-ai-workflow.md`.
-  - **Antes, en esta misma sesión:** PR #29 (`/parallel`), mergeado.
-  - **Verificado:**
-    - `pnpm verify` en verde.
-    - Dos rondas de `/review` con code-reviewer, security-reviewer y docs-checker: sin bloqueantes; los importantes, corregidos.
-    - `delivery-auditor`, ejecutado con un agente genérico porque el agente no existe en `main`, dio RECHAZADO por tres motivos. Los dos primeros ya están resueltos (los permisos en #92 y el texto del ruleset). Queda pendiente el motivo 3; ver "Problemas".
-- **En curso:** nada en código. Los tres PRs esperan revisión y merge.
-- **Decisiones:**
-  - **En ADR-0025:**
-    - el agente solo hace push con el script, que valida la rama y construye el refspec;
-    - aprobación del plan humana en `/task` y por `plan-reviewer` en `/dev-loop`;
-    - TDD con `spec-tester`;
-    - el loop usa un token fine-grained sin Administration, Workflows ni Secrets.
-  - **Del usuario, escritas en `dev-loop.md` y `12-ai-workflow.md`:** sin límite de hora; `--max-idle 8`; `--max-failures` solo cuenta tareas que agotan intentos; tres PRs.
-  - **Ruleset `protect-main`:** sin bypass y sin checks requeridos, porque `verify` falla también en `main` por causas preexistentes (el usuario dice que tienen que ver con fechas). Está escrito en `08-git-workflow.md` "Ramas". `/deliver` y el loop tratan como preexistente un fallo que también ocurre en el último PR mergeado a `main`.
-- **Problemas:**
-  - **Pregunta abierta para el usuario (motivo 3 del auditor):** ¿un test `AC-n` que falla por el `not implemented` de un stub cuenta como rojo válido? El criterio AC-2 de #91 dice "falla por assertions". Hasta que conteste, no está escrito en ningún lado.
-  - **La CI de `main` está en rojo** en todos los `verify` desde al menos #87. No se investigó.
-  - **Orden de merge:** #92, #93 y #94, seguidos. Tras cada squash merge, la rama siguiente necesita `git merge origin/main` y push con el script para que su diff quede limpio.
-  - **El loop no se ha probado contra un issue real.**
-  - **El worktree `~/Projects/atium-dev-loop` sigue existiendo.** En la rama `chore/91-delivery-pipeline` hay un `git stash` de respaldo de esta sesión ("A-full backup") que ya no hace falta.
-- **Siguiente paso:**
-  1. Responder la pregunta del rojo con stub.
-  2. Revisar y mergear #92, #93 y #94 en orden, actualizando cada rama siguiente después de cada merge.
-  3. Preparar el worktree `../atium-loop` y el token del loop (`12-ai-workflow.md`, "Loop de desarrollo").
-  4. Lanzar `/dev-loop V1 --dry-run`.
