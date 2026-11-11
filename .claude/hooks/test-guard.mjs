@@ -2,10 +2,14 @@
 // PreToolUse hook: blocks changes that weaken or delete existing tests.
 //
 // Blocks when an edit to a test file:
-//   - removes assertions (expect, should, assert, fc.assert)
-//   - removes test cases (it, test, it.each, test.each)
+//   - removes assertions (expect, expect.poll, should, assert, fc.assert)
+//   - removes test cases (it, test, it.each, test.each), including commenting them out
 //   - adds disabling markers (.skip, .only, .todo, .fixme, xit, xdescribe, xtest)
-// and when a shell command deletes or moves a test file.
+// and when a shell command deletes, moves, reverts or empties a test file.
+//
+// Only code counts: comments and the contents of strings, template literals and
+// regex literals are ignored, so RuleTester cases like 'test.only(...)' are not markers.
+// Edit and MultiEdit compare the whole file before and after the replacement.
 //
 // Exit code 2 blocks the tool call and shows stderr to the agent.
 // Any internal error allows the call (fail-open) and logs to stderr.
@@ -18,29 +22,171 @@ const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(\/(test|test-contracts)\/)/;
 const EXCLUDED = /(^|\/)(examples|fixtures|node_modules|dist)\//;
 
 const PATTERNS = {
-  assertions: /\bexpect(?:\.soft)?\s*\(|\.should\s*\(|\bassert(?:\.\w+)?\s*\(|\bfc\.assert\s*\(/g,
-  testCases: /\b(?:it|test)(?:\.(?:each\b[^(]*|skip|only|todo|fixme|concurrent))?\s*\(/g,
+  assertions:
+    /\bexpect(?:\.(?:soft|poll))?\s*\(|\.should\s*\(|\bassert(?:\.\w+)?\s*\(|\bfc\.assert\s*\(/g,
+  testCases:
+    /(?<![.$\w])(?:it|test)(?:\.(?:each\b[^(]*|skip|only|todo|fixme|concurrent))?\s*\(/g,
   disabling: /\.(?:skip|only|todo|fixme)\s*\(|\bx(?:it|describe|test)\s*\(/g,
 };
 
-const DELETE_COMMAND =
-  /\b(?:rm|unlink|git\s+rm|mv|git\s+mv)\b[^;&|]*?(?:\.(?:test|spec)\.[cm]?[jt]sx?|\/test\/|\/test-contracts\/)/;
+// After these words a `/` starts a regex literal, not a division.
+const REGEX_AFTER_WORD = new Set([
+  "return",
+  "typeof",
+  "case",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "throw",
+  "instanceof",
+  "yield",
+  "await",
+  "do",
+  "else",
+]);
+
+const WORD_CHAR = /[\w$]/;
+
+/**
+ * Replaces comments and the contents of string, template and regex literals with
+ * spaces, keeping line breaks, so the patterns only see code.
+ * shortcut: a `/` right after `)`, `]` or `}` is read as division; upgrade to a real
+ * tokenizer if `if (x) /re/.test(y)` style code starts to matter.
+ */
+function codeOnly(text) {
+  const out = text.split("");
+  const n = text.length;
+  const templates = []; // brace depth where each open `${` started
+  let depth = 0;
+  let regexAllowed = true;
+
+  const blank = (from, to) => {
+    for (let k = from; k < Math.min(to, n); k++) {
+      if (out[k] !== "\n") out[k] = " ";
+    }
+  };
+
+  // Strings end at their quote or at the end of the line.
+  const skipString = (start, quote) => {
+    let j = start + 1;
+    while (j < n && text[j] !== quote && text[j] !== "\n")
+      j += text[j] === "\\" ? 2 : 1;
+    blank(start + 1, j);
+    return text[j] === quote ? j + 1 : j;
+  };
+
+  // Template text runs until the closing backtick or the next `${`.
+  const skipTemplateText = (start) => {
+    let j = start;
+    while (j < n && text[j] !== "`") {
+      if (text[j] === "\\") {
+        j += 2;
+      } else if (text[j] === "$" && text[j + 1] === "{") {
+        blank(start, j);
+        templates.push(depth);
+        regexAllowed = true;
+        return j + 2;
+      } else {
+        j++;
+      }
+    }
+    blank(start, j);
+    regexAllowed = false;
+    return j + 1;
+  };
+
+  // A regex must close on the same line; otherwise the `/` was not a regex.
+  const skipRegex = (start) => {
+    let j = start + 1;
+    let inClass = false;
+    while (j < n && text[j] !== "\n") {
+      const c = text[j];
+      if (c === "\\") {
+        j += 2;
+        continue;
+      }
+      if (c === "/" && !inClass) break;
+      if (c === "[") inClass = true;
+      else if (c === "]") inClass = false;
+      j++;
+    }
+    if (text[j] !== "/") return start + 1;
+    blank(start + 1, j);
+    j++;
+    while (j < n && WORD_CHAR.test(text[j])) j++;
+    return j;
+  };
+
+  let i = 0;
+  while (i < n) {
+    const c = text[i];
+    const next = text[i + 1];
+    if (c === "/" && next === "/") {
+      const end = text.indexOf("\n", i);
+      const to = end === -1 ? n : end;
+      blank(i, to);
+      i = to;
+    } else if (c === "/" && next === "*") {
+      const end = text.indexOf("*/", i + 2);
+      const to = end === -1 ? n : end + 2;
+      blank(i, to);
+      i = to;
+    } else if (c === "'" || c === '"') {
+      i = skipString(i, c);
+      regexAllowed = false;
+    } else if (c === "`") {
+      i = skipTemplateText(i + 1);
+    } else if (
+      c === "}" &&
+      templates.length > 0 &&
+      templates.at(-1) === depth
+    ) {
+      templates.pop();
+      i = skipTemplateText(i + 1);
+    } else if (c === "/" && regexAllowed) {
+      const end = skipRegex(i);
+      regexAllowed = end === i + 1;
+      i = end;
+    } else if (WORD_CHAR.test(c)) {
+      let j = i + 1;
+      while (j < n && WORD_CHAR.test(text[j])) j++;
+      regexAllowed = REGEX_AFTER_WORD.has(text.slice(i, j));
+      i = j;
+    } else {
+      if (c === "{") depth++;
+      else if (c === "}") depth--;
+      if (!/\s/.test(c)) regexAllowed = !")]}".includes(c);
+      i++;
+    }
+  }
+  return out.join("");
+}
 
 function count(text, pattern) {
   return (text.match(pattern) ?? []).length;
 }
 
 function metrics(text) {
+  const code = codeOnly(text);
   return {
-    assertions: count(text, PATTERNS.assertions),
-    testCases: count(text, PATTERNS.testCases),
-    disabling: count(text, PATTERNS.disabling),
+    assertions: count(code, PATTERNS.assertions),
+    testCases: count(code, PATTERNS.testCases),
+    disabling: count(code, PATTERNS.disabling),
   };
 }
 
+function projectRoot() {
+  return process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+}
+
 function toRelative(filePath) {
-  const root = process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
-  return path.relative(root, path.resolve(root, filePath)).split(path.sep).join("/");
+  const root = projectRoot();
+  return path
+    .relative(root, path.resolve(root, filePath))
+    .split(path.sep)
+    .join("/");
 }
 
 function isGuardedFile(filePath) {
@@ -49,22 +195,51 @@ function isGuardedFile(filePath) {
   return TEST_FILE.test(`/${relative}`) && !EXCLUDED.test(relative);
 }
 
+function readCurrent(filePath) {
+  const absolute = path.resolve(projectRoot(), filePath);
+  return existsSync(absolute) ? readFileSync(absolute, "utf8") : undefined;
+}
+
+// Applies the edits like the tool does; undefined when one cannot apply.
+function applyEdits(text, edits) {
+  let result = text;
+  for (const edit of edits) {
+    const oldString = edit.old_string ?? "";
+    const newString = edit.new_string ?? "";
+    const at = oldString === "" ? -1 : result.indexOf(oldString);
+    if (at === -1) return undefined;
+    result = edit.replace_all
+      ? result.split(oldString).join(newString)
+      : result.slice(0, at) + newString + result.slice(at + oldString.length);
+  }
+  return result;
+}
+
 function beforeAndAfter(toolName, input) {
   switch (toolName) {
     case "Edit":
-      return { before: input.old_string ?? "", after: input.new_string ?? "" };
     case "MultiEdit": {
-      const edits = Array.isArray(input.edits) ? input.edits : [];
+      const edits =
+        toolName === "Edit"
+          ? [input]
+          : Array.isArray(input.edits)
+            ? input.edits
+            : [];
+      const current = readCurrent(input.file_path);
+      const after =
+        current === undefined ? undefined : applyEdits(current, edits);
+      if (current !== undefined && after !== undefined)
+        return { before: current, after };
       return {
         before: edits.map((edit) => edit.old_string ?? "").join("\n"),
         after: edits.map((edit) => edit.new_string ?? "").join("\n"),
       };
     }
-    case "Write": {
-      const absolute = path.resolve(process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), input.file_path);
-      const before = existsSync(absolute) ? readFileSync(absolute, "utf8") : "";
-      return { before, after: input.content ?? "" };
-    }
+    case "Write":
+      return {
+        before: readCurrent(input.file_path) ?? "",
+        after: input.content ?? "",
+      };
     default:
       return undefined;
   }
@@ -81,9 +256,56 @@ function findViolations(before, after) {
     violations.push(`removes ${b.testCases - a.testCases} test case(s)`);
   }
   if (a.disabling > b.disabling) {
-    violations.push(`adds ${a.disabling - b.disabling} skip/only/todo/fixme marker(s)`);
+    violations.push(
+      `adds ${a.disabling - b.disabling} skip/only/todo/fixme marker(s)`,
+    );
   }
   return violations;
+}
+
+const TEST_PATH =
+  /\.(?:test|spec)\.[cm]?[jt]sx?\b|(?:^|[\s/'"=])(?:test|test-contracts)(?=$|[\s/'"])/;
+const COMMAND_START = String.raw`^[\s(){}!]*(?:\w+=\S*\s+)*(?:sudo\s+)?`;
+const DELETING = new RegExp(
+  COMMAND_START +
+    String.raw`(?:rm|unlink|mv|git\s+(?:rm|mv|restore)|git\s+checkout(?![^\n]*\s-[bB]\b)|find\b[^\n]*\s-(?:delete|exec\s+rm))\b`,
+);
+const NESTED_SHELL = new RegExp(
+  COMMAND_START + String.raw`(?:eval|(?:ba|z|da)?sh\s+-c)\b\s*`,
+);
+// `>` truncates; `>>` appends and `2>`, `&>`, `>&2` redirect streams.
+const REDIRECT = /(?<![>&\d])>(?![>&])/g;
+const SEGMENT_END = /[;&|\n(`]|$/g;
+
+// Replaces quoted text with spaces of the same length, so positions still match.
+function blankQuotes(command) {
+  return command.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, (quoted) =>
+    " ".repeat(quoted.length),
+  );
+}
+
+/** Whether a shell command deletes, moves, reverts or empties a test file. */
+function deletesTestFile(command) {
+  const code = blankQuotes(command);
+  let start = 0;
+  for (const match of code.matchAll(SEGMENT_END)) {
+    const segment = command.slice(start, match.index);
+    const segmentCode = code.slice(start, match.index);
+    start = match.index + 1;
+    if (DELETING.test(segmentCode) && TEST_PATH.test(segment)) return true;
+    if (NESTED_SHELL.test(segmentCode)) {
+      const inner = segment.replace(NESTED_SHELL, "").replace(/['"]/g, "");
+      if (deletesTestFile(inner)) return true;
+    }
+    for (const redirect of segmentCode.matchAll(REDIRECT)) {
+      // The target may be quoted, so read it from the original segment.
+      const target =
+        /^\s*(\S+)/.exec(segment.slice(redirect.index + 1))?.[1] ?? "";
+      if (TEST_PATH.test(target)) return true;
+    }
+    if (match[0] === "") break;
+  }
+  return false;
 }
 
 function block(reason) {
@@ -107,13 +329,14 @@ function main(raw) {
 
   if (toolName === "Bash") {
     const command = typeof input.command === "string" ? input.command : "";
-    if (DELETE_COMMAND.test(command)) {
-      block("the command deletes or moves a test file");
+    if (deletesTestFile(command)) {
+      block("the command deletes, moves, reverts or empties a test file");
     }
     return;
   }
 
-  if (typeof input.file_path !== "string" || !isGuardedFile(input.file_path)) return;
+  if (typeof input.file_path !== "string" || !isGuardedFile(input.file_path))
+    return;
 
   const texts = beforeAndAfter(toolName, input);
   if (texts === undefined) return;
