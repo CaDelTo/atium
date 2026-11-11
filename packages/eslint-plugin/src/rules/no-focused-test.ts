@@ -51,6 +51,12 @@ export const noFocusedTest = createRule<[], "focused" | "removeOnly", AtiumCatal
         if (callee.type !== AST_NODE_TYPES.MemberExpression) {
           return;
         }
+        // From the `.`, `?.` or `[` before `only`, so parentheses around the
+        // object and comments before the dot stay: `(test).only` → `(test)`.
+        const start = context.sourceCode.getTokenBefore(callee.property);
+        if (start === null) {
+          return;
+        }
         context.report({
           node: callee.property,
           messageId: "focused",
@@ -58,7 +64,7 @@ export const noFocusedTest = createRule<[], "focused" | "removeOnly", AtiumCatal
           suggest: [
             {
               messageId: "removeOnly",
-              fix: (fixer) => fixer.removeRange([callee.object.range[1], callee.range[1]]),
+              fix: (fixer) => fixer.removeRange([start.range[0], callee.range[1]]),
             },
           ],
         });
