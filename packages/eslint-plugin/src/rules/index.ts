@@ -1,7 +1,11 @@
-import type { AtiumRuleModule } from "../create-rule.js";
+import type { AtiumCatalogRuleModule } from "../create-rule.js";
+import { noFocusedTest } from "./no-focused-test.js";
 
 /**
  * Rules of the plugin, by their ESLint name without the `atium/` prefix
- * (03-linter.md §11.8). Each one has a page in `docs/rules/`.
+ * (03-linter.md §11.8). Each one has a page in `docs/rules/` and carries its
+ * catalogue entry in `meta.docs`.
  */
-export const rules: Readonly<Record<string, AtiumRuleModule>> = Object.freeze({});
+export const rules: Readonly<Record<string, AtiumCatalogRuleModule>> = Object.freeze({
+  "no-focused-test": noFocusedTest,
+});

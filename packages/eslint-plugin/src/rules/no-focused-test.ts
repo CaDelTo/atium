@@ -1,5 +1,11 @@
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
+import { unwrap } from "../syntax/ast.js";
+import { classifyBlock } from "../syntax/structure.js";
+
+/** The modifier that focuses a test or describe (03-linter.md §11.3.1). */
+const FOCUS_MODIFIER = "only";
 
 /** Code of the rule that reports a forgotten `.only` (03-linter.md §11.3, E2E010). */
 export const RULE_FOCUSED_TEST = "E2E010";
@@ -31,5 +37,31 @@ export const noFocusedTest = createRule<[], "focused" | "removeOnly", AtiumCatal
     },
   },
   defaultOptions: [],
-  create: () => ({}),
+  create(context) {
+    return {
+      CallExpression(node) {
+        const block = classifyBlock(node);
+        const callee = unwrap(node.callee);
+        // `only` is always the last part of a declaration's name, so it is
+        // the property of the callee (03-linter.md §11.3.1).
+        if (
+          block?.modifiers.includes(FOCUS_MODIFIER) !== true ||
+          callee.type !== AST_NODE_TYPES.MemberExpression
+        ) {
+          return;
+        }
+        context.report({
+          node: callee.property,
+          messageId: "focused",
+          data: { kind: block.kind === "describe" ? "describe" : "test" },
+          suggest: [
+            {
+              messageId: "removeOnly",
+              fix: (fixer) => fixer.removeRange([callee.object.range[1], callee.range[1]]),
+            },
+          ],
+        });
+      },
+    };
+  },
 });
