@@ -5,7 +5,8 @@ Cypress test suites, such as fixed waits or fragile selectors, in the editor
 and in CI.
 
 > Atium is a provisional codename and this package is not published to npm yet.
-> It has no rules yet: they arrive with the next tasks of the V1 phase.
+> Its first rule is `atium/no-focused-test` (E2E010); the rest arrive with the
+> next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
 
 ## Installation
 

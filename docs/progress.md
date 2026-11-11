@@ -8,6 +8,62 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-11 — #51 v1-11-rule-e2e010-only
+
+- **Hecho:**
+  - **#50 (misma sesión):** PR #139 mergeado por la persona; la #50 está cerrada.
+  - **Rama y PR de #51:**
+    - Rama `feat/51-rule-e2e010-only`, creada desde `origin/main`.
+    - PR #140 en borrador, con `Closes #51` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **Commits:**
+    - `8200444` `test(eslint-plugin): specify no-focused-test`:
+      - tests AC con `RuleTester`, en rojo los 11 inválidos;
+      - `AtiumCatalogDocs` y el genérico `Docs` de `createRule` en `packages/eslint-plugin/src/create-rule.ts`;
+      - el stub, sin registrar.
+    - `6ca240e` `feat(eslint-plugin): add no-focused-test (E2E010)`: la regla en `src/rules/no-focused-test.ts`, su registro en `src/rules/index.ts` (tipado con `AtiumCatalogRuleModule`) y la página `docs/rules/e2e010.md`.
+    - `869f20b` `docs(docs)`: 03-linter.md:
+      - §11.3, qué no detecta E2E010;
+      - §11.3.1, solo `only`;
+      - §11.8, el catálogo en `meta.docs`.
+    - `ebd004a` `test`: `src/rules/catalog.test.ts`, que valida la entrada del catálogo de cada regla registrada.
+    - `c8a63e0`: correcciones de `/review`:
+      - §11.8 dice que la tabla fija los valores, y `catalog.test.ts` compara `meta.docs` con la fila;
+      - el README del plugin;
+      - `@typeParam`;
+      - `FOCUS_MODIFIER` como `BlockModifier`.
+    - `ec98256` `test`: `no-focused-test.edge.test.ts` reproduce que la sugerencia rompía `(test).only` y borraba comentarios (4 casos en rojo). También desactiva `sonarjs/no-empty-test-file` para `packages/eslint-plugin/src/rules/**/*.test.ts` en `eslint.config.js`.
+    - `4ce8f26` `fix`: la sugerencia borra desde el token anterior a `only` (`.`, `?.` o `[`).
+    - `07a0673` `docs`: revierte la realineación de la tabla del README, que había hecho Prettier.
+  - **Puertas:**
+    - `plan-reviewer`: CAMBIOS en dos rondas, incorporados.
+    - Rojo verificado.
+    - `/verify`: PASS, con 481 tests en eslint-plugin.
+    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: RECHAZADO dos veces, solo por el tamaño (462 líneas frente a 400). La segunda vez, porque la aprobación de la persona aún no estaba en un sitio comprobable.
+    - La persona aprobó la excepción con un comentario en #51.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #51.
+- **En curso:** PR #140 en borrador. Al crearlo, la CI todavía no había reportado ningún check. Falta `gh pr ready 140` cuando estén en verde.
+- **Decisiones:**
+  - **El catálogo de §11.8 vive en el `meta.docs` de cada regla:**
+    - `AtiumCatalogDocs` añade `severity`, `category`, `confidence`, `source` y `recommended`.
+    - Las reglas se crean con `createRule<Options, Messages, AtiumCatalogDocs>`.
+    - La tabla del diseño sigue fijando los valores (ADR-0023 §3), y `catalog.test.ts` la compara con el código.
+    - Está en 03-linter.md §11.8 y en el PR. Es el patrón para v1-12 a v1-19.
+  - **E2E010 reporta solo `only`.** Un `.only` con el callback por referencia no se detecta. Está en 03-linter.md §11.3 y §11.3.1 y en la página de la regla.
+  - **Se mantienen los imports directos de `syntax/ast.js` desde las reglas**, porque `unwrap` no está en el barrel. Está en el PR, no en el diseño.
+  - **Excepción de tamaño del PR:** la aprobó la persona en un comentario de #51.
+- **Problemas:**
+  - **`test-guard` (`.claude/hooks/test-guard.mjs`) da falsos positivos:**
+    - cuenta `.only(`, `.skip(` y `.fixme(` dentro de strings, así que bloquea escribir tests de `RuleTester`;
+    - cuenta `.test(` de una regex como caso de test.
+    - La persona tuvo que copiar a mano los dos archivos de test de la regla, y volverá a pasar con v1-12 a v1-19.
+    - Conviene que el hook ignore los literales de string, o los `src/rules/*.test.ts`. Es una tarea de tooling aparte, sin issue.
+  - **`docs/engineering/08-git-workflow.md:110` no dice cómo se aprueba una excepción de tamaño.** `delivery-auditor` no acepta la aprobación si llega solo a través del agente. Las reglas tendrán PRs grandes por los casos de `RuleTester`. Sin issue.
+  - **Para v1-37:** `plugin.rules` se tipa como `Rule.RuleModule` de ESLint (`plugin.ts:11`), así que no expone con tipos los campos del catálogo. v1-37 necesitará un accesor tipado o validar con Zod en el borde.
+  - **Preexistente:** `max-lines` en `packages/core/src/storage/run-file.test.ts` y 2 clones de `vitest.config.ts`.
+- **Siguiente paso:** con la CI de #140 en verde, ejecutar `gh pr ready 140`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #52 (v1-12, regla E2E001 de esperas fijas); hay que comprobar sus dependencias y decidir antes si se arregla `test-guard`.
+
 ### 2026-11-10 — #50 v1-10-selector-parsing
 
 - **Hecho:**
@@ -410,36 +466,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
      - si alguno falla, compararlo con el último PR mergeado a `main` (paso 8 de `/deliver`).
   2. Decidir en #42 dónde se exportan los helpers (raíz de core con changeset, un subpath `internal` nuevo, o `pure` con un ADR que reemplace la lista de ADR-0023) y qué hacer con `ATIUM_DIRECTORY` en cli.
   3. Antes de lanzar `/dev-loop`: `git -C ../atium-loop switch --detach origin/main`, y crear las etiquetas `loop:blocked` y `loop` o dejar que las cree el loop.
-
-### 2026-10-14 — #91 Loop de desarrollo, pipeline de entrega y push del agente
-
-- **Hecho:**
-  - **Issue y PRs.** Issue de seguimiento #91. El trabajo se divide en tres PRs apilados, ninguno mergeado y todos con push hecho por el usuario mediante el script:
-    - #92 (`chore/91-push-script`, `0eb7ae8`, base `main`): ADR-0025, `.claude/scripts/push-branch.mjs` con 31 tests (`pnpm test:claude`, dentro de `pnpm verify`) y `.claude/settings.json`. El usuario editó los permisos: permite el script y los comandos de git y gh del pipeline, deniega editar `.claude/scripts/**` y `.claude/loop-settings.json`, y mantiene el `deny` de `git push`.
-    - #93 (`chore/91-delivery-pipeline`, `953c846`, base `chore/91-push-script`): pipeline de entrega. Incluye `plan-reviewer`, `spec-tester` (TDD), `delivery-auditor`, `test-writer` como endurecimiento, `/deliver`, `/task`, la sección TDD de `04-testing.md` y dos puntos nuevos en la DoD.
-    - #94 (`chore/91-dev-loop`, `cef5b34`, base `chore/91-delivery-pipeline`, `Closes #91`): `/dev-loop`, `.claude/loop-settings.json`, el modo loop de `/handoff`, las etiquetas `loop:blocked` y `loop`, y la sección "Loop de desarrollo" de `12-ai-workflow.md`.
-  - **Antes, en esta misma sesión:** PR #29 (`/parallel`), mergeado.
-  - **Verificado:**
-    - `pnpm verify` en verde.
-    - Dos rondas de `/review` con code-reviewer, security-reviewer y docs-checker: sin bloqueantes; los importantes, corregidos.
-    - `delivery-auditor`, ejecutado con un agente genérico porque el agente no existe en `main`, dio RECHAZADO por tres motivos. Los dos primeros ya están resueltos (los permisos en #92 y el texto del ruleset). Queda pendiente el motivo 3; ver "Problemas".
-- **En curso:** nada en código. Los tres PRs esperan revisión y merge.
-- **Decisiones:**
-  - **En ADR-0025:**
-    - el agente solo hace push con el script, que valida la rama y construye el refspec;
-    - aprobación del plan humana en `/task` y por `plan-reviewer` en `/dev-loop`;
-    - TDD con `spec-tester`;
-    - el loop usa un token fine-grained sin Administration, Workflows ni Secrets.
-  - **Del usuario, escritas en `dev-loop.md` y `12-ai-workflow.md`:** sin límite de hora; `--max-idle 8`; `--max-failures` solo cuenta tareas que agotan intentos; tres PRs.
-  - **Ruleset `protect-main`:** sin bypass y sin checks requeridos, porque `verify` falla también en `main` por causas preexistentes (el usuario dice que tienen que ver con fechas). Está escrito en `08-git-workflow.md` "Ramas". `/deliver` y el loop tratan como preexistente un fallo que también ocurre en el último PR mergeado a `main`.
-- **Problemas:**
-  - **Pregunta abierta para el usuario (motivo 3 del auditor):** ¿un test `AC-n` que falla por el `not implemented` de un stub cuenta como rojo válido? El criterio AC-2 de #91 dice "falla por assertions". Hasta que conteste, no está escrito en ningún lado.
-  - **La CI de `main` está en rojo** en todos los `verify` desde al menos #87. No se investigó.
-  - **Orden de merge:** #92, #93 y #94, seguidos. Tras cada squash merge, la rama siguiente necesita `git merge origin/main` y push con el script para que su diff quede limpio.
-  - **El loop no se ha probado contra un issue real.**
-  - **El worktree `~/Projects/atium-dev-loop` sigue existiendo.** En la rama `chore/91-delivery-pipeline` hay un `git stash` de respaldo de esta sesión ("A-full backup") que ya no hace falta.
-- **Siguiente paso:**
-  1. Responder la pregunta del rojo con stub.
-  2. Revisar y mergear #92, #93 y #94 en orden, actualizando cada rama siguiente después de cada merge.
-  3. Preparar el worktree `../atium-loop` y el token del loop (`12-ai-workflow.md`, "Loop de desarrollo").
-  4. Lanzar `/dev-loop V1 --dry-run`.

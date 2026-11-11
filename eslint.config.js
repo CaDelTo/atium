@@ -117,6 +117,12 @@ export default tseslint.config(
     rules: { "sonarjs/assertions-in-tests": "off" },
   },
   {
+    // Rule tests declare their cases with RuleTester.run, which sonarjs does
+    // not recognize as tests.
+    files: ["packages/eslint-plugin/src/rules/**/*.test.ts"],
+    rules: { "sonarjs/no-empty-test-file": "off" },
+  },
+  {
     files: ["*.config.{js,ts,mjs}", "**/*.config.{js,ts,mjs}"],
     rules: { "no-restricted-syntax": "off" },
   },
