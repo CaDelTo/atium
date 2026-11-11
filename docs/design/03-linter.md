@@ -70,7 +70,7 @@ El autofix solo se ofrece cuando la transformación es segura. Para E2E001 no ha
 | E2E005 | Test demasiado grande | Acciones (`click`, `fill`, `goto`, `press`, `check`, `selectOption`, comandos `cy.*`) o líneas por test | — | 25 acciones o 150 líneas |
 | E2E006 | Assertions insuficientes | Tests con acciones y cero assertions. Cuenta: `expect(...)`, `.should()` / `.and()`, funciones en `assertFunctionNames` y helpers del mismo archivo que contengan assertions (un nivel) | Helpers de otros archivos se resuelven en el motor cross-file | 1 assertion |
 | E2E009 | Assertions no web-first | `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...`, `expect(await locator.count())...` | — | — |
-| E2E010 | `.only` olvidado | `test.only`, `describe.only`, `it.only` | — | — |
+| E2E010 | `.only` olvidado | `test.only`, `describe.only`, `it.only` | Un `.only` cuyo callback no es una función literal (`describe.only("d", suite)`); el resto de modificadores | — |
 | E2E012 | Secretos en tests | Literales asignados a identificadores tipo `password`, `token`, `secret`, `apiKey` con entropía alta; patrones conocidos (JWT, claves de nube) | Valores obviamente ficticios (`"password123"`, `"test"`) | Entropía ≥ 3.5 bits/char |
 
 #### 11.3.1 Reconocimiento de sintaxis
@@ -96,7 +96,7 @@ Los envoltorios de TypeScript (`x!`, `x as T`, `<T>x`, `x satisfies T`) y el enc
   | Step | `test.step`, `test.step.skip` | — |
 
   - Las declaraciones que empiezan por `test` siguen la sintaxis de Playwright; el resto, la de Mocha.
-  - Los modificadores son las partes del nombre `only`, `skip`, `fixme`, `fail`, `serial` y `parallel`. Qué modificadores reporta E2E010 lo decide la regla.
+  - Los modificadores son las partes del nombre `only`, `skip`, `fixme`, `fail`, `serial` y `parallel`. Qué modificadores reporta E2E010 lo decide la regla: solo `only`.
   - Un test y un step necesitan título: `test.skip()`, `test.skip(isMobile, "reason")` y `test.skip(({ browserName }) => ...)` son anotaciones, no tests.
   - El título es el primer argumento cuando hay más de uno; la función es el último. Por eso `test.step(title, body, { box: true })` no se reconoce como step; sus nodos siguen perteneciendo al test que lo contiene.
   - Quedan fuera `specify`, `xit` y `xdescribe`.
@@ -172,6 +172,7 @@ Nombres, severidades y presets decididos en [ADR-0023](../adr/0023-arquitectura-
 - **Severidad:** la del Finding es la de esta tabla, sea cual sea el nivel que el usuario dé a la regla en ESLint. Los presets activan las reglas `error` como `"error"` en ESLint y las `warning` e `info` como `"warn"`. Una regla en `"off"` no produce Findings.
 - **Preset:** las reglas por archivo marcadas `recommended` entran en `atium/recommended`; todas entran en `atium/strict` (§11.1). Las reglas cross-file no son de ESLint: "activa" significa que `atium lint` la ejecuta salvo que `analyzers["lint-crossfile"].rules` la ponga en `"off"`, y "desactivada", que solo se ejecuta si la pone en `"on"` (§11.10). E2E011 y E2E013 vienen desactivadas porque son `info`, de confianza `medium` y las de más falsos positivos.
 - **Categoría de E2E012:** `Finding.category` no tiene `security`; los secretos van en `maintainability` (§22.3).
+- **En el código:** la fila de cada regla por archivo vive en el `meta.docs` de la regla (`AtiumCatalogDocs`: `code`, `severity`, `category`, `confidence`, `source` y `recommended`), así que cada regla registrada trae la suya y no hay una tabla aparte que pueda divergir. Decidido en #51.
 
 | Código | Nombre en ESLint | Severidad | Categoría | Confianza | Fuente | Preset |
 |---|---|---|---|---|---|---|
