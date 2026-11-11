@@ -24,11 +24,11 @@ Estándares: docs/engineering/04-testing.md
   - un caso de `RuleTester` como `'test.only("t", () => {})'` cuenta como un `.only(` añadido, y bloquea escribir los tests de cada regla de `packages/eslint-plugin/src/rules/` (pasó dos veces en #51);
   - `/^E2E\d{3}$/u.test(code)` cuenta como un caso de test (`.test(`), así que quitarlo parece borrar un test.
 - Edit compara solo `old_string` y `new_string`: un fragmento que empieza dentro de un template literal de varias líneas no se puede interpretar bien.
-- Ningún test cubre el hook.
+- Ningún test cubría el hook antes de esta tarea.
 
 ## Hacer
 
-- Buscar el comando solo donde empieza un comando (`(^|[;&|]\s*)`), después de quitar el texto entre comillas.
+- Buscar los comandos de borrado en cada segmento del comando (`;`, `&`, `|`, `(`, `` ` ``, salto de línea), en cualquier posición (`do rm`, `/bin/rm`, `xargs rm`), después de quitar el texto entre comillas y el cuerpo de los heredocs.
 - Reconocer `test` y `test-contracts` sin `/` final, `git checkout|restore` sobre tests, `find … -delete` y redirecciones que vacían un test.
 - Contar `expect.<modificador>(` (`expect.soft(`, `expect.poll(`) como assertion; los matchers asimétricos como `expect.any(` no cuentan.
 - Contar solo código: antes de aplicar `PATTERNS`, un escáner lineal sin dependencias reemplaza por espacios los comentarios y el contenido de strings, template literals (los `${…}` siguen siendo código) y regex. Strings y regex terminan en el fin de línea.

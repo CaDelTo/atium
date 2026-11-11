@@ -2,14 +2,16 @@
 // PreToolUse hook: blocks changes that weaken or delete existing tests.
 //
 // Blocks when an edit to a test file:
-//   - removes assertions (expect, expect.poll, should, assert, fc.assert)
+//   - removes assertions (expect, expect.soft, expect.poll, should, assert, fc.assert)
 //   - removes test cases (it, test, it.each, test.each), including commenting them out
 //   - adds disabling markers (.skip, .only, .todo, .fixme, xit, xdescribe, xtest)
 // and when a shell command deletes, moves, reverts or empties a test file.
 //
 // Only code counts: comments and the contents of strings, template literals and
 // regex literals are ignored, so RuleTester cases like 'test.only(...)' are not markers.
-// Edit and MultiEdit compare the whole file before and after the replacement.
+// Edit and MultiEdit compare the whole file before and after the replacement, or the
+// old and new strings when the file is missing or does not contain them.
+// In shell commands, quoted text and heredoc bodies are ignored.
 //
 // Exit code 2 blocks the tool call and shows stderr to the agent.
 // Any internal error allows the call (fail-open) and logs to stderr.
@@ -219,17 +221,12 @@ function beforeAndAfter(toolName, input) {
   switch (toolName) {
     case "Edit":
     case "MultiEdit": {
-      const edits =
-        toolName === "Edit"
-          ? [input]
-          : Array.isArray(input.edits)
-            ? input.edits
-            : [];
+      const multi = Array.isArray(input.edits) ? input.edits : [];
+      const edits = toolName === "Edit" ? [input] : multi;
       const current = readCurrent(input.file_path);
       const after =
         current === undefined ? undefined : applyEdits(current, edits);
-      if (current !== undefined && after !== undefined)
-        return { before: current, after };
+      if (after !== undefined) return { before: current, after };
       return {
         before: edits.map((edit) => edit.old_string ?? "").join("\n"),
         after: edits.map((edit) => edit.new_string ?? "").join("\n"),
@@ -265,37 +262,58 @@ function findViolations(before, after) {
 
 const TEST_PATH =
   /\.(?:test|spec)\.[cm]?[jt]sx?\b|(?:^|[\s/'"=])(?:test|test-contracts)(?=$|[\s/'"])/;
-const COMMAND_START = String.raw`^[\s(){}!]*(?:\w+=\S*\s+)*(?:sudo\s+)?`;
-const DELETING = new RegExp(
-  COMMAND_START +
-    String.raw`(?:rm|unlink|mv|git\s+(?:rm|mv|restore)|git\s+checkout(?![^\n]*\s-[bB]\b)|find\b[^\n]*\s-(?:delete|exec\s+rm))\b`,
-);
-const NESTED_SHELL = new RegExp(
-  COMMAND_START + String.raw`(?:eval|(?:ba|z|da)?sh\s+-c)\b\s*`,
-);
+// Delete, move, revert or empty commands, wherever they appear in a segment
+// (`do rm`, `/bin/rm`, `xargs rm`, `git -C . rm`), once quoted text is blanked.
+const DELETING =
+  /(?:^|[\s/\\])(?:rm|unlink|mv)(?![\w./-])|\bgit\b.*\s(?:restore|checkout(?!.*\s-[bB]\b))(?![\w.-])|\bfind\b.*\s-delete\b/;
+const NESTED_SHELL = /(?:^|[\s/\\])(?:eval|(?:ba|z|da)?sh\s+-c)(?=\s)/;
 // `>` truncates; `>>` appends and `2>`, `&>`, `>&2` redirect streams.
 const REDIRECT = /(?<![>&\d])>(?![>&])/g;
 const SEGMENT_END = /[;&|\n(`]|$/g;
+// A heredoc body runs from the line after `<<TAG` to a line with only TAG.
+// shortcut: `$((a<<b))` reads as an unterminated heredoc and hides the rest of the
+// command; upgrade to a shell tokenizer if that ever matters.
+const HEREDOC =
+  /(?<!<)<<(?!<)-?\s*(['"]?)([A-Za-z_]\w*)\1[^\n]*\n([\s\S]*?)(?=(?<=\n)[\t ]*\2[\t ]*(?:\n|$)|$)/g;
+// A heredoc read by a shell (`bash <<EOF`, `cat <<EOF | sh`) is code, not text.
+const SHELL_READER = /(?:^|[\s|/])(?:(?:ba|z|da)?sh|eval)(?![\w.-])/;
 
-// Replaces quoted text with spaces of the same length, so positions still match.
-function blankQuotes(command) {
-  return command.replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, (quoted) =>
-    " ".repeat(quoted.length),
-  );
+const spaces = (text) => text.replace(/[^\n]/g, " ");
+
+// Blanks heredoc bodies and quoted text, keeping positions and line breaks of
+// heredocs, so commit messages and grep patterns are not read as commands.
+function blankText(command) {
+  return command
+    .replace(HEREDOC, (match, _quote, _tag, body, offset) => {
+      const lineStart = command.lastIndexOf("\n", offset) + 1;
+      const header = command.slice(lineStart, offset + match.indexOf("\n"));
+      if (SHELL_READER.test(header)) return match;
+      return match.slice(0, match.length - body.length) + spaces(body);
+    })
+    .replace(/'[^']*'|"(?:[^"\\]|\\.)*"/g, (quoted) =>
+      " ".repeat(quoted.length),
+    );
 }
 
 /** Whether a shell command deletes, moves, reverts or empties a test file. */
-function deletesTestFile(command) {
-  const code = blankQuotes(command);
+function deletesTestFile(rawCommand) {
+  // Join `\` line continuations so `rm -f \` and the path stay in one segment.
+  const command = rawCommand.replace(/\\\n/g, "  ");
+  const code = blankText(command);
   let start = 0;
   for (const match of code.matchAll(SEGMENT_END)) {
     const segment = command.slice(start, match.index);
     const segmentCode = code.slice(start, match.index);
     start = match.index + 1;
     if (DELETING.test(segmentCode) && TEST_PATH.test(segment)) return true;
-    if (NESTED_SHELL.test(segmentCode)) {
-      const inner = segment.replace(NESTED_SHELL, "").replace(/['"]/g, "");
-      if (deletesTestFile(inner)) return true;
+    const nested = NESTED_SHELL.exec(segmentCode);
+    if (
+      nested &&
+      deletesTestFile(
+        segment.slice(nested.index + nested[0].length).replace(/['"]/g, ""),
+      )
+    ) {
+      return true;
     }
     for (const redirect of segmentCode.matchAll(REDIRECT)) {
       // The target may be quoted, so read it from the original segment.
@@ -303,7 +321,6 @@ function deletesTestFile(command) {
         /^\s*(\S+)/.exec(segment.slice(redirect.index + 1))?.[1] ?? "";
       if (TEST_PATH.test(target)) return true;
     }
-    if (match[0] === "") break;
   }
   return false;
 }

@@ -131,6 +131,10 @@ describe("literals and comments", () => {
     );
   });
 
+  it("does not end a template literal at an escaped backtick", () => {
+    assert.equal(write("", "const s = `a \\` test.only(`;\n"), ALLOWED);
+  });
+
   it("ignores markers in comments", () => {
     const content =
       '// it.only( and test.skip( are forbidden\n/* xit( */\nit("x", () => {});\n';
@@ -181,7 +185,8 @@ describe("real weakening is still blocked", () => {
   });
 
   it("does not count asymmetric matchers like expect.any( as assertions", () => {
-    const before = 'it("a", () => {\n  expect(x).toEqual(expect.any(String));\n});\n';
+    const before =
+      'it("a", () => {\n  expect(x).toEqual(expect.any(String));\n});\n';
     assert.equal(edit(before, "expect.any(String)", "anyString"), ALLOWED);
   });
 
@@ -247,6 +252,19 @@ describe("shell commands", () => {
     'echo "" > "packages/core/src/a.test.ts"',
     'bash -c "rm packages/core/src/a.test.ts"',
     "(rm packages/core/src/a.test.ts)",
+    "for f in a; do rm packages/core/src/a.test.ts; done",
+    "if true; then rm packages/core/src/a.test.ts; fi",
+    "/bin/rm packages/core/src/a.test.ts",
+    "\\rm packages/core/src/a.test.ts",
+    "xargs rm packages/core/src/a.test.ts",
+    "timeout 5 rm packages/core/src/a.test.ts",
+    "git -C . rm packages/core/src/a.test.ts",
+    "cat <<EOF\nnotes\nEOF\nrm packages/core/src/a.test.ts",
+    "cat <<EOF > packages/core/src/a.test.ts\nx\nEOF",
+    "bash <<'EOF'\nrm packages/core/src/a.test.ts\nEOF",
+    "cat <<EOF | sh\nrm packages/core/src/a.test.ts\nEOF",
+    "cat <<EOF\nEOF\nrm packages/core/src/a.test.ts",
+    "rm -f \\\n  packages/core/src/a.test.ts",
   ];
 
   for (const command of blocked) {
@@ -263,6 +281,10 @@ describe("shell commands", () => {
     "cat a.ts >> packages/core/src/a.test.ts",
     "rm -rf dist",
     "pnpm --filter @atium/core test",
+    "git commit -F - <<'EOF'\nchore: note\n\nrm packages/core/src/a.test.ts\nEOF",
+    'find packages -name "*.test.ts" -exec grep -l foo {} +',
+    `git commit -m "$(cat <<'EOF'\nchore: don't keep it\n\nrm packages/core/src/a.test.ts\nEOF\n)"`,
+    "pnpm vitest run packages/mv/a.test.ts",
   ];
 
   for (const command of allowed) {

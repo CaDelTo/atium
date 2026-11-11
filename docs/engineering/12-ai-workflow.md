@@ -207,13 +207,14 @@ El agente se detiene, explica por qué quería hacer el cambio y pide aprobació
 - Haz el cambio tú mismo, o
 - Inicia la sesión con `ATIUM_TEST_GUARD=off` solo para esa tarea.
 
-Cómo cuenta: solo el código. Antes de contar, un escáner lineal quita los comentarios y el contenido de strings, template literals (los `${…}` siguen siendo código) y regex, así que los casos de `RuleTester` como `'test.only("t", () => {})'` no cuentan como marcadores, y `/re/.test(x)` no cuenta como caso de test. Edit y MultiEdit comparan el archivo completo antes y después del reemplazo. Comentar un test cuenta como quitarlo. En los comandos solo mira el comando con el que empieza cada segmento (`;`, `&&`, `|`, `(`), sin el texto entre comillas, y revisa el argumento de `sh -c` y `eval`.
+Cómo cuenta: solo el código. Antes de contar, un escáner lineal quita los comentarios y el contenido de strings, template literals (los `${…}` siguen siendo código) y regex, así que los casos de `RuleTester` como `'test.only("t", () => {})'` no cuentan como marcadores, y `/re/.test(x)` no cuenta como caso de test. Edit y MultiEdit comparan el archivo completo antes y después del reemplazo; si el archivo no existe o no contiene `old_string`, comparan los fragmentos. Comentar un test cuenta como quitarlo. En los comandos ignora el texto entre comillas y el cuerpo de los heredocs (salvo los que lee un shell: `bash <<EOF`, `cat <<EOF | sh`), une las líneas que terminan en `\`, parte el comando en segmentos (`;`, `&`, `|`, `(`, `` ` `` y salto de línea) y bloquea un segmento que borra, mueve o revierte (`rm`, `unlink`, `mv`, `git restore`, `git checkout` sin `-b`, `find … -delete`, en cualquier posición: `do rm`, `/bin/rm`, `xargs rm`, `git -C . rm`) y nombra un test, o que redirige con `>` a un test. Revisa también el argumento de `sh -c` y `eval`.
 
 Limitaciones conocidas, que revisa `code-reviewer`:
 
 - No detecta una tabla de `it.each` que pierde filas ni una assertion que se relaja (`toBe` → `toBeDefined`).
 - El escáner no es un parser: lee como división una `/` justo después de `)`, `]` o `}` (`if (x) /re/.test(y)`), y strings y regex terminan en el fin de línea.
-- No ve borrados indirectos: `find … | xargs rm`, un script que borra o una línea de un heredoc que empieza por `rm`. A la inversa, una línea de un heredoc que empieza por `rm` y nombra un test se bloquea aunque solo sea texto.
+- No ve borrados indirectos, en los que el test no aparece en el mismo segmento que el comando (`find … | xargs rm`, un script que borra), ni los que no usan esos comandos (`truncate -s0`, `tee`, `cp /dev/null`).
+- Un comando sin comillas que solo menciona un borrado (`echo rm a.test.ts`) se bloquea.
 
 No se ejecuta `pnpm verify` en un hook: es lento y se ejecuta explícitamente con `/verify`.
 
