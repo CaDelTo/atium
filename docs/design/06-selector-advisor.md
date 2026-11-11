@@ -18,7 +18,18 @@ El linter clasifica cada locator según su llamada en el AST:
 | 2 | CSS por atributo estable | `button[name=submit]` |
 | 1 | CSS estructural / XPath posicional | `div > div:nth-child(2) > button` |
 
-Con `i18n: true`, el nivel 4 por texto visible baja por debajo del nivel 3, porque cambia con el idioma.
+Con `i18n: true`, el nivel 4 por texto visible baja por debajo del nivel 3, porque cambia con el idioma: `getByLabel`, `getByPlaceholder`, `getByText`, `getByAltText` y `getByTitle` pasan al nivel 2. `getByRole` con `name` sigue en el 5.
+
+Casos que la tabla no cubre (decididos en #50):
+
+- Un `getBy*` se clasifica por su método, sea cual sea su argumento: `getByTestId(id)` es 3. `getByRole` sin `name`, `getByAltText` y `getByTitle` son 4. Un `getBy*` que no está en la tabla no se clasifica.
+- Atributos de test id (nivel 3): `data-testid`, `data-test-id`, `data-test`, `data-cy` y `data-qa`, en CSS y en XPath.
+- `locator()`, `$()` y `cy.get()` se clasifican por su selector (sección 11.3.1):
+  - 1 si usa alguno de estos patrones de E2E002 o E2E003: pseudoclase posicional, clase generada, id con secuencia numérica, predicado posicional o ruta absoluta. La lista es cerrada: el número de combinadores no cuenta, porque su umbral lo fija E2E002 (v1-13);
+  - si no, 3 si usa un atributo de test id;
+  - si no, 2 si usa un id o cualquier otro atributo (`#submit`, `button[name=submit]`, `//button[@name='x']`);
+  - si no, 1: solo tipos y clases (`.btn`, `div > span`).
+- En una lista con comas cuenta el selector de nivel más bajo: `[data-testid=a], .btn` es 1. Un selector desconocido o que no es literal no se clasifica.
 
 ### 14.2 Datos en runtime
 

@@ -69,11 +69,22 @@ function hasNameOption(call: TSESTree.CallExpression): boolean {
   return options?.type === AST_NODE_TYPES.ObjectExpression && options.properties.some(isNameKey);
 }
 
+/**
+ * Whether a method is one of Playwright's `getBy*` locators: the prefix
+ * followed by a capital, such as `getByText` (03-linter.md §11.3.1).
+ *
+ * @param method - A method name.
+ * @returns `true` for a `getBy*` name.
+ */
+export function isGetByMethod(method: string): boolean {
+  return GET_BY.test(method);
+}
+
 function frameworkOfQuery(call: TSESTree.CallExpression, method: string): Framework | undefined {
   if (isCypressChain(call)) {
     return method === CYPRESS_QUERY ? "cypress" : undefined;
   }
-  return isOneOf(LOCATOR_QUERIES, method) || GET_BY.test(method) ? "playwright" : undefined;
+  return isOneOf(LOCATOR_QUERIES, method) || isGetByMethod(method) ? "playwright" : undefined;
 }
 
 function queryOf(call: TSESTree.CallExpression): LocatorQuery | undefined {
