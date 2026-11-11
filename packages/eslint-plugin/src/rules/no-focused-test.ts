@@ -4,6 +4,7 @@ import type { AtiumCatalogDocs } from "../create-rule.js";
 import { unwrap } from "../syntax/ast.js";
 import { classifyBlock } from "../syntax/structure.js";
 import type { BlockModifier } from "../syntax/structure.js";
+import { accessStart } from "./member-access.js";
 
 /** The modifier that focuses a test or describe (03-linter.md §11.3.1). */
 const FOCUS_MODIFIER: BlockModifier = "only";
@@ -51,10 +52,8 @@ export const noFocusedTest = createRule<[], "focused" | "removeOnly", AtiumCatal
         if (callee.type !== AST_NODE_TYPES.MemberExpression) {
           return;
         }
-        // From the `.`, `?.` or `[` before `only`, so parentheses around the
-        // object and comments before the dot stay: `(test).only` → `(test)`.
-        const start = context.sourceCode.getTokenBefore(callee.property);
-        if (start === null) {
+        const start = accessStart(context.sourceCode, callee);
+        if (start === undefined) {
           return;
         }
         context.report({
@@ -64,7 +63,7 @@ export const noFocusedTest = createRule<[], "focused" | "removeOnly", AtiumCatal
           suggest: [
             {
               messageId: "removeOnly",
-              fix: (fixer) => fixer.removeRange([start.range[0], callee.range[1]]),
+              fix: (fixer) => fixer.removeRange([start, callee.range[1]]),
             },
           ],
         });

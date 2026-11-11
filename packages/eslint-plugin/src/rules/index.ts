@@ -1,5 +1,6 @@
 import type { AtiumCatalogRuleModule } from "../create-rule.js";
 import { noFocusedTest } from "./no-focused-test.js";
+import { noHardWait } from "./no-hard-wait.js";
 
 /**
  * Rules of the plugin, by their ESLint name without the `atium/` prefix
@@ -8,4 +9,5 @@ import { noFocusedTest } from "./no-focused-test.js";
  */
 export const rules: Readonly<Record<string, AtiumCatalogRuleModule>> = Object.freeze({
   "no-focused-test": noFocusedTest,
+  "no-hard-wait": noHardWait,
 });

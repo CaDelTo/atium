@@ -39,23 +39,42 @@ function propertyName(member: TSESTree.MemberExpression): string | undefined {
   return isStringLiteral(member.property) ? member.property.value : undefined;
 }
 
+/** A wrapper that does not change which value its expression refers to. */
+export type TransparentWrapper =
+  | TSESTree.TSNonNullExpression
+  | TSESTree.TSAsExpression
+  | TSESTree.TSTypeAssertion
+  | TSESTree.TSSatisfiesExpression
+  | TSESTree.ChainExpression;
+
+/**
+ * Whether a node only wraps its expression: the TypeScript `x!`, `x as T`,
+ * `<T>x` and `x satisfies T`, or the wrapper of an optional chain `a?.b`
+ * (03-linter.md §11.3.1).
+ *
+ * @param node - Any node.
+ * @returns `true` for one of those wrappers.
+ */
+export function isTransparentWrapper(node: TSESTree.Node): node is TransparentWrapper {
+  return (
+    node.type === AST_NODE_TYPES.TSNonNullExpression ||
+    node.type === AST_NODE_TYPES.TSAsExpression ||
+    node.type === AST_NODE_TYPES.TSTypeAssertion ||
+    node.type === AST_NODE_TYPES.TSSatisfiesExpression ||
+    node.type === AST_NODE_TYPES.ChainExpression
+  );
+}
+
 /**
  * Removes what does not change which value an expression refers to: the
- * TypeScript `x!`, `x as T`, `<T>x` and `x satisfies T`, and the wrapper of
- * an optional chain such as `a?.b`.
+ * wrappers of {@link isTransparentWrapper}.
  *
  * @param node - Any node.
  * @returns The inner node, or the node itself when it is not wrapped.
  */
 export function unwrap(node: TSESTree.Node): TSESTree.Node {
   let current = node;
-  while (
-    current.type === AST_NODE_TYPES.TSNonNullExpression ||
-    current.type === AST_NODE_TYPES.TSAsExpression ||
-    current.type === AST_NODE_TYPES.TSTypeAssertion ||
-    current.type === AST_NODE_TYPES.TSSatisfiesExpression ||
-    current.type === AST_NODE_TYPES.ChainExpression
-  ) {
+  while (isTransparentWrapper(current)) {
     current = current.expression;
   }
   return current;

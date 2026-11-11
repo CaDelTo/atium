@@ -39,7 +39,9 @@ export interface TestContext extends TitlePath {
 export function enclosingBlocks(node: TSESTree.Node): readonly TestBlock[] {
   const blocks: TestBlock[] = [];
   let current: TSESTree.Node = node;
-  while (current.parent !== undefined) {
+  // Stop at the Program, the only node without a parent: ESLint sets its
+  // `parent` to `null`, not `undefined`.
+  while (current.type !== AST_NODE_TYPES.Program) {
     const { parent } = current;
     if (parent.type === AST_NODE_TYPES.CallExpression && isFunctionNode(current)) {
       const block = classifyBlock(parent);
