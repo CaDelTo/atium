@@ -76,15 +76,15 @@ const SKIP_LINE = 'test.skip("t", () => {});';
 const ONLY_LINE = '\n        test.only("u", () => {});';
 
 describe("literals and comments", () => {
-  it("allows writing a RuleTester file whose cases contain .only( and .skip( in strings", () => {
+  it("AC-4: allows writing a RuleTester file whose cases contain .only( and .skip( in strings", () => {
     assert.equal(write("", RULE_TEST), ALLOWED);
   });
 
-  it("allows an edit inside a multi-line template literal that adds .only(", () => {
+  it("AC-4: allows an edit inside a multi-line template literal that adds .only(", () => {
     assert.equal(edit(RULE_TEST, SKIP_LINE, SKIP_LINE + ONLY_LINE), ALLOWED);
   });
 
-  it("allows replacing a regex .test( call, which is not a test case", () => {
+  it("AC-5: allows replacing a regex .test( call, which is not a test case", () => {
     const before =
       'it("has a code", () => {\n  expect(/^E2E\\d{3}$/u.test(code)).toBe(true);\n});\n';
     const status = edit(
@@ -141,7 +141,7 @@ describe("literals and comments", () => {
     assert.equal(write("", content), ALLOWED);
   });
 
-  it("treats commenting out a test as removing it", () => {
+  it("AC-6: treats commenting out a test as removing it", () => {
     const before = 'it("x", () => {\n  expect(1).toBe(1);\n});\n';
     assert.equal(
       edit(before, before, `// ${before.replaceAll("\n", "\n// ")}`),
@@ -161,23 +161,28 @@ describe("real weakening is still blocked", () => {
   const SUITE =
     'describe("s", () => {\n  it("a", () => {\n    expect(1).toBe(1);\n  });\n});\n';
 
-  it("blocks adding .only( in code", () => {
+  it("AC-6: blocks adding .only( in code", () => {
     assert.equal(edit(SUITE, 'it("a"', 'it.only("a"'), BLOCKED);
   });
 
-  it("blocks adding .skip( in code", () => {
+  it("AC-6: blocks adding .skip( in code", () => {
     assert.equal(edit(SUITE, 'it("a"', 'it.skip("a"'), BLOCKED);
   });
 
-  it("blocks removing a test case", () => {
+  it("AC-6: blocks removing a test case with its assertions", () => {
     assert.equal(write(SUITE, 'describe("s", () => {});\n'), BLOCKED);
   });
 
-  it("blocks removing an assertion", () => {
+  it("AC-6: blocks removing a test case that has no assertions", () => {
+    const before = 'it("a", () => {});\nit("b", () => {});\n';
+    assert.equal(edit(before, 'it("b", () => {});\n', ""), BLOCKED);
+  });
+
+  it("AC-6: blocks removing an assertion", () => {
     assert.equal(edit(SUITE, "    expect(1).toBe(1);\n", ""), BLOCKED);
   });
 
-  it("allows replacing expect( with expect.poll(", () => {
+  it("AC-3: allows replacing expect( with expect.poll(", () => {
     assert.equal(
       edit(SUITE, "expect(1).toBe(1)", "await expect.poll(() => 1).toBe(1)"),
       ALLOWED,
@@ -239,16 +244,36 @@ describe("edits are applied to the whole file", () => {
 });
 
 describe("shell commands", () => {
+  // The four deletions and the two text-only mentions listed in the task (v1-49).
+  const taskDeletions = [
+    "rm -rf packages/core/test",
+    "git checkout -- packages/core/src/a.test.ts",
+    'find packages -name "*.test.ts" -delete',
+    ": > packages/core/src/a.test.ts",
+  ];
+  const taskMentions = [
+    "git commit -m 'explain mv old.test.ts'",
+    "grep -rn 'rm foo.test.ts' docs",
+  ];
+
+  for (const command of taskDeletions) {
+    it(`AC-1: blocks ${command}`, () => {
+      assert.equal(run("Bash", { command }), BLOCKED);
+    });
+  }
+
+  for (const command of taskMentions) {
+    it(`AC-2: allows ${command}`, () => {
+      assert.equal(run("Bash", { command }), ALLOWED);
+    });
+  }
+
   const blocked = [
     "rm packages/core/src/a.test.ts",
-    "rm -rf packages/core/test",
     "cd packages/core && git rm test-contracts/storage.ts",
     "mv src/a.test.ts src/b.ts",
-    "git checkout -- packages/core/src/a.test.ts",
     "git restore packages/core/src/a.spec.ts",
-    'find packages -name "*.test.ts" -delete',
     "find packages -name '*.test.ts' -exec rm {} +",
-    ": > packages/core/src/a.test.ts",
     'echo "" > "packages/core/src/a.test.ts"',
     'bash -c "rm packages/core/src/a.test.ts"',
     "(rm packages/core/src/a.test.ts)",
@@ -274,8 +299,6 @@ describe("shell commands", () => {
   }
 
   const allowed = [
-    "git commit -m 'explain mv old.test.ts'",
-    "grep -rn 'rm foo.test.ts' docs",
     "git checkout -b test/12-new-rule",
     "pnpm test 2> packages/core/src/a.test.ts.log",
     "cat a.ts >> packages/core/src/a.test.ts",
