@@ -172,7 +172,7 @@ Nombres, severidades y presets decididos en [ADR-0023](../adr/0023-arquitectura-
 - **Severidad:** la del Finding es la de esta tabla, sea cual sea el nivel que el usuario dé a la regla en ESLint. Los presets activan las reglas `error` como `"error"` en ESLint y las `warning` e `info` como `"warn"`. Una regla en `"off"` no produce Findings.
 - **Preset:** las reglas por archivo marcadas `recommended` entran en `atium/recommended`; todas entran en `atium/strict` (§11.1). Las reglas cross-file no son de ESLint: "activa" significa que `atium lint` la ejecuta salvo que `analyzers["lint-crossfile"].rules` la ponga en `"off"`, y "desactivada", que solo se ejecuta si la pone en `"on"` (§11.10). E2E011 y E2E013 vienen desactivadas porque son `info`, de confianza `medium` y las de más falsos positivos.
 - **Categoría de E2E012:** `Finding.category` no tiene `security`; los secretos van en `maintainability` (§22.3).
-- **En el código:** la fila de cada regla por archivo vive en el `meta.docs` de la regla (`AtiumCatalogDocs`: `code`, `severity`, `category`, `confidence`, `source` y `recommended`), así que cada regla registrada trae la suya y no hay una tabla aparte que pueda divergir. Decidido en #51.
+- **En el código:** esta tabla fija los valores (ADR-0023 §3). Cada regla por archivo copia su fila en su `meta.docs` (`AtiumCatalogDocs`: `code`, `severity`, `category`, `confidence`, `source` y `recommended`), y un test del plugin comprueba que cada regla registrada coincide con su fila. Decidido en #51.
 
 | Código | Nombre en ESLint | Severidad | Categoría | Confianza | Fuente | Preset |
 |---|---|---|---|---|---|---|

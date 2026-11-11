@@ -52,6 +52,8 @@ export type AtiumCatalogRuleModule = ESLintUtils.RuleModule<
  * A registered rule passes `AtiumCatalogDocs` as `Docs`, so the compiler checks
  * its catalogue entry: `createRule<[], "message", AtiumCatalogDocs>({ ... })`.
  *
+ * @typeParam Docs - The fields of `meta.docs`: `AtiumCatalogDocs` for a
+ *   registered rule, `AtiumRuleDocs` by default.
  * @param rule - The rule: its ESLint `name` (such as `no-hard-wait`), its
  * `meta` with `docs.code`, its `defaultOptions` and `create`.
  * @returns The rule module, ready to register in the plugin's `rules`.

@@ -5,7 +5,8 @@ Cypress test suites, such as fixed waits or fragile selectors, in the editor
 and in CI.
 
 > Atium is a provisional codename and this package is not published to npm yet.
-> It has no rules yet: they arrive with the next tasks of the V1 phase.
+> Its first rule is `atium/no-focused-test` (E2E010); the rest arrive with the
+> next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
 
 ## Installation
 
@@ -59,12 +60,12 @@ export default [
 ];
 ```
 
-| Key                   | Default                    | Meaning                                                                       |
-| --------------------- | -------------------------- | ----------------------------------------------------------------------------- |
-| `framework`           | detected from each file's imports | `"playwright"` or `"cypress"`                                         |
-| `pageObjectDirs`      | `[]`                       | Globs of the Page Object code, where selectors are allowed                    |
-| `assertFunctionNames` | `[]`                       | Helpers that count as an assertion, by function or method name; `*` is the only wildcard, as in `verify*` |
-| `i18n`                | `false`                    | Penalize selectors by visible text, because they change with the language    |
+| Key                   | Default                           | Meaning                                                                                                   |
+| --------------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `framework`           | detected from each file's imports | `"playwright"` or `"cypress"`                                                                             |
+| `pageObjectDirs`      | `[]`                              | Globs of the Page Object code, where selectors are allowed                                                |
+| `assertFunctionNames` | `[]`                              | Helpers that count as an assertion, by function or method name; `*` is the only wildcard, as in `verify*` |
+| `i18n`                | `false`                           | Penalize selectors by visible text, because they change with the language                                 |
 
 Without `framework`, a file counts as Playwright when it imports
 `@playwright/test` or `playwright/test`, and as Cypress when it imports
