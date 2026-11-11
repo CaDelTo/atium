@@ -4,30 +4,35 @@ import type { TSESLint } from "@typescript-eslint/utils";
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
 import { CYPRESS_ROOT } from "../defaults.js";
-import { unwrap } from "../syntax/ast.js";
+import { isTransparentWrapper, unwrap } from "../syntax/ast.js";
 import { testContextOf } from "../syntax/context.js";
 import { fixedWaitOf } from "../syntax/waits.js";
 import type { FixedWait } from "../syntax/waits.js";
+import { accessStart } from "./member-access.js";
 
 /** Placeholder the user replaces with what to wait for (03-linter.md §11.2; decided in #52). */
 const PLACEHOLDER = '"TODO"';
 
-/** Wrappers that do not change which value an expression is: `x as T`, `x!`, `a?.b`… */
-const TRANSPARENT_PARENTS: ReadonlySet<string> = new Set([
-  AST_NODE_TYPES.TSAsExpression,
-  AST_NODE_TYPES.TSNonNullExpression,
-  AST_NODE_TYPES.TSSatisfiesExpression,
-  AST_NODE_TYPES.TSTypeAssertion,
-  AST_NODE_TYPES.ChainExpression,
-]);
-
-/** Whether an expression is awaited, through `as`, `!`, `satisfies` and `?.` wrappers. */
+/**
+ * Whether an expression is awaited, through `as`, `!`, `satisfies` and `?.`
+ * wrappers. The walk stops at the first parent that is not a wrapper, so it
+ * never reaches the Program, whose `parent` ESLint sets to `null`.
+ */
 function isAwaited(node: TSESTree.Node): boolean {
   let current = node;
-  while (current.parent !== undefined && TRANSPARENT_PARENTS.has(current.parent.type)) {
+  while (current.parent !== undefined && isTransparentWrapper(current.parent)) {
     current = current.parent;
   }
   return current.parent?.type === AST_NODE_TYPES.AwaitExpression;
+}
+
+/** Receivers that read the same without the parentheses or casts around them. */
+function isPlainReceiver(node: TSESTree.Node): boolean {
+  return (
+    node.type === AST_NODE_TYPES.Identifier ||
+    node.type === AST_NODE_TYPES.ThisExpression ||
+    node.type === AST_NODE_TYPES.MemberExpression
+  );
 }
 
 type Fixer = TSESLint.RuleFixer;
@@ -37,7 +42,8 @@ type SourceCode = Readonly<TSESLint.SourceCode>;
  * The editable replacement for a fixed wait (decided in #52): a web-first
  * assertion with a placeholder for `waitForTimeout` and `cy.wait(n)`, and
  * `.should("be.visible")` on a Cypress chain that already picks its subject.
- * `undefined` for the promise, whose receiver (`page`, `cy`…) is unknown.
+ * `undefined` for the promise, whose receiver (`page`, `cy`…) is unknown, and
+ * for a `waitForTimeout` whose receiver is not a name, `this` or a member chain.
  */
 function replacementOf(
   wait: FixedWait,
@@ -48,20 +54,25 @@ function replacementOf(
   if (callee?.type !== AST_NODE_TYPES.MemberExpression) {
     return undefined;
   }
+  // Without its casts and parentheses, so the suggestion stays valid code:
+  // `(page as Page).waitForTimeout(n)` becomes `expect(page.getByRole(…))`.
   const receiver = unwrap(callee.object);
   if (wait.kind === "waitForTimeout") {
-    const text = `expect(${sourceCode.getText(callee.object)}.getByRole(${PLACEHOLDER})).toBeVisible()`;
+    if (!isPlainReceiver(receiver)) {
+      return undefined;
+    }
+    const text = `expect(${sourceCode.getText(receiver)}.getByRole(${PLACEHOLDER})).toBeVisible()`;
     return (fixer) => fixer.replaceText(node, text);
   }
   if (receiver.type === AST_NODE_TYPES.Identifier && receiver.name === CYPRESS_ROOT) {
     const text = `${CYPRESS_ROOT}.get(${PLACEHOLDER}).should("be.visible")`;
     return (fixer) => fixer.replaceText(node, text);
   }
-  const dot = sourceCode.getTokenBefore(callee.property);
-  if (dot === null) {
+  const start = accessStart(sourceCode, callee);
+  if (start === undefined) {
     return undefined;
   }
-  return (fixer) => fixer.replaceTextRange([dot.range[0], node.range[1]], '.should("be.visible")');
+  return (fixer) => fixer.replaceTextRange([start, node.range[1]], '.should("be.visible")');
 }
 
 /**
@@ -103,7 +114,7 @@ export const noHardWait = createRule<[], "hardWait" | "waitForCondition", AtiumC
     messages: {
       hardWait:
         "Fixed waits slow down the suite and cause flakiness when the app is slower than expected. Wait for a condition instead.",
-      waitForCondition: "Wait for a condition instead, and fill in the TODO.",
+      waitForCondition: "Replace the fixed wait with a condition to wait for.",
     },
   },
   defaultOptions: [],
