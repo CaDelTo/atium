@@ -58,6 +58,13 @@ describe("no-hard-wait edge cases", () => {
         inTest("await (new Promise(r => setTimeout(r, 500)) satisfies Promise<void>);"),
         null,
       ),
+      // The receiver is written without its wrappers, so the suggestion stays valid.
+      hardWait(
+        inTest("await (page as Page).waitForTimeout(500);"),
+        inTest('await expect(page.getByRole("TODO")).toBeVisible();'),
+      ),
+      // A receiver that is not a name, `this` or a member chain gets no suggestion.
+      hardWait(inTest("await (await getPage()).waitForTimeout(500);"), null),
       // A step inside a test counts as the test.
       hardWait(
         'test("t", async () => {\n  await test.step("s", async () => {\n    await new Promise(r => setTimeout(r, 500));\n  });\n});',
