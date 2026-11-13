@@ -15,6 +15,7 @@ import {
   calleePath,
   isMethodCall,
   isOneOf,
+  isTransparentWrapper,
   propertyName,
   unwrap,
 } from "../syntax/ast.js";
@@ -124,12 +125,21 @@ function isPlaywrightLocator(receiver: TSESTree.Expression): boolean {
 }
 
 /** Whether `await` must be wrapped in parentheses where the matcher call is used. */
-function needsParentheses(call: TSESTree.CallExpression): boolean {
-  const { parent } = call;
+function needsParentheses(node: TSESTree.Node): boolean {
+  const { parent } = node;
   return (
-    (parent.type === AST_NODE_TYPES.MemberExpression && parent.object === call) ||
-    (parent.type === AST_NODE_TYPES.CallExpression && parent.callee === call)
+    (parent?.type === AST_NODE_TYPES.MemberExpression && parent.object === node) ||
+    (parent?.type === AST_NODE_TYPES.CallExpression && parent.callee === node)
   );
+}
+
+/** The matcher call with the wrappers around it (`?.`, `as`, `!`), which an `await` may precede. */
+function outermost(call: TSESTree.CallExpression): TSESTree.Node {
+  let node: TSESTree.Node = call;
+  while (isTransparentWrapper(node.parent)) {
+    node = node.parent;
+  }
+  return node;
 }
 
 /** A detected `expect(await x.query()).matcher(…)` that has a replacement row. */
@@ -145,15 +155,20 @@ function replacementText(
   sourceCode: Readonly<TSESLint.SourceCode>,
   { expectCall, query, matcher, row }: Replaceable,
 ): string {
-  const text = (node: TSESTree.Node) => sourceCode.getText(node);
+  // A sequence `(a, b)` keeps its parentheses, or it would become two arguments.
+  const text = (node: TSESTree.Node) =>
+    node.type === AST_NODE_TYPES.SequenceExpression
+      ? `(${sourceCode.getText(node)})`
+      : sourceCode.getText(node);
   const expectArgs = [text(query.receiver), ...expectCall.arguments.slice(1).map(text)].join(", ");
   const argument = row.keepsArgument ? matcher.call.arguments.map(text).join(", ") : "";
   const not = matcher.negated ? ".not" : "";
   const assertion = `${text(expectCall.callee)}(${expectArgs})${not}.${row.replacement}(${argument})`;
-  if (matcher.call.parent.type === AST_NODE_TYPES.AwaitExpression) {
+  const used = outermost(matcher.call);
+  if (used.parent?.type === AST_NODE_TYPES.AwaitExpression) {
     return assertion;
   }
-  return needsParentheses(matcher.call) ? `(await ${assertion})` : `await ${assertion}`;
+  return needsParentheses(used) ? `(await ${assertion})` : `await ${assertion}`;
 }
 
 /**
