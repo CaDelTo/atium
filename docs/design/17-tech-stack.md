@@ -21,6 +21,7 @@
 | Parser CSS | parsel-js | Tokeniza selectores CSS para E2E002, E2E007 y la clasificación de §14.1 |
 | Similitud | fastest-levenshtein | Renombres y duplicados |
 | Archivos | tinyglobby | Búsqueda rápida de tests |
+| Globs de rutas | picomatch | Comprueba si un archivo está en `pageObjectDirs` (§11.1); ya llegaba como dependencia de tinyglobby (decidido en #53) |
 | Compresión | `node:zlib` para los runs `.ndjson.gz`; fflate, previsto para los datos del reporte HTML | zlib: stream nativo, sin dependencia, que el lector de líneas consume mientras comprueba los límites de bytes descomprimidos (gzip bomb, [ADR-0018](../adr/0018-formato-archivos-run.md)); fflate: funciona en el navegador |
 | Concurrencia | p-limit | Límite de uploads y analizadores en paralelo |
 | IDs | uuid v7 | Ordenables por tiempo |
