@@ -142,7 +142,7 @@ export const CHAINED_ASSERTIONS = Object.freeze(["should", "and"] as const);
 
 /**
  * Methods that query a locator on any object, besides `getBy*` and Cypress's
- * `cy.get()`. Source: 03-linter.md §11.3, E2E002, and §11.3.1.
+ * `cy.get()` and `cy.xpath()`. Source: 03-linter.md §11.3, E2E002, and §11.3.1.
  */
 export const LOCATOR_QUERIES = Object.freeze(["locator", "$"] as const);
 

@@ -1,8 +1,8 @@
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
-import { CYPRESS_XPATH_QUERY, LOCATOR_QUERIES } from "../defaults.js";
+import { LOCATOR_QUERIES } from "../defaults.js";
 import { isOneOf } from "../syntax/ast.js";
-import { locatorOf } from "../syntax/locators.js";
+import { isCypressXPathCommand, locatorOf } from "../syntax/locators.js";
 import type { LocatorQuery } from "../syntax/locators.js";
 import { analyzeSelector, selectorText } from "../syntax/selectors.js";
 
@@ -11,7 +11,7 @@ type MessageId = "positionalPredicate" | "absolutePath";
 /** Queries that can hold XPath: `locator()` and `$()` in Playwright, `cy.xpath()` in Cypress. */
 function isXPathQuery(query: LocatorQuery): boolean {
   return query.framework === "cypress"
-    ? query.method === CYPRESS_XPATH_QUERY
+    ? isCypressXPathCommand(query)
     : isOneOf(LOCATOR_QUERIES, query.method);
 }
 
