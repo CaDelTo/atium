@@ -427,6 +427,43 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@22.20.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/suite-index:
+    dependencies:
+      '@atium/eslint-plugin':
+        specifier: workspace:*
+        version: link:../eslint-plugin
+      '@typescript-eslint/types':
+        specifier: 8.70.1
+        version: 8.70.1
+      zod:
+        specifier: 4.6.6
+        version: 4.6.6
+    devDependencies:
+      '@arethetypeswrong/cli':
+        specifier: 0.18.5
+        version: 0.18.5
+      '@types/node':
+        specifier: 22.20.4
+        version: 22.20.4
+      '@typescript-eslint/typescript-estree':
+        specifier: 8.70.1
+        version: 8.70.1(supports-color@7.2.0)(typescript@6.0.3)
+      '@vitest/coverage-v8':
+        specifier: 5.0.3
+        version: 5.0.3(vitest@5.0.3)
+      publint:
+        specifier: 0.3.24
+        version: 0.3.24
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(supports-color@7.2.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@22.20.4)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
 packages:
 
   '@andrewbranch/untar.js@1.0.4':
