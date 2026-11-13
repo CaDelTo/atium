@@ -110,12 +110,12 @@ describe("AC-1: no-positional-locator", () => {
       positionalCase('page.locator("li").nth(2);', nth("nth", "2"), minIndexTwo),
 
       // .first()/.last() on a base that is not unique (D2).
-      positionalCase('page.locator("li").first();', firstOrLast("first")),
-      positionalCase('page.getByRole("row").last();', firstOrLast("last")),
-      positionalCase('page.locator("#cart li").first();', firstOrLast("first")),
-      positionalCase('page.locator("[data-testid=list] li").first();', firstOrLast("first")),
-      positionalCase('cy.get("li").first();', firstOrLast("first")),
-      positionalCase('cy.get("li").last();', firstOrLast("last")),
+      positionalCase('page.locator("li").first();', firstOrLast("first()")),
+      positionalCase('page.getByRole("row").last();', firstOrLast("last()")),
+      positionalCase('page.locator("#cart li").first();', firstOrLast("first()")),
+      positionalCase('page.locator("[data-testid=list] li").first();', firstOrLast("first()")),
+      positionalCase('cy.get("li").first();', firstOrLast("first()")),
+      positionalCase('cy.get("li").last();', firstOrLast("last()")),
       // A negative literal index is a .last() (D1).
       positionalCase('page.locator("li").nth(-1);', firstOrLast("nth(-1)")),
       positionalCase('page.locator("li").nth(-2);', firstOrLast("nth(-2)")),
