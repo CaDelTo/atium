@@ -41,7 +41,7 @@ function reasonOf(refinement: LocatorRefinement, minIndex: number): Reason | und
   const { method, base } = refinement;
   const nonUnique = base !== undefined && !isUnique(base);
   if (!isOneOf(INDEXED_REFINEMENTS, method)) {
-    return nonUnique ? { messageId: "firstOrLast", data: { method } } : undefined;
+    return nonUnique ? { messageId: "firstOrLast", data: { method: `${method}()` } } : undefined;
   }
   const index = literalIndex(refinement.index);
   if (index === undefined) {

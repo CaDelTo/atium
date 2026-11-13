@@ -90,12 +90,12 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'page.$("li").first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       {
         code: 'cy.xpath("//li").first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       {
         code: 'cy.get("li").filter(".x").eq(2);',
@@ -105,7 +105,7 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'cy.get("li").filter(".x").last();',
         output: null,
-        errors: [firstOrLast("last")],
+        errors: [firstOrLast("last()")],
       },
       {
         code: 'frame.locator("li").nth(1);',
@@ -115,13 +115,13 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'frame.locator("li").first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       // Wrappers and optional calls are transparent.
       {
         code: '(page.locator("li") as Locator).first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       {
         code: 'page.locator("li")!.nth(1);',
@@ -131,7 +131,7 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'page.locator("li")?.first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       {
         code: 'page.locator("li")?.nth(1);',
@@ -158,13 +158,13 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'page.getByRole("row", { ...opts }).first();',
         output: null,
-        errors: [firstOrLast("first")],
+        errors: [firstOrLast("first()")],
       },
       // Several refinements: each is judged against the nearest query.
       {
         code: 'page.locator("li").first().nth(1);',
         output: null,
-        errors: [firstOrLast("first"), nth("nth", "1")],
+        errors: [firstOrLast("first()"), nth("nth", "1")],
       },
       {
         code: 'page.getByTestId("row").first().nth(1);',
@@ -174,13 +174,13 @@ describe("no-positional-locator: edge cases", () => {
       {
         code: 'page.locator("li").nth(1).first();',
         output: null,
-        errors: [nth("nth", "1"), firstOrLast("first")],
+        errors: [nth("nth", "1"), firstOrLast("first()")],
       },
       // Two statements: independent reports.
       {
         code: 'page.locator("a").first();\npage.locator("b").last();',
         output: null,
-        errors: [firstOrLast("first"), firstOrLast("last")],
+        errors: [firstOrLast("first()"), firstOrLast("last()")],
       },
     ],
   });
