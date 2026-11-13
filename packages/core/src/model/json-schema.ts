@@ -24,3 +24,17 @@ export function runJsonSchema(): Record<string, unknown> {
       "One execution of a job or shard, with its results. Text limits are measured in UTF-8 bytes of the value once escaped for JSON, without the surrounding quotes; maxLength is only an upper bound of that measure. Run files store this object as NDJSON: the run without results on line 1, then one result per line (ADR-0018).",
   };
 }
+
+/**
+ * JSON Schema of a `Report`, as published in
+ * `packages/core/schemas/report.v1.json` (13-score-baseline-reports.md §21.5).
+ *
+ * JSON Schema cannot express every rule of the report: `docsUrl` appears as
+ * `format: "uri"` without its `http`/`https` restriction, and the order and
+ * summary that `createReport` guarantees are not checked.
+ *
+ * @returns The JSON Schema, with a title and a description.
+ */
+export function reportJsonSchema(): Record<string, unknown> {
+  throw new Error("not implemented");
+}

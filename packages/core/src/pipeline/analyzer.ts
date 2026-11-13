@@ -22,6 +22,22 @@ export const CAPABILITIES = [
 export type Capability = (typeof CAPABILITIES)[number];
 
 /**
+ * Every kind of `SkipReason`: why the orchestrator skipped an analyzer
+ * (14-architecture.md §22.2). Reports carry only the kind (13-score-baseline-reports.md §21.5).
+ */
+export const SKIP_REASON_KINDS = [
+  "missing-capabilities",
+  "duplicate-id",
+  "invalid-config",
+  "timeout",
+  "failed",
+  "aborted",
+] as const;
+
+/** Kind of reason an analyzer was skipped. See {@link SKIP_REASON_KINDS}. */
+export type SkipReasonKind = (typeof SKIP_REASON_KINDS)[number];
+
+/**
  * What an analyzer reads: source code (`static`), the current run
  * (`runtime`) or the stored history (`history`).
  */
