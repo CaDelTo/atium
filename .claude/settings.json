@@ -1,5 +1,5 @@
 {
-    "permissions": {
+  "permissions": {
     "allow": [
       "Bash(pnpm verify)",
       "Bash(pnpm format:check)",
@@ -27,6 +27,7 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr checks:*)",
       "Bash(node .claude/scripts/push-branch.mjs:*)",
+      "Bash(node .claude/scripts/open-pr.mjs:*)",
       "Bash(git fetch origin)",
       "Bash(git fetch origin --prune)",
       "Bash(git switch --no-track -c:*)",
@@ -50,15 +51,10 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Edit(./fixtures/**)",
-      "Write(./fixtures/**)",
       "Edit(./.claude/settings.json)",
-      "Write(./.claude/settings.json)",
       "Edit(./.claude/hooks/**)",
-      "Write(./.claude/hooks/**)",
       "Edit(./.claude/scripts/**)",
-      "Write(./.claude/scripts/**)",
       "Edit(./.claude/loop-settings.json)",
-      "Write(./.claude/loop-settings.json)",
       "Bash(gh issue close:*)",
       "Bash(gh issue delete:*)",
       "Bash(gh pr merge:*)",
