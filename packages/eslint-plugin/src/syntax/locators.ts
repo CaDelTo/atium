@@ -1,15 +1,16 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESTree } from "@typescript-eslint/types";
 import {
+  CYPRESS_INDEXED_REFINEMENT,
   CYPRESS_QUERY,
   CYPRESS_XPATH_QUERY,
   GET_BY_PREFIX,
-  INDEXED_REFINEMENT,
+  INDEXED_REFINEMENTS,
   LOCATOR_QUERIES,
   LOCATOR_REFINEMENTS,
   ROLE_LOCATOR,
 } from "../defaults.js";
-import { calleeName, chainOf, isCypressChain, isMethodCall, isOneOf } from "./ast.js";
+import { calleeName, chainOf, isCypressChain, isMethodCall, isOneOf, unwrap } from "./ast.js";
 import type { Framework } from "./framework.js";
 
 /** Playwright's `getBy*` locators: the prefix followed by a capital, such as `getByText`. */
@@ -34,7 +35,10 @@ export interface LocatorQuery {
   readonly hasName: boolean;
 }
 
-/** A call that picks one element of a locator: `.nth()`, `.first()` or `.last()`. */
+/**
+ * A call that picks one element of a locator: `.nth()`, `.first()`, `.last()`,
+ * or `.eq()` on a `cy` chain (03-linter.md §11.3.1).
+ */
 export interface LocatorRefinement {
   /** Discriminant. */
   readonly kind: "refinement";
@@ -42,7 +46,7 @@ export interface LocatorRefinement {
   readonly node: TSESTree.CallExpression;
   /** The method. */
   readonly method: (typeof LOCATOR_REFINEMENTS)[number];
-  /** The argument of `.nth()`; `undefined` for `.first()` and `.last()`. */
+  /** The argument of `.nth()` or `.eq()`; `undefined` for `.first()` and `.last()`. */
   readonly index: TSESTree.CallExpressionArgument | undefined;
   /**
    * The nearest query earlier in the same chain, such as the `getByRole` of
@@ -66,7 +70,8 @@ function isNameKey(property: TSESTree.ObjectLiteralElement): boolean {
 }
 
 function hasNameOption(call: TSESTree.CallExpression): boolean {
-  const options = call.arguments[1];
+  const argument = call.arguments[1];
+  const options = argument === undefined ? undefined : unwrap(argument);
   return options?.type === AST_NODE_TYPES.ObjectExpression && options.properties.some(isNameKey);
 }
 
@@ -125,9 +130,20 @@ function baseQuery(call: TSESTree.CallExpression): LocatorQuery | undefined {
   return undefined;
 }
 
+function isRefinement(
+  call: TSESTree.CallExpression,
+  method: string,
+): method is LocatorRefinement["method"] {
+  if (!isMethodCall(call) || !isOneOf(LOCATOR_REFINEMENTS, method)) {
+    return false;
+  }
+  return method !== CYPRESS_INDEXED_REFINEMENT || isCypressChain(call);
+}
+
 /**
  * Recognizes a locator call (03-linter.md §11.3 and §11.3.1): a query, on any
- * object for Playwright and on a `cy` chain for Cypress, or a refinement.
+ * object for Playwright and on a `cy` chain for Cypress, or a refinement
+ * (`.eq()` only on a `cy` chain).
  * It matches names, without type information.
  *
  * @param call - Any call.
@@ -135,12 +151,12 @@ function baseQuery(call: TSESTree.CallExpression): LocatorQuery | undefined {
  */
 export function locatorOf(call: TSESTree.CallExpression): LocatorCall | undefined {
   const method = calleeName(call);
-  if (method !== undefined && isMethodCall(call) && isOneOf(LOCATOR_REFINEMENTS, method)) {
+  if (method !== undefined && isRefinement(call, method)) {
     return {
       kind: "refinement",
       node: call,
       method,
-      index: method === INDEXED_REFINEMENT ? call.arguments[0] : undefined,
+      index: isOneOf(INDEXED_REFINEMENTS, method) ? call.arguments[0] : undefined,
       base: baseQuery(call),
     };
   }

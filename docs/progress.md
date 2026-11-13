@@ -8,6 +8,41 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #55 v1-15-rule-e2e004-nth
+
+- **Hecho:**
+  - **Antes, en la misma sesión:** PR #144 (#54, E2E003) mergeado.
+  - **Rama y PR de #55:**
+    - Rama `feat/55-rule-e2e004-positional-locator`, creada desde `origin/main`.
+    - PR #145 en borrador, con `Closes #55` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **Commits:**
+    - `ca0b77d` `test(eslint-plugin): specify no-positional-locator`: tests AC en `src/rules/no-positional-locator.test.ts`, tests de `.eq` en `src/syntax/locators.cypress-eq.test.ts`, stub de la regla y constantes en `defaults.ts`; 19 en rojo.
+    - `7367217` `feat(eslint-plugin): add no-positional-locator (E2E004)`: la regla; `.eq()` como refinamiento con índice solo en cadenas `cy` (`syntax/locators.ts`); `INDEXED_REFINEMENT` pasa a `INDEXED_REFINEMENTS`; `TEST_ID_LOCATOR` y `POSITIONAL_LOCATOR_DEFAULTS`; registro, `docs/rules/e2e004.md`, 03-linter.md §11.3/§11.3.1 y README.
+    - `6706b30` `test`: 48 casos borde de test-writer (`no-positional-locator.edge.test.ts`).
+    - `a992751` `fix`: `unwrap` del índice y de las opciones de `getByRole` (hallazgo importante de /review), con `no-positional-locator.wrappers.test.ts`; cita del diseño en `defaults.ts` y "integer literal" en la página.
+    - `0a574c6` `test(eslint-plugin): revise AC-1`: `data.method` "first()"/"last()" en 6 casos de AC-1, aprobado por la persona y confirmado por `spec-tester`.
+    - `df568b6` `fix`: el mensaje `firstOrLast` muestra `.first()`/`.last()`; edge tests alineados.
+  - **Puertas:**
+    - `plan-reviewer`: REQUIERE PERSONA (D1-D3), después CAMBIOS, incorporados.
+    - Rojo verificado.
+    - `/verify`: PASS, con 740 tests en eslint-plugin.
+    - `/review`: 0 bloqueantes; 1 importante y 3 menores, todos corregidos; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: RECHAZADO en la primera ronda porque el cambio de AC-1 iba dentro de un commit `fix` (12-ai-workflow.md paso 6 exige `spec-tester` y un commit `test(...): revise AC-n`); se separó el commit en local antes del push. APROBADO en la segunda. Son 648 líneas, con la excepción de tamaño publicada por la persona en #55.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #55.
+- **En curso:** PR #145 en borrador. Al crearlo, los 7 checks estaban pendientes. Falta `gh pr ready 145` cuando estén en verde.
+- **Decisiones** (de la persona, en 03-linter.md §11.3 y §11.3.1 como "Decidido en #55"):
+  - D1: opción `minIndex` (entero ≥ 0, por defecto 1). Un índice negativo literal se trata como `.last()`; un índice no literal o no entero no se reporta.
+  - D2: base única = `getByRole` con `name` o `getByTestId`; cualquier otra base reconocida es no única; sin base, `.first()`/`.last()` no se reportan.
+  - D3: `.eq(n)` de Cypress cuenta como `.nth(n)`, solo en cadenas `cy`.
+  - Sin escribir en el diseño, fijado solo por los tests: `2.0` y `0x2` cuentan como enteros, `-0` como 0; un `name` dentro de un spread no cuenta; el hallazgo va sobre el nombre del refinamiento.
+- **Problemas:**
+  - `08-git-workflow.md:110` dice "si es más grande, se divide" y no prevé excepciones de tamaño; `delivery-auditor` lo señaló de nuevo. Conviene que la persona decida si se escribe el mecanismo (comentario propio en el issue). Sin issue.
+  - `delivery-auditor` no puede demostrar quién escribe un comentario en GitHub, porque el agente usa la misma cuenta que la persona (08-git-workflow.md:33).
+  - El intermedio `0a574c6` deja 6 tests de AC-1 en rojo hasta `df568b6`; 12-ai-workflow.md no dice en qué orden van un `revise AC-n` y su `fix`.
+  - Siguen: la ruta del worktree eliminado `cranky-kowalevski-258155` en el test de `example-playwright-demo`, la sesión propuesta "Align §14.1 selector levels with E2E002 depth" sin iniciar, y `max-lines` en `packages/core/src/storage/run-file.test.ts`.
+- **Siguiente paso:** con la CI de #145 en verde, ejecutar `gh pr ready 145`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es el issue abierto más antiguo del milestone V1 cuyas dependencias estén cerradas (previsiblemente #56, v1-16).
+
 ### 2026-11-13 — #54 v1-14-rule-e2e003-positional-xpath
 
 - **Hecho:**
@@ -430,49 +465,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Una persona revisa y mergea #108.
   - Después, volver a lanzar la CI de #103 (o actualizar su rama) para que `audit` pase, y ejecutar `gh pr ready 103` si todo pasa.
   - Decidir si se abre un issue para subir `vitest` a >=5.0.3.
-
-### 2026-10-22 — dev-loop V1
-
-- **Hecho:**
-  - Ejecución de `/dev-loop` en la fase V1, iniciada el 2026-10-15 con max-tasks=3, max-open-prs=4, max-failures=2 y max-idle=8.
-  - La persona pidió terminar #43 hasta `/deliver --loop`, cerrar con `/handoff` y detener el loop sin empezar más tareas ni vueltas.
-  - **#43 v1-03-run-file-defaults, entregado: PR #103 en borrador, rama `fix/43-run-file-defaults`, etiqueta `loop`.**
-    - Commits:
-      - `e92e542` diseño §23.2.1 y test AC-2. El rojo se verificó: `0o755 ≠ 0o700`.
-      - `6acaa65` implementación.
-      - `4b7fc8a` tests de endurecimiento.
-      - `ebd7901` quita un test duplicado.
-    - `pnpm verify` pasa en `ebd7901`. `delivery-auditor` dio APROBADO. Hay un comentario de entrega en #43.
-  - PRs mantenidos: ninguno.
-  - Tareas detenidas: ninguna.
-  - Contadores: 1 tarea entregada, 0 fallidas seguidas, 0 vueltas sin cambios.
-- **En curso:**
-  - PR #103 sigue en borrador porque los 7 checks de CI (`verify` ×6 y `audit`) estaban pendientes al entregarlo.
-  - Si pasan todos, hay que ejecutar `gh pr ready 103`.
-  - Si alguno falla, hay que compararlo con el mismo check del último PR mergeado, como dice `/deliver`, paso 8.
-  - Estado de la CI de #103 al cerrar la sesión:
-    - `verify` pasa en ubuntu (Node 22 y 24) y en macOS con Node 24; los de Windows y macOS con Node 22 siguen pendientes.
-    - **`audit` falla por una advisory nueva, no por esta tarea:**
-      - Es GHSA-587h-7wmj-h5pm (alta), contra `vite` 8.3.0–8.3.2 y `launch-editor` ≤2.14.1; las dos son dependencias de desarrollo.
-      - Se publicó después de que pasara #101, y `main` tiene el mismo lockfile, así que también fallaría.
-      - #43 no toca `pnpm-lock.yaml` ni ningún `package.json`.
-      - Hace falta un issue de bump de dependencias. Hasta entonces, el `audit` de cualquier PR fallará.
-- **Decisiones:**
-  - La persona aprobó quitar el tercer test de `run-file-modes.test.ts`, que repetía AC-2 y el test de `0600`. El hook `test-guard` bloqueó la edición, así que la persona aplicó el parche ella misma.
-    - Dónde quedó escrito: el cuerpo del commit `ebd7901`, el PR #103 y `.atium-loop/current.md`. No hay ADR ni cambio de diseño.
-  - Se justificó en lugar de corregir el aviso `max-lines` de `packages/core/src/storage/run-file.test.ts`, que tiene 405 líneas para un máximo de 400.
-    - Lo causa el test de especificación AC-2. Moverlo lo decide `spec-tester` o una persona (04-testing.md, "TDD").
-    - Dónde quedó escrito: el PR #103 y el comentario en #43.
-  - El loop se detuvo por instrucción de la persona. Dónde quedó escrito: solo en `.atium-loop/current.md`, que no se versiona.
-- **Problemas:**
-  - En las rondas 1 y 2 de `/verify` del 2026-10-15, varios tests de archivos que la tarea no tocó superaron el timeout bajo carga (load 20-46). En la ronda 3 y el 2026-10-22, con carga normal, todo pasó. Si se repite en CI, tratarlo como flaky preexistente.
-  - La spec de v1-03 dice que los reintentos de `fs.rm` esperan "unos 0,3 s". Con el retraso lineal de Node (100, 200 y 300 ms) son unos 0,6 s en el peor caso. El diseño no da cifra, así que no cambia nada.
-  - Sugerencias de `/review` que ya existían antes y no son de esta tarea, sin issue:
-    - `REDACT_PATTERN_IDS` no está congelado en tiempo de ejecución.
-    - Antes de escribir no se comprueba con `realpath` si `.atium/runs` es un symlink (06-security.md:33).
-- **Siguiente paso:**
-  - Pedir a la persona que cree el issue del bump de `vite` (≥8.3.3) y `launch-editor` (≥2.14.2) por GHSA-587h-7wmj-h5pm.
-  - Revisar la CI de PR #103. Si los `verify` pasan, decide la persona: el `audit` no lo causa la tarea, pero `/deliver` solo da el PR por listo cuando el mismo check también falla en el último PR mergeado.
-  - Una persona revisa y mergea #103.
-  - Decidir si se mueve el test AC-2 a `run-file-modes.test.ts` y si las dos sugerencias de seguridad merecen un issue.
-  - Para reanudar el loop: `/loop /dev-loop`.
