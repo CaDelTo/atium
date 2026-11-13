@@ -4,6 +4,51 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-22 — #105 Avisos de seguridad en vite y launch-editor
+
+- **Hecho:**
+  - #105 no tiene archivo en `docs/tasks/`: la especificación es el cuerpo del issue. Se trabajó con `/task` en el worktree `atium-105`. `plan-reviewer` dio APROBADO, la persona aprobó el plan y este se comentó en el issue con la etiqueta `plan:approved`.
+  - **Rama y PR:** rama `chore/105-vite-launch-editor-advisories`, con un solo commit `b92e404`, `chore(deps): resolve patched vite and launch-editor`. PR #108 con `Closes #105`, listo para revisión. Los 7 checks de CI pasan (`verify` ×6 y `audit`).
+  - **Cambio:** solo `pnpm-lock.yaml`.
+    - `vite` pasa de 8.3.1 a 8.3.4 y `launch-editor` de 2.14.1 a 2.14.2, por GHSA-587h-7wmj-h5pm (high).
+    - Arrastra estas transitivas: `rolldown` 1.2.13, `@oxc-project/types` 0.153.0 y `postcss` 8.5.29.
+    - El peer opcional `postcss` de tsup también pasa a 8.5.29, así que queda una sola versión de postcss.
+    - Se hizo con `pnpm update -r vite launch-editor` y después `pnpm update -r postcss`.
+  - **Verificación:**
+    - `pnpm audit --audit-level high` sale con 0.
+    - `TURBO_FORCE=true pnpm verify` pasa.
+    - `pnpm install --frozen-lockfile` pasa.
+    - `/review`: `code-reviewer` aprobó en 2 rondas y `docs-checker` dio OK.
+    - `delivery-auditor`: APROBADO.
+- **En curso:** nada. Falta que una persona revise y mergee el PR #108.
+- **Decisiones:**
+  - **Sin `overrides`:**
+    - `vitest` y `@vitest/mocker` 5.0.2 aceptan vite `^8.0.0`, y `@changesets/cli` 3.0.3 acepta launch-editor `^2.14.1`.
+    - 06-security.md (sección Dependencias) solo permite overrides cuando ningún padre elegible corrige el aviso.
+    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
+  - **postcss unificado en 8.5.29:**
+    - Lo encontró `duplication-auditor` y la persona dejó corregirlo a criterio de la sesión.
+    - `pnpm dedupe` no lo resolvía porque postcss es un peer opcional de tsup.
+    - La 8.5.30 (2026-10-12) todavía no cumple los 14 días.
+    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
+  - **Sugerencias de `/review` descartadas:**
+    - Dudaba de que el padre de launch-editor fuera `@changesets/cli`; `pnpm why` lo confirma.
+    - Proponía cambiar el trailer de atribución; la atribución de la sesión es Claude Opus 5.5.
+    - Dónde quedó escrito: solo en esta entrada.
+- **Problemas:**
+  - Siguen 2 avisos moderate en `vitest` <5.0.3, que es dependencia directa y se pinea a 5.0.2 en la raíz, core, eslint-plugin, cli, storage-sqlite y playwright-demo.
+    - No bloquean el job `audit`, que solo bloquea en high.
+    - No hay issue para ellos.
+    - vitest 5.0.3 (2026-09-30) ya cumple los 14 días. Subirlo junto con `@vitest/coverage-v8` es una tarea aparte.
+  - En pnpm 12, `--depth` no acepta `Infinity` y su valor por defecto ya es ilimitado: basta `pnpm update -r <paquete>`.
+  - Siguen pendientes los puntos de la entrada anterior:
+    - Pasar PR #103 a listo. Ahora el `audit` debería pasar al rebasar sobre `main` con #108.
+    - Mover el test AC-2 de `run-file.test.ts` (405 líneas, aviso `max-lines`).
+- **Siguiente paso:**
+  - Una persona revisa y mergea #108.
+  - Después, volver a lanzar la CI de #103 (o actualizar su rama) para que `audit` pase, y ejecutar `gh pr ready 103` si todo pasa.
+  - Decidir si se abre un issue para subir `vitest` a >=5.0.3.
+
 ### 2026-10-22 — dev-loop V1
 
 - **Hecho:**

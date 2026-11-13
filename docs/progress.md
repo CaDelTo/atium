@@ -8,6 +8,38 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #56 v1-16-rule-e2e009-web-first
+
+- **Hecho:**
+  - **Antes, en la misma sesión:** PR #145 (#55, E2E004) mergeado.
+  - **Rama y PR de #56:**
+    - Rama `feat/56-rule-e2e009-web-first`, creada desde `origin/main`.
+    - PR #146 en borrador, con `Closes #56` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **Commits:**
+    - `49d9fcd` `test(eslint-plugin): specify prefer-web-first-assertion`: spec en `src/rules/prefer-web-first-assertion.test.ts`, stub, listas y tabla en `defaults.ts`, decisiones en 03-linter.md §11.3/§11.3.1 y el ejemplo de `toHaveText` de la tarea; 49 en rojo.
+    - `edcf9c0` `feat`: la regla, `propertyName` exportado en `syntax/ast.ts`, registro, `docs/rules/e2e009.md` y README.
+    - `ec0c0da` `fix`: edge tests y propiedades fast-check de test-writer (`.edge.test.ts`, `.properties.test.ts`) y 2 bugs que encontró: receptor `(a, b)` sin paréntesis y `await` doble a través de `?.`.
+    - `16197d3` `fix`: hallazgos de /review (`count()` con literal no numérico ya no da autofix; paréntesis ante `**`; `satisfies`; TSDoc; docs), con `.review.test.ts`.
+  - **Puertas:**
+    - `plan-reviewer`: REQUIERE PERSONA, después CAMBIOS, incorporados.
+    - Rojo verificado.
+    - `/verify`: PASS, con 884 tests en eslint-plugin.
+    - `/review`: 0 bloqueantes; 1 importante y 3 menores corregidos; el resto justificado; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO a la primera. Son 1411 líneas, con la excepción de tamaño publicada por la persona en #56.
+    - Push con `push-branch.mjs`, resumen de entrega comentado en #56 y PR vinculado a la sesión.
+- **En curso:** PR #146 en borrador. Al crearlo, la CI todavía no había reportado ningún check. Falta `gh pr ready 146` cuando estén en verde.
+- **Decisiones** (de la persona, en 03-linter.md §11.3 y §11.3.1 como "Decidido en #56"):
+  - `textContent()` solo da sugerencia (`toHaveText` normaliza espacios y `textContent()` puede ser `null`).
+  - Autofix solo en `isVisible()`/`count()` sobre un locator de Playwright reconocido (`locator()`, `getBy*`, o `.nth/.first/.last` sobre uno; no `$()`); otro receptor da sugerencia.
+  - La consulta sin `await` no se detecta.
+  - Tomadas por el agente con delegación de la persona: `.filter({})` sin refinamiento sigue como sugerencia (lo seguro); `expect<T>()` pierde su argumento de tipo a propósito. Están justificadas en el PR, no en el diseño.
+- **Problemas:**
+  - **Tarea propuesta sin iniciar:** "Shared Linter test helper in eslint-plugin" (el montaje de `Linter` copiado en 4-5 archivos de test); debe empezar desde `main` cuando #56 esté mergeado.
+  - Siguen: `08-git-workflow.md:110` no prevé excepciones de tamaño; la sesión "Align §14.1 selector levels with E2E002 depth" sin iniciar; la ruta del worktree eliminado `cranky-kowalevski-258155` en el test de `example-playwright-demo`; `max-lines` en `packages/core/src/storage/run-file.test.ts`.
+  - El primer intento de `test-writer` se cortó por el límite de uso y se reanudó; no afectó al resultado.
+- **Siguiente paso:** con la CI de #146 en verde, ejecutar `gh pr ready 146`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #57 (v1-17, E2E005 test demasiado grande).
+
 ### 2026-11-13 — #55 v1-15-rule-e2e004-nth
 
 - **Hecho:**
@@ -420,48 +452,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Avisos preexistentes fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
   - La rama local `docs/audit-tasks` (PR #133 ya mergeado) sigue en el checkout principal; se puede borrar.
 - **Siguiente paso:** con la CI de #134 en verde, `gh pr ready 134` y que una persona lo revise y mergee. Después, la siguiente tarea Pendiente de V1 es #45 (v1-05 Alinear el diseño con lo implementado en V0); las de auditoría más urgentes son #116 (v1-46, carrera de migración SQLite) y #118 (v1-48, redacción de secretos).
-
-### 2026-10-22 — #105 Avisos de seguridad en vite y launch-editor
-
-- **Hecho:**
-  - #105 no tiene archivo en `docs/tasks/`: la especificación es el cuerpo del issue. Se trabajó con `/task` en el worktree `atium-105`. `plan-reviewer` dio APROBADO, la persona aprobó el plan y este se comentó en el issue con la etiqueta `plan:approved`.
-  - **Rama y PR:** rama `chore/105-vite-launch-editor-advisories`, con un solo commit `b92e404`, `chore(deps): resolve patched vite and launch-editor`. PR #108 con `Closes #105`, listo para revisión. Los 7 checks de CI pasan (`verify` ×6 y `audit`).
-  - **Cambio:** solo `pnpm-lock.yaml`.
-    - `vite` pasa de 8.3.1 a 8.3.4 y `launch-editor` de 2.14.1 a 2.14.2, por GHSA-587h-7wmj-h5pm (high).
-    - Arrastra estas transitivas: `rolldown` 1.2.13, `@oxc-project/types` 0.153.0 y `postcss` 8.5.29.
-    - El peer opcional `postcss` de tsup también pasa a 8.5.29, así que queda una sola versión de postcss.
-    - Se hizo con `pnpm update -r vite launch-editor` y después `pnpm update -r postcss`.
-  - **Verificación:**
-    - `pnpm audit --audit-level high` sale con 0.
-    - `TURBO_FORCE=true pnpm verify` pasa.
-    - `pnpm install --frozen-lockfile` pasa.
-    - `/review`: `code-reviewer` aprobó en 2 rondas y `docs-checker` dio OK.
-    - `delivery-auditor`: APROBADO.
-- **En curso:** nada. Falta que una persona revise y mergee el PR #108.
-- **Decisiones:**
-  - **Sin `overrides`:**
-    - `vitest` y `@vitest/mocker` 5.0.2 aceptan vite `^8.0.0`, y `@changesets/cli` 3.0.3 acepta launch-editor `^2.14.1`.
-    - 06-security.md (sección Dependencias) solo permite overrides cuando ningún padre elegible corrige el aviso.
-    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
-  - **postcss unificado en 8.5.29:**
-    - Lo encontró `duplication-auditor` y la persona dejó corregirlo a criterio de la sesión.
-    - `pnpm dedupe` no lo resolvía porque postcss es un peer opcional de tsup.
-    - La 8.5.30 (2026-10-12) todavía no cumple los 14 días.
-    - Dónde quedó escrito: el commit `b92e404` y el PR #108.
-  - **Sugerencias de `/review` descartadas:**
-    - Dudaba de que el padre de launch-editor fuera `@changesets/cli`; `pnpm why` lo confirma.
-    - Proponía cambiar el trailer de atribución; la atribución de la sesión es Claude Opus 5.5.
-    - Dónde quedó escrito: solo en esta entrada.
-- **Problemas:**
-  - Siguen 2 avisos moderate en `vitest` <5.0.3, que es dependencia directa y se pinea a 5.0.2 en la raíz, core, eslint-plugin, cli, storage-sqlite y playwright-demo.
-    - No bloquean el job `audit`, que solo bloquea en high.
-    - No hay issue para ellos.
-    - vitest 5.0.3 (2026-09-30) ya cumple los 14 días. Subirlo junto con `@vitest/coverage-v8` es una tarea aparte.
-  - En pnpm 12, `--depth` no acepta `Infinity` y su valor por defecto ya es ilimitado: basta `pnpm update -r <paquete>`.
-  - Siguen pendientes los puntos de la entrada anterior:
-    - Pasar PR #103 a listo. Ahora el `audit` debería pasar al rebasar sobre `main` con #108.
-    - Mover el test AC-2 de `run-file.test.ts` (405 líneas, aviso `max-lines`).
-- **Siguiente paso:**
-  - Una persona revisa y mergea #108.
-  - Después, volver a lanzar la CI de #103 (o actualizar su rama) para que `audit` pase, y ejecutar `gh pr ready 103` si todo pasa.
-  - Decidir si se abre un issue para subir `vitest` a >=5.0.3.
