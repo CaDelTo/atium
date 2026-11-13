@@ -99,7 +99,23 @@ function argumentsFit(
     );
   }
   const arity = row.keepsArgument ? 1 : 0;
-  return args.length === arity && args.every((arg) => arg.type !== AST_NODE_TYPES.SpreadElement);
+  return (
+    args.length === arity &&
+    args.every((arg) => arg.type !== AST_NODE_TYPES.SpreadElement) &&
+    (row.numericArgument !== true || !args.some(isNonNumericLiteral))
+  );
+}
+
+/** A literal that is not a number, such as `"3"`, `null`, `[3]` or `{}` (§11.3.1, decided in #56). */
+function isNonNumericLiteral(node: TSESTree.CallExpressionArgument): boolean {
+  if (node.type === AST_NODE_TYPES.Literal) {
+    return typeof node.value !== "number";
+  }
+  return (
+    node.type === AST_NODE_TYPES.TemplateLiteral ||
+    node.type === AST_NODE_TYPES.ArrayExpression ||
+    node.type === AST_NODE_TYPES.ObjectExpression
+  );
 }
 
 /** The row that replaces this matcher on this query, or `undefined` when none applies. */
@@ -129,7 +145,10 @@ function needsParentheses(node: TSESTree.Node): boolean {
   const { parent } = node;
   return (
     (parent?.type === AST_NODE_TYPES.MemberExpression && parent.object === node) ||
-    (parent?.type === AST_NODE_TYPES.CallExpression && parent.callee === node)
+    (parent?.type === AST_NODE_TYPES.CallExpression && parent.callee === node) ||
+    (parent?.type === AST_NODE_TYPES.BinaryExpression &&
+      parent.operator === "**" &&
+      parent.left === node)
   );
 }
 

@@ -138,7 +138,10 @@ export const EXPECT_CALLS = Object.freeze(["expect", "expect.soft", "expect.poll
  * Calls whose value E2E009 reads: `expect.poll` already retries. Source:
  * 03-linter.md §11.3, E2E009, and §11.3.1 (decided in #56).
  */
-export const WEB_FIRST_EXPECT_CALLS = Object.freeze(["expect", "expect.soft"] as const);
+export const WEB_FIRST_EXPECT_CALLS = Object.freeze([
+  "expect",
+  "expect.soft",
+] as const satisfies readonly (typeof EXPECT_CALLS)[number][]);
 
 /**
  * Methods that read the page once, whose awaited value E2E009 reports inside
@@ -151,7 +154,9 @@ export const NON_WEB_FIRST_QUERIES = Object.freeze(["isVisible", "textContent", 
  * `toBe(true)` and the like, the boolean literal its only argument must be.
  */
 export interface WebFirstMatcher {
+  /** The matcher name, such as `toBe`. */
   readonly name: string;
+  /** The boolean literal its only argument must be; `undefined` when the row keeps any argument or takes none. */
   readonly argument?: boolean;
 }
 
@@ -167,6 +172,8 @@ export interface WebFirstReplacement {
   readonly keepsArgument: boolean;
   /** Whether the row is an autofix (on a recognized locator) rather than a suggestion. */
   readonly autofix: boolean;
+  /** Whether a literal argument must be a number, as for `toHaveCount(n)`; another literal gets only the finding. */
+  readonly numericArgument?: boolean;
 }
 
 /**
@@ -202,6 +209,7 @@ export const WEB_FIRST_REPLACEMENTS: readonly WebFirstReplacement[] = Object.fre
     replacement: "toHaveCount",
     keepsArgument: true,
     autofix: true,
+    numericArgument: true,
   },
   {
     query: "textContent",
@@ -236,7 +244,7 @@ export const LOCATOR_QUERIES = Object.freeze(["locator", "$"] as const);
  * web-first assertions do not accept it. Source: 03-linter.md §11.3.1, E2E009
  * (decided in #56).
  */
-export const ELEMENT_HANDLE_QUERY = "$";
+export const ELEMENT_HANDLE_QUERY = "$" satisfies (typeof LOCATOR_QUERIES)[number];
 
 /**
  * Prefix of Playwright's locators by role, text, label and so on; a capital

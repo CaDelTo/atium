@@ -69,7 +69,7 @@ El autofix solo se ofrece cuando la transformación es segura. Para E2E001 no ha
 | E2E004 | Uso de `.nth()` | `.nth(n)` con n > 0, `.first()` / `.last()` encadenados a locators no únicos | `.nth()` sobre `getByRole` con nombre | Opción `minIndex`: 1 (se reporta `.nth(n)` con n ≥ 1) |
 | E2E005 | Test demasiado grande | Acciones (`click`, `fill`, `goto`, `press`, `check`, `selectOption`, comandos `cy.*`) o líneas por test | — | 25 acciones o 150 líneas |
 | E2E006 | Assertions insuficientes | Tests con acciones y cero assertions. Cuenta: `expect(...)`, `.should()` / `.and()`, funciones en `assertFunctionNames` y helpers del mismo archivo que contengan assertions (un nivel) | Helpers de otros archivos se resuelven en el motor cross-file | 1 assertion |
-| E2E009 | Assertions no web-first | `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...`, `expect(await locator.count())...` | Un valor guardado antes en una variable, `expect.poll`, `innerText` / `inputValue` / `getAttribute`, la consulta sin `await` y Cypress | — |
+| E2E009 | Assertions no web-first | `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...`, `expect(await locator.count())...` | Un valor guardado antes en una variable, `expect.poll`, `innerText` / `inputValue` / `getAttribute`, la consulta sin `await` y el estilo de Cypress, que no hace `await` sobre comandos | — |
 | E2E010 | `.only` olvidado | `test.only`, `describe.only`, `it.only` | Un `.only` cuyo callback no es una función literal (`describe.only("d", suite)`); el resto de modificadores | — |
 | E2E012 | Secretos en tests | Literales asignados a identificadores tipo `password`, `token`, `secret`, `apiKey` con entropía alta; patrones conocidos (JWT, claves de nube) | Valores obviamente ficticios (`"password123"`, `"test"`) | Entropía ≥ 3.5 bits/char |
 
@@ -143,7 +143,7 @@ Los envoltorios de TypeScript (`x!`, `x as T`, `<T>x`, `x satisfies T`) y el enc
 
   - **Autofix:** solo en las filas de `isVisible` y `count`, y solo si el receptor `x`, sin envoltorios, es una consulta de Playwright distinta de `$()` (que da un ElementHandle), es decir `locator()` o `getBy*`, o un refinamiento (`.nth()`, `.first()`, `.last()`) cuyo locator base es una consulta así.
   - **Sugerencia:** en las filas de `textContent`, porque `toHaveText` normaliza los espacios y `textContent()` puede ser `null`, y en las de `isVisible` y `count` con cualquier otro receptor (un identificador, `page.$("a")`, `items.first()`, `cy.get("a").first()`, `page.locator("a").filter(…)`).
-  - **Solo el hallazgo:** con otro matcher o ninguno, con argumentos en la consulta (`page.isVisible("#a")`), con un número de argumentos del matcher distinto del de su fila o con comentarios en el código que se reemplaza.
+  - **Solo el hallazgo:** con otro matcher o ninguno, con argumentos en la consulta (`page.isVisible("#a")`), con un número de argumentos del matcher distinto del de su fila, con un argumento que no es el literal de la fila (`toBe(1)` o `toBe(shown)` sobre `isVisible()`), con un literal que no es un número en la fila de `count` (`toBe("3")`, `toBe(null)`, `toEqual({})`) o con comentarios en el código que se reemplaza.
   - Decidido en #56.
 
 ### 11.4 Reglas cross-file
