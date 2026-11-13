@@ -4,6 +4,52 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-15 — #42 v1-02-shared-fs-and-path-helpers
+
+- **Hecho:**
+  - **#41 cerrada.** La persona mergeó el PR #97 (`090de39`). Los checks `audit` y los 6 `verify` pasaron, salvo un timeout de `verify (ubuntu-latest, Node 22)`; ver "Problemas". Después, el worktree `atium-loop` volvió a detached sobre `origin/main`.
+  - **#42 con `/task 42`,** en el worktree `atium-loop`:
+    - La persona tomó las decisiones abiertas de la tarea. El plan pasó dos rondas de `plan-reviewer` y lo aprobó la persona; está comentado en el issue bajo `## Plan aprobado`, con la etiqueta `plan:approved`.
+    - Rama `refactor/42-shared-fs-and-path-helpers`. PR #98 con `Closes #42`, listo para revisión.
+    - Los 7 checks de CI están en verde: los 6 `verify` y `audit`.
+  - **Commits:**
+    - `b860348`: especificación TDD.
+      - Stubs de `isMissingFileError` y `displayPath`.
+      - 18 tests `AC-n` en rojo: 17 por el stub y 1 por assertion. Este último es el test de `loadConfig` con `..foo.json`, que reproduce el bug.
+    - `e07a5a5` (core): mueve `isMissingFileError` a `errno.ts` y `displayPath` a `paths.ts`, y define `ATIUM_DIRECTORY` en `defaults.ts`.
+      - `RUNS_DIRECTORY` se construye a partir de `ATIUM_DIRECTORY` con `as const`.
+      - Exporta `LOCAL_PROVIDER` desde `ci/detect-run-context.ts`.
+      - Los cinco helpers y constantes se exportan desde la raíz de `@atium/core` y se documentan en el README de core.
+      - `loadConfig` usa el `displayPath` compartido, lo que corrige el caso `..foo.json`.
+    - `7677d09` (cli): importa los helpers de core. `ATIUM_DIRECTORY` se queda duplicado, con un test que lo iguala al de core.
+    - `30dc27d` (sqlite): `SQLITE_DATABASE_PATH` se construye a partir del `ATIUM_DIRECTORY` de core.
+    - `21be247`: endurecimiento de `test-writer`.
+      - `packages/core/src/display-path.test.ts`: tests de propiedades con semilla fija, separadores redundantes e `isMissingFileError` con errores reales del sistema de archivos.
+      - Dos tests del check `config` de doctor.
+    - `40b52f9`, `7c9882e` y `ab67916`: correcciones de `/review` y del primer rechazo de `delivery-auditor`.
+  - **Verificado:**
+    - `pnpm verify` con exit 0 sobre `ab67916`.
+    - `/review` con code-reviewer, duplication-auditor, docs-checker, security-reviewer, design-auditor (CONFORME) y perf-benchmarker: sin bloqueantes. `atium --help` tarda 40,3 ms frente a un presupuesto de 300 ms. No se pudo comparar con `main` porque no hay permiso para crear un worktree.
+    - `delivery-auditor` dio APROBADO en la segunda ronda.
+- **En curso:** nada. El PR #98 espera revisión y merge.
+- **Decisiones** (todas escritas en `docs/tasks/v1-02-shared-fs-and-path-helpers.md`, "Decisiones abiertas en esta tarea"):
+  - **Exports:** `errnoCode`, `isMissingFileError`, `displayPath`, `ATIUM_DIRECTORY` y `LOCAL_PROVIDER` se exportan desde la raíz de `@atium/core`, no desde `pure` ni desde un subpath nuevo. Sin ADR ni changeset: el cambio es aditivo y los paquetes son `private`.
+  - **`ATIUM_DIRECTORY` en cli:** se queda duplicado, porque `messages.ts` lo usa en `--help`, que no puede cargar core. `packages/cli/src/defaults.test.ts` los mantiene iguales.
+  - **`errnoCode` en cli:** no se reexporta, en contra del plan. `project-files.test.ts` solo cambia su import a `@atium/core`. La persona lo aprobó en `/review` con "Corrige todo"; la cita la escribió el agente, no la persona.
+  - **`LOCAL_PROVIDER`:** se queda en `ci/detect-run-context.ts` y no en `defaults.ts`, porque es un valor del modelo, no un default. Esto solo está escrito aquí y en el cuerpo del PR.
+- **Problemas:**
+  - **Test inestable** `packages/eslint-plugin/src/syntax/context.test.ts:174`. Es de propiedades con fast-check, sin semilla fija y con 100 ejecuciones. Superó los 5000 ms en `verify (ubuntu-latest, Node 22)` del PR #97; en local tarda entre 0,4 y 0,6 s. No hay issue abierto.
+  - **Sugerencias no aplicadas:**
+    - `displayPath(cwd, cwd)` devuelve `""`, igual que antes, y no está especificado.
+    - Mover el test de `isMissingFileError` con errores reales de `display-path.test.ts` a `errno.test.ts`. `test-guard` bloqueó quitarlo del primero.
+  - **Permisos de la sesión:** está denegado `git commit --amend`, `gh run view` y `gh api`. El scratchpad dejó de estar disponible a mitad de sesión; los textos temporales se escribieron en un directorio de `$TMPDIR`.
+  - **Worktree del loop ocupado:** `atium-loop` quedó en la rama `refactor/42-shared-fs-and-path-helpers`.
+- **Siguiente paso:**
+  1. Revisar y mergear el PR #98.
+  2. Antes de lanzar `/dev-loop`: `git -C ../atium-loop switch --detach origin/main`.
+  3. Abrir un issue para el test inestable de `context.test.ts:174`, con las opciones de semilla fija, `numRuns` o un timeout explícito.
+  4. Siguiente tarea de V1: #43 (v1-03, valores de los archivos de run en `defaults.ts`).
+
 ### 2026-10-15 — #41 v1-01-dependency-security-bump
 
 - **Hecho:**

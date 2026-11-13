@@ -295,3 +295,10 @@ export const VISIBLE_TEXT_LOCATORS = Object.freeze([
   "getByAltText",
   "getByTitle",
 ] as const);
+
+/**
+ * Defaults of `atium/no-fragile-css-selector` (E2E002): a CSS selector with
+ * `depth` or more combinators is fragile. Source: 03-linter.md §11.3, E2E002
+ * ("≥ 3 combinadores"; "Opción `depth`: 3"); the option name was decided in #53.
+ */
+export const FRAGILE_SELECTOR_DEFAULTS = Object.freeze({ depth: 3 });
