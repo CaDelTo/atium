@@ -175,6 +175,18 @@ export const LOCATOR_REFINEMENTS = Object.freeze(["nth", "first", "last"] as con
 export const INDEXED_REFINEMENT = "nth";
 
 /**
+ * Cypress's equivalent of `.nth()`, a refinement with an index only on a `cy`
+ * chain. Source: 03-linter.md §11.3, E2E004, and §11.3.1 (decided in #55).
+ */
+export const CYPRESS_INDEXED_REFINEMENT = "eq";
+
+/**
+ * Refinements that take an index: `.nth()`, and `.eq()` on a `cy` chain.
+ * Source: 03-linter.md §11.3, E2E004, and §11.3.1 (decided in #55).
+ */
+export const INDEXED_REFINEMENTS = Object.freeze(["nth", CYPRESS_INDEXED_REFINEMENT] as const);
+
+/**
  * Calls that wait a fixed time: Playwright's `waitForTimeout`, Cypress's
  * `cy.wait` with a number literal and a `setTimeout` that is the whole body
  * of a `new Promise` executor. Source: 03-linter.md §11.3, E2E001, and §11.3.1.
@@ -309,3 +321,11 @@ export const VISIBLE_TEXT_LOCATORS = Object.freeze([
  * ("≥ 3 combinadores"; "Opción `depth`: 3"); the option name was decided in #53.
  */
 export const FRAGILE_SELECTOR_DEFAULTS = Object.freeze({ depth: 3 });
+
+/**
+ * Default options of `atium/no-positional-locator` (E2E004): `.nth(n)` is
+ * reported from `minIndex` on, so with the default any `n > 0`. Source:
+ * 03-linter.md §11.3, E2E004 ("`.nth(n)` con n > 0", threshold
+ * "Configurable"), and §11.3.1 (decided in #55).
+ */
+export const POSITIONAL_LOCATOR_DEFAULTS = Object.freeze({ minIndex: 1 });
