@@ -33,7 +33,7 @@ settings: {
 Los valores por defecto viven en `packages/eslint-plugin/src/defaults.ts`:
 
 - `framework`: no tiene default. Se detecta por los imports de cada archivo y solo acepta `"playwright"` o `"cypress"`; `undefined` cuenta como ausente.
-- `pageObjectDirs`: `[]`, ningún archivo es Page Object si no se configura. Son globs POSIX que se comparan con la ruta del archivo relativa al directorio desde el que corre ESLint (`cwd`), con picomatch: `*` no cruza `/`, se distinguen mayúsculas, un `./` inicial se ignora y una ruta sin comodines (`tests/pages`) cubre todo lo que contiene. Un archivo fuera de ese directorio, o un nombre como `<input>`, no es Page Object. Decidido en #53.
+- `pageObjectDirs`: `[]`, ningún archivo es Page Object si no se configura. Son globs POSIX que se comparan con la ruta del archivo relativa al directorio desde el que corre ESLint (`cwd`), con picomatch: `*` no cruza `/`, se distinguen mayúsculas, un `./` inicial se ignora, una ruta sin comodines (`tests/pages`) cubre todo lo que contiene, `.` cubre todo el `cwd`, los directorios y archivos que empiezan por punto también casan y un glob negado (`!tests/x`) se ignora. Un archivo fuera de ese directorio, o un nombre como `<input>`, no es Page Object. Decidido en #53.
 - `assertFunctionNames`: `[]`, solo cuentan las assertions del framework.
 - `i18n`: `false`.
 

@@ -69,8 +69,10 @@ export default [
 
 `pageObjectDirs` globs are matched against the path of each file relative to
 the directory ESLint runs from: `*` does not cross `/`, matching is
-case-sensitive, a leading `./` is ignored, and a path without wildcards
-(`tests/pages`) covers everything inside it.
+case-sensitive, a leading `./` is ignored, a path without wildcards
+(`tests/pages`) covers everything inside it, `.` covers the whole directory,
+names that start with a dot match too, and negated globs (`!tests/x`) are
+ignored.
 
 Without `framework`, a file counts as Playwright when it imports
 `@playwright/test` or `playwright/test`, and as Cypress when it imports
