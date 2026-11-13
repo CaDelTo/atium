@@ -4,6 +4,52 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-10-22 — dev-loop V1
+
+- **Hecho:**
+  - Ejecución de `/dev-loop` en la fase V1, iniciada el 2026-10-15 con max-tasks=3, max-open-prs=4, max-failures=2 y max-idle=8.
+  - La persona pidió terminar #43 hasta `/deliver --loop`, cerrar con `/handoff` y detener el loop sin empezar más tareas ni vueltas.
+  - **#43 v1-03-run-file-defaults, entregado: PR #103 en borrador, rama `fix/43-run-file-defaults`, etiqueta `loop`.**
+    - Commits:
+      - `e92e542` diseño §23.2.1 y test AC-2. El rojo se verificó: `0o755 ≠ 0o700`.
+      - `6acaa65` implementación.
+      - `4b7fc8a` tests de endurecimiento.
+      - `ebd7901` quita un test duplicado.
+    - `pnpm verify` pasa en `ebd7901`. `delivery-auditor` dio APROBADO. Hay un comentario de entrega en #43.
+  - PRs mantenidos: ninguno.
+  - Tareas detenidas: ninguna.
+  - Contadores: 1 tarea entregada, 0 fallidas seguidas, 0 vueltas sin cambios.
+- **En curso:**
+  - PR #103 sigue en borrador porque los 7 checks de CI (`verify` ×6 y `audit`) estaban pendientes al entregarlo.
+  - Si pasan todos, hay que ejecutar `gh pr ready 103`.
+  - Si alguno falla, hay que compararlo con el mismo check del último PR mergeado, como dice `/deliver`, paso 8.
+  - Estado de la CI de #103 al cerrar la sesión:
+    - `verify` pasa en ubuntu (Node 22 y 24) y en macOS con Node 24; los de Windows y macOS con Node 22 siguen pendientes.
+    - **`audit` falla por una advisory nueva, no por esta tarea:**
+      - Es GHSA-587h-7wmj-h5pm (alta), contra `vite` 8.3.0–8.3.2 y `launch-editor` ≤2.14.1; las dos son dependencias de desarrollo.
+      - Se publicó después de que pasara #101, y `main` tiene el mismo lockfile, así que también fallaría.
+      - #43 no toca `pnpm-lock.yaml` ni ningún `package.json`.
+      - Hace falta un issue de bump de dependencias. Hasta entonces, el `audit` de cualquier PR fallará.
+- **Decisiones:**
+  - La persona aprobó quitar el tercer test de `run-file-modes.test.ts`, que repetía AC-2 y el test de `0600`. El hook `test-guard` bloqueó la edición, así que la persona aplicó el parche ella misma.
+    - Dónde quedó escrito: el cuerpo del commit `ebd7901`, el PR #103 y `.atium-loop/current.md`. No hay ADR ni cambio de diseño.
+  - Se justificó en lugar de corregir el aviso `max-lines` de `packages/core/src/storage/run-file.test.ts`, que tiene 405 líneas para un máximo de 400.
+    - Lo causa el test de especificación AC-2. Moverlo lo decide `spec-tester` o una persona (04-testing.md, "TDD").
+    - Dónde quedó escrito: el PR #103 y el comentario en #43.
+  - El loop se detuvo por instrucción de la persona. Dónde quedó escrito: solo en `.atium-loop/current.md`, que no se versiona.
+- **Problemas:**
+  - En las rondas 1 y 2 de `/verify` del 2026-10-15, varios tests de archivos que la tarea no tocó superaron el timeout bajo carga (load 20-46). En la ronda 3 y el 2026-10-22, con carga normal, todo pasó. Si se repite en CI, tratarlo como flaky preexistente.
+  - La spec de v1-03 dice que los reintentos de `fs.rm` esperan "unos 0,3 s". Con el retraso lineal de Node (100, 200 y 300 ms) son unos 0,6 s en el peor caso. El diseño no da cifra, así que no cambia nada.
+  - Sugerencias de `/review` que ya existían antes y no son de esta tarea, sin issue:
+    - `REDACT_PATTERN_IDS` no está congelado en tiempo de ejecución.
+    - Antes de escribir no se comprueba con `realpath` si `.atium/runs` es un symlink (06-security.md:33).
+- **Siguiente paso:**
+  - Pedir a la persona que cree el issue del bump de `vite` (≥8.3.3) y `launch-editor` (≥2.14.2) por GHSA-587h-7wmj-h5pm.
+  - Revisar la CI de PR #103. Si los `verify` pasan, decide la persona: el `audit` no lo causa la tarea, pero `/deliver` solo da el PR por listo cuando el mismo check también falla en el último PR mergeado.
+  - Una persona revisa y mergea #103.
+  - Decidir si se mueve el test AC-2 a `run-file-modes.test.ts` y si las dos sugerencias de seguridad merecen un issue.
+  - Para reanudar el loop: `/loop /dev-loop`.
+
 ### 2026-10-15 — #99 Test de propiedades de context.test.ts supera el timeout en CI
 
 - **Hecho:**
