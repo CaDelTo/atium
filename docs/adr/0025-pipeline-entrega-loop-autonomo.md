@@ -1,6 +1,6 @@
 # ADR-0025: Pipeline de entrega con TDD y loop de desarrollo autónomo
 
-- Estado: Aceptada; el orden de las puertas 2 y 3, el modelo de `plan-reviewer` y el lanzamiento de `/dev-loop` los reemplaza [ADR-0026](0026-pipeline-contexto-por-tarea.md)
+- Estado: Aceptada; quién ejecuta cada tarea, el orden de las puertas 2 y 3 y el modelo de `plan-reviewer` los reemplaza [ADR-0026](0026-pipeline-contexto-por-tarea.md)
 - Fecha: 2026-10-14
 - Reemplaza parcialmente: [ADR-0015](0015-subagentes-y-revision.md), en lo relativo a la prohibición de push
 - Diseño relacionado: docs/engineering/12-ai-workflow.md, docs/engineering/04-testing.md, docs/engineering/08-git-workflow.md

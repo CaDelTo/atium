@@ -86,8 +86,9 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 
 # Flujo de trabajo
 
-- Empieza las tareas con `/task <n|archivo>` (número de issue o
-  `docs/tasks/<archivo>`).
+- Empieza las tareas con `/task <n …|archivo>` (hasta 3 issues, o vacío para
+  que elija): eres el orquestador y cada tarea la ejecuta un subagente
+  `task-runner` con contexto limpio en su worktree (ADR-0026).
 - Cada tarea va en una rama `<tipo>/<n>-<nombre>` y su PR incluye `Closes #<n>`
   (formato en docs/engineering/08-git-workflow.md, sección "Issues").
 - Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
@@ -99,15 +100,14 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Antes de escribir código, presenta el plan con el veredicto de `plan-reviewer`
   y espera aprobación. Solo en `/dev-loop` aprueba `plan-reviewer`; lo que
   requiera una decisión humana se detiene igualmente.
-- Una tarea por contexto (ADR-0026): después de `/handoff`, `/clear` antes de la
-  siguiente `/task`.
-- Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
-  fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
-- Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
-  `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
-- Para entregar tareas sin intervención, una tras otra: `/dev-loop`, una vuelta
-  por proceso con el bucle de shell de docs/engineering/12-ai-workflow.md
-  ("Loop de desarrollo").
+- Un `task-runner` por tarea; no implementes tareas en el contexto del
+  orquestador. No avances a tareas no pedidas ni hagas cambios fuera del
+  alcance pedido; si ves algo que mejorar, menciónalo al final.
+- Para trabajar varias tareas a la vez: `/task` con varios issues (hasta 3), o
+  `/parallel` con una sesión por tarea (docs/engineering/12-ai-workflow.md,
+  "Trabajo en paralelo").
+- Para entregar tareas sin intervención: `/loop /dev-loop`, hasta 3 a la vez
+  (docs/engineering/12-ai-workflow.md, "Loop de desarrollo").
 - TDD cuando la tarea lo permite (docs/engineering/04-testing.md, "TDD"):
   `spec-tester` escribe los tests `AC-n` antes de la implementación y no se
   tocan después. Si no, los tests se escriben junto con el código.

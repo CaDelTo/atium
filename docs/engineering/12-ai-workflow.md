@@ -42,41 +42,43 @@ Reglas:
 | `design-auditor` | inherit | No | Conformidad exacta con `docs/design/` |
 | `plan-reviewer` | sonnet; opus en `/dev-loop` o con fórmulas, estados, esquemas o `defaults.ts` | No | Revisión del plan antes de implementar (puerta 0) |
 | `spec-tester` | inherit | Solo tests | Tests de especificación `AC-n` antes de la implementación (fase roja del TDD) |
+| `task-runner` | inherit | Sí | Ejecuta una tarea completa con el pipeline, en su worktree y con contexto limpio; lo lanzan `/task` y `/dev-loop` ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)) |
 | `delivery-auditor` | inherit | No | Auditoría estricta de la entrega dentro de `/review` (puerta 2), veredicto binario |
 
-Los subagentes no ven la conversación principal: cada invocación debe incluir el alcance (archivos o ref) y la pregunta concreta.
+Los subagentes no ven la conversación principal: cada invocación debe incluir el alcance (archivos o ref) y la pregunta concreta. `task-runner` lanza a su vez los subagentes del pipeline: es el único con dos niveles.
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `/task <n\|archivo> [en paralelo con #M …]` | Lee el issue (número) o el archivo de `docs/tasks/`, comprueba que nadie más la tiene en curso, reúne contexto con `explorer`, presenta el plan con el veredicto de `plan-reviewer` y espera aprobación; después sigue el [pipeline de entrega](#pipeline-de-entrega). Con `en paralelo con #M` aplica las reglas de "Trabajo en paralelo" |
+| `/task [n …\|archivo]` | Orquestador: lanza un `task-runner` por tarea (hasta 3 a la vez; sin argumentos elige Pendientes independientes). Cada runner prepara el plan con `plan-reviewer`; el orquestador te lo presenta, te reenvía la aprobación y el runner sigue el [pipeline de entrega](#pipeline-de-entrega) |
 | `/deliver` | Puerta final: comprueba que `/review` terminó con `delivery-auditor` en `APROBADO`; push de la rama y PR en borrador con `Closes #N` mediante `.claude/scripts/open-pr.mjs`; PR listo con la CI en verde |
-| `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes uno tras otro con el pipeline de entrega, aprobando planes con `plan-reviewer`. Una vuelta por proceso, lanzada por un bucle de shell (ver [Loop de desarrollo](#loop-de-desarrollo)) |
+| `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes con el pipeline de entrega, hasta 3 a la vez en runners, aprobando planes con `plan-reviewer`. Se lanza con `/loop /dev-loop` (ver [Loop de desarrollo](#loop-de-desarrollo)) |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |
 | `/review [ref]` | Revisión en paralelo con los agentes de revisión, incluido `delivery-auditor` en una rama de tarea, contra `ref` (por defecto `origin/main`); consolida un solo reporte |
 | `/audit` | Auditoría de todo el repo y propuesta de tareas |
 | `/adr <título>` | ADR nuevo desde la plantilla |
 | `/plan-phase <fase>` | Divide una fase del roadmap en tareas; propone la lista y espera aprobación; después crea los archivos y, con `issue-writer`, el milestone y los issues |
-| `/handoff` | Cierra la sesión: escribe una entrada en `docs/progress.md` (y la comenta en el issue si la tarea no tiene PR) y pide `/clear` |
-| `/parallel [n …]` | Propone tareas Pendientes que se pueden hacer a la vez; tras la aprobación crea un worktree por tarea e imprime el comando para abrir una sesión en cada uno. `--cleanup` retira los worktrees de PRs mergeados |
+| `/handoff` | Cierra la tarea (lo ejecuta el runner): escribe una entrada en `docs/progress.md` y la comenta en el issue si la tarea no tiene PR |
+| `/parallel [n …]` | Alternativa manual a `/task` con varias tareas: propone tareas Pendientes que se pueden hacer a la vez; tras la aprobación crea un worktree por tarea e imprime el comando para abrir una sesión en cada uno. `--cleanup` retira los worktrees de PRs mergeados |
 
 ## Flujo de una tarea
 
 ```
-inicio de sesión (contexto limpio) → leer la última entrada de docs/progress.md
+inicio de sesión → leer la última entrada de docs/progress.md
    ▼
 siguiente tarea → issue abierto más antiguo del milestone actual
                   con las dependencias cerradas o Hechas y sin rama, PR, worktree ni loop:blocked
    ▼
-/task 25   (o /task docs/tasks/v1-04-hard-wait-rule.md)
-   │  gh issue view → explorer reúne contexto → plan → plan-reviewer → aprobación (una persona)
+/task 25 26 27   (orquestador: un task-runner por tarea, hasta 3, cada uno en su worktree)
+   │  runner: gh issue view → explorer → plan → plan-reviewer → PLAN
+   │  orquestador: presenta el plan → aprobación (una persona) → SendMessage al runner
    ▼
 pipeline de entrega (ver abajo)
    │  rama → [TDD: stubs → spec-tester → rojo → commit] → implementación → test-writer
    │  /verify → /review (con delivery-auditor) → /deliver (open-pr.mjs → push → PR en borrador)
    ▼
-/handoff → entrada en docs/progress.md → /clear antes de la siguiente tarea
+/handoff → entrada en docs/progress.md → informe ENTREGADA al orquestador
    ▼
 CI en verde → PR listo para revisión → revisión humana → merge (una persona) → el issue se cierra
 ```
@@ -115,24 +117,19 @@ La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o ha
 3. Lanzamiento desde el worktree, con los permisos propios del loop (`.claude/loop-settings.json`, que se suman a los del proyecto):
 
    ```bash
-   cd ../atium-loop && export ATIUM_LOOP=1 GH_TOKEN="$(security find-generic-password -s atium-loop -w)"
-   while rm -f .atium-loop/next && claude -p --settings .claude/loop-settings.json "/dev-loop V1"; do
-     next="$(cat .atium-loop/next 2>/dev/null)"
-     case "$next" in ''|*[!0-9]*) break ;; esac  # stop, vacío o inválido: termina
-     sleep "$next"
-   done
+   cd ../atium-loop && ATIUM_LOOP=1 GH_TOKEN="$(security find-generic-password -s atium-loop -w)" claude --settings .claude/loop-settings.json "/loop /dev-loop V1"
    ```
 
-   Cada vuelta es un proceso `claude -p` nuevo, con contexto limpio ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)). Al terminar, la vuelta escribe en `.atium-loop/next` los segundos que hay que esperar o `stop`; si el proceso falla o no escribe el archivo, el bucle termina. En `claude -p` nadie confirma permisos: lo que `loop-settings.json` no permite se rechaza. `gh` y los scripts de push y PR usan `GH_TOKEN`; con `ATIUM_LOOP=1`, el script se niega a empujar sin él. `loop-settings.json` permite los comandos del pipeline (para que el loop no se quede esperando una confirmación), activa `acceptEdits` y deniega `gh api`, los comandos de git que destruyen trabajo o cambian la configuración, y la edición de `.claude/`, `CLAUDE.md`, `.github/` y los archivos de dependencias y hooks de la raíz.
+   El loop es un orquestador: cada tarea y cada mantenimiento de PR lo hace un `task-runner` con contexto limpio, en un worktree dentro de `.claude/worktrees/` y con los mismos permisos y variables de entorno ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)). Un runner no puede confirmar permisos: lo que `loop-settings.json` no permite se rechaza y detiene esa tarea. `gh` y los scripts de push y PR usan `GH_TOKEN`; con `ATIUM_LOOP=1`, el script se niega a empujar sin él. `loop-settings.json` permite los comandos del pipeline (para que el loop no se quede esperando una confirmación), activa `acceptEdits` y deniega `gh api`, los comandos de git que destruyen trabajo o cambian la configuración, y la edición de `.claude/`, `CLAUDE.md`, `.github/` y los archivos de dependencias y hooks de la raíz.
 
 **Funcionamiento:**
 
 - Prioridades en cada vuelta: mantener sus PRs (comentarios de la persona, checks rojos, rama desactualizada, pasar a listo), retomar issues desbloqueados y, por último, empezar el siguiente issue Pendiente.
 - No toma issues con `loop:blocked`, la tarea de aceptación de la fase ni tareas que cambien `.claude/`, `.github/`, `CLAUDE.md` o dependencias (`plan-reviewer` las marca como `REQUIERE PERSONA`).
-- **Límites:** `--max-tasks` (tareas entregadas por ejecución, 3), `--max-open-prs` (PRs del loop sin mergear, 4), `--max-failures` (tareas seguidas que agotan sus intentos, 2; una pregunta a la persona no cuenta), `--max-idle` (vueltas seguidas sin cambios, 8), más los límites de cada puerta del pipeline y de intentos por PR. No hay límite de hora.
+- **Límites:** `--max-tasks` (tareas entregadas por ejecución, 3), `--max-parallel` (runners a la vez, 3), `--max-open-prs` (PRs del loop sin mergear, 4), `--max-failures` (tareas seguidas que agotan sus intentos, 2; una pregunta a la persona no cuenta), `--max-idle` (vueltas seguidas sin cambios, 8), más los límites de cada puerta del pipeline y de intentos por PR. No hay límite de hora.
 - **Solo atiende a la persona dueña del repositorio:** los comentarios de cualquier otro autor se ignoran. Los suyos empiezan por `🤖 dev-loop:`, porque usa la misma cuenta. Las peticiones de cambio se dejan como comentarios del PR; los comentarios en línea de una revisión no los lee.
 - **Desbloquear un issue:** responder la pregunta en un comentario del issue y quitar la etiqueta `loop:blocked`.
-- **Estado:** vive en GitHub (etiquetas, ramas, PRs, comentarios) y en el registro `.atium-loop/` del worktree, así que cada vuelta empieza sin memoria de la anterior y el loop sobrevive a reinicios. Los contadores del registro son un freno, no un control de seguridad.
+- **Estado:** vive en GitHub (etiquetas, ramas, PRs, comentarios) y en el registro `.atium-loop/` del worktree, así que sobrevive a la compactación del contexto y a reinicios. Los runners no comparten memoria: el orquestador les pasa lo que necesitan. Los contadores del registro son un freno, no un control de seguridad.
 - **Al terminar** abre un PR con la entrada de `docs/progress.md` que resume la ejecución.
 - `--dry-run` describe lo que haría sin escribir nada.
 
@@ -147,7 +144,9 @@ La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o ha
 
 ## Trabajo en paralelo
 
-Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y en su propia sesión de Claude Code; cada tarea sigue el [pipeline de entrega](#pipeline-de-entrega) completo. Esta sección es la única fuente de las reglas; `/parallel` y `/task` remiten a ella.
+Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y sigue el [pipeline de entrega](#pipeline-de-entrega) completo. Esta sección es la única fuente de las reglas; `/task`, `/dev-loop` y `/parallel` remiten a ella.
+
+La forma habitual es `/task` con varios issues (o sin argumentos): un `task-runner` por tarea, en `.claude/worktrees/`, todo desde una conversación. `/parallel` es la alternativa manual, con una sesión de terminal por tarea:
 
 ```
 /parallel   (en el repo principal)
@@ -257,7 +256,7 @@ Claude Code no recuerda sesiones anteriores. La continuidad vive en el repositor
 | `docs/progress.md` | Contexto de las últimas sesiones: qué quedó a medias, decisiones, problemas y siguiente paso |
 | `docs/adr/` | Decisiones permanentes |
 
-Una tarea por contexto ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)): cada sesión empieza leyendo la última entrada de `docs/progress.md` y termina con `/handoff` y `/clear`. Encadenar tareas en una misma conversación hace que cada turno vuelva a leer el contexto de las anteriores: la misma clase de tarea llegó a costar cinco veces más. Una decisión que solo quedó en una conversación se considera perdida.
+Cada sesión empieza leyendo la última entrada de `docs/progress.md`; cada tarea termina con `/handoff`. Cada tarea corre en su propio `task-runner` ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)): encadenar tareas en un mismo contexto hace que cada turno vuelva a leer las anteriores, y la misma clase de tarea llegó a costar cinco veces más. Una decisión que solo quedó en una conversación se considera perdida.
 
 ## Límites
 

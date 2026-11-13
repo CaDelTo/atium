@@ -29,6 +29,6 @@ Decisiones de diseño ya tomadas. Para cambiar una, se crea un ADR nuevo que la 
 | [0023](0023-arquitectura-linter.md) | Arquitectura del linter: capas, nombres, catálogo, documentación, `atium lint` y contexto de los analizadores | Aceptada |
 | [0024](0024-licencia-apache-2.md) | Licencia Apache-2.0 y repositorio público | Aceptada |
 | [0025](0025-pipeline-entrega-loop-autonomo.md) | Pipeline de entrega con TDD y loop de desarrollo autónomo; push de ramas de tarea por el agente | Reemplazada parcialmente por 0026 |
-| [0026](0026-pipeline-contexto-por-tarea.md) | Contexto limpio por tarea, una vuelta de `/dev-loop` por proceso y pipeline de entrega más corto | Aceptada |
+| [0026](0026-pipeline-contexto-por-tarea.md) | Orquestador con un subagente `task-runner` por tarea (hasta 3 a la vez) y pipeline de entrega más corto | Aceptada |
 
 Plantilla: [0000-template.md](0000-template.md)
