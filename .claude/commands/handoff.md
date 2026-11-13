@@ -1,5 +1,5 @@
 ---
-description: Guarda el estado de la sesión en docs/progress.md y en el issue de la tarea para que la siguiente sesión continúe sin perder contexto
+description: Guarda el estado de la sesión en docs/progress.md (y en el issue de la tarea si no tiene PR) para que la siguiente sesión continúe sin perder contexto
 ---
 
 Cierra la sesión dejando el estado por escrito.
@@ -17,14 +17,16 @@ Cierra la sesión dejando el estado por escrito.
 - **Siguiente paso:** la primera acción concreta de la próxima sesión.
 ```
 
-3. Comenta la misma entrada en el issue de la tarea de la sesión con `gh issue comment N --body-file <archivo>`, escribiendo el archivo en un directorio temporal fuera del repo. El issue se identifica por la rama actual (`<tipo>/<n>-…`) o por la conversación; si la sesión no tuvo issue, omite el comentario y dilo.
+3. Si la tarea de la sesión no tiene un PR abierto, comenta la misma entrada en su issue con `gh issue comment N --body-file <archivo>`, escribiendo el archivo en un directorio temporal fuera del repo. El issue se identifica por la rama actual (`<tipo>/<n>-…`) o por la conversación; si la sesión no tuvo issue, omite el comentario y dilo.
 4. Si docs/progress.md tiene más de 10 entradas, mueve las más antiguas a docs/progress-archive.md, dejando las 10 más recientes.
 5. Sé literal y específico: la próxima sesión no tendrá esta conversación. No incluyas valores de variables de entorno, tokens ni datos sensibles.
 6. Muestra la entrada al usuario. Si la tarea de la sesión ya tiene un PR abierto (`/deliver`), haz commit de la entrada (`docs(repo): add handoff entry for #N`) con solo `docs/progress.md` y, si archivaste, `docs/progress-archive.md`, y push con `node .claude/scripts/push-branch.mjs <rama>`. Ese commit no vuelve a pasar por `delivery-auditor`; la CI lo verifica. Si no hay PR, no hagas commit salvo que te lo pida.
 
+7. Termina pidiendo a la persona que ejecute `/clear` antes de la siguiente tarea (ADR-0026).
+
 ## Modo loop
 
-Cuando lo ejecuta `/dev-loop` al terminar una ejecución, estos pasos sustituyen a los pasos 2, 3 y 6:
+Cuando lo ejecuta `/dev-loop` al terminar una ejecución, estos pasos sustituyen a los pasos 2, 3, 6 y 7:
 
 1. Desde el worktree limpio, crea la rama `docs/<AAAAMMDD>-dev-loop-handoff-<hhmm>` con `git switch --no-track -c <rama> origin/main` (la fecha ocupa el lugar del número de issue).
 2. Escribe la entrada (título `AAAA-MM-DD — dev-loop <fase>`): PRs entregados, PRs mantenidos, tareas detenidas con su pregunta y los contadores. Sale del registro `.atium-loop/`.

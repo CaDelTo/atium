@@ -92,19 +92,22 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
   (formato en docs/engineering/08-git-workflow.md, sección "Issues").
 - Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
   ramas de tarea y solo con `node .claude/scripts/push-branch.mjs <rama>`
-  (ADR-0025).
+  o `open-pr.mjs`, que lo usa (ADR-0025, ADR-0026).
 - Cada tarea sigue el pipeline de entrega (docs/engineering/12-ai-workflow.md):
   plan → `plan-reviewer` → aprobación → [TDD] → implementación → `test-writer`
-  → `/verify` → `/review` → `/deliver` → `/handoff`.
+  → `/verify` → `/review` (incluye `delivery-auditor`) → `/deliver` → `/handoff`.
 - Antes de escribir código, presenta el plan con el veredicto de `plan-reviewer`
   y espera aprobación. Solo en `/dev-loop` aprueba `plan-reviewer`; lo que
   requiera una decisión humana se detiene igualmente.
+- Una tarea por contexto (ADR-0026): después de `/handoff`, `/clear` antes de la
+  siguiente `/task`.
 - Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
   fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
 - Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
   `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
-- Para entregar tareas sin intervención, una tras otra: `/loop /dev-loop`
-  (docs/engineering/12-ai-workflow.md, "Loop de desarrollo").
+- Para entregar tareas sin intervención, una tras otra: `/dev-loop`, una vuelta
+  por proceso con el bucle de shell de docs/engineering/12-ai-workflow.md
+  ("Loop de desarrollo").
 - TDD cuando la tarea lo permite (docs/engineering/04-testing.md, "TDD"):
   `spec-tester` escribe los tests `AC-n` antes de la implementación y no se
   tocan después. Si no, los tests se escriben junto con el código.
@@ -129,8 +132,9 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Revisión con criterio (`sonnet`): `code-reviewer`, `security-reviewer`,
   `test-writer` (endurecimiento de tests).
 - Lo crítico lo hace el modelo de la sesión: fórmulas, estados, esquemas,
-  decisiones de arquitectura, `design-auditor`, `plan-reviewer`, `spec-tester`
-  y `delivery-auditor`.
+  decisiones de arquitectura, `design-auditor`, `spec-tester`, `delivery-auditor`
+  y `plan-reviewer` en `/dev-loop` o con fórmulas, estados o esquemas (en
+  `/task`, `sonnet`).
 - Nunca delegues decisiones; los subagentes reportan y tú decides.
 - Los subagentes no ven esta conversación: dales siempre alcance (archivos o ref)
   y una pregunta concreta.
