@@ -1,6 +1,10 @@
+import type { TSESTree } from "@typescript-eslint/types";
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
 import { TEST_SIZE_DEFAULTS } from "../defaults.js";
+import { actionOf } from "../syntax/actions.js";
+import { testContextOf } from "../syntax/context.js";
+import { classifyBlock } from "../syntax/structure.js";
 
 /** Code of the rule that reports a test that is too large (03-linter.md §11.3, E2E005). */
 export const RULE_TEST_SIZE = "E2E005";
@@ -48,7 +52,42 @@ export const maxTestSize = createRule<[TestSizeOptions], "tooLarge", AtiumCatalo
     },
   },
   defaultOptions: [TEST_SIZE_DEFAULTS],
-  create() {
-    throw new Error("not implemented");
+  create(context, [{ maxActions, maxLines }]) {
+    const actions = new Map<TSESTree.CallExpression, number>();
+    return {
+      CallExpression(node) {
+        // The innermost test keeps the action, also inside a `test.step` (§11.3.1).
+        const test = actionOf(node) === undefined ? undefined : testContextOf(node)?.test.node;
+        if (test !== undefined) {
+          actions.set(test, (actions.get(test) ?? 0) + 1);
+        }
+      },
+      // On exit every action of the test has been counted.
+      "CallExpression:exit"(node: TSESTree.CallExpression) {
+        const block = classifyBlock(node);
+        if (block?.kind !== "test") {
+          return;
+        }
+        const { callback } = block;
+        const count = actions.get(node) ?? 0;
+        const lines = callback.loc.end.line - callback.loc.start.line + 1;
+        if (count <= maxActions && lines <= maxLines) {
+          return;
+        }
+        // The callback's header: a node inside the test, so the fingerprint's
+        // titlePath includes it (§11.5), without underlining the whole body.
+        context.report({
+          node: callback,
+          loc: { start: callback.loc.start, end: callback.body.loc.start },
+          messageId: "tooLarge",
+          data: {
+            actions: String(count),
+            lines: String(lines),
+            maxActions: String(maxActions),
+            maxLines: String(maxLines),
+          },
+        });
+      },
+    };
   },
 });
