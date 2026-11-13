@@ -18,6 +18,21 @@ describe("isPageObjectFile: edge cases", () => {
     expect(isPageObjectFile("/repo", "/repo", ["**", "tests/pages"])).toBe(false);
   });
 
+  it("covers files in directories that start with a dot", () => {
+    expect(isPageObjectFile("tests/pages/.shared/a.ts", "/repo", ["tests/pages/**"])).toBe(true);
+    expect(isPageObjectFile("tests/.pages/a.ts", "/repo", ["tests/*/a.ts"])).toBe(true);
+  });
+
+  it("ignores negated globs instead of matching almost every file", () => {
+    expect(isPageObjectFile("src/app.ts", "/repo", ["!tests/x"])).toBe(false);
+    expect(isPageObjectFile("tests/pages/a.ts", "/repo", ["!tests/x", "tests/pages"])).toBe(true);
+  });
+
+  it.each([".", "./"])("treats %j as the whole of cwd", (glob) => {
+    expect(isPageObjectFile("tests/pages/a.ts", "/repo", [glob])).toBe(true);
+    expect(isPageObjectFile("a.ts", "/repo", [glob])).toBe(true);
+  });
+
   it("covers a directory given with a trailing slash", () => {
     expect(isPageObjectFile("tests/pages/a.ts", "/repo", ["tests/pages/"])).toBe(true);
     expect(isPageObjectFile("tests/pages-old/a.ts", "/repo", ["tests/pages/"])).toBe(false);
