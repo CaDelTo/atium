@@ -15,8 +15,12 @@ interface Reason {
   readonly data: Readonly<Record<string, string>>;
 }
 
-/** The value of a literal integer index, such as `2` or `-1`; `undefined` for anything else. */
-function literalIndex(index: TSESTree.CallExpressionArgument | undefined): number | undefined {
+/**
+ * The value of a literal integer index, such as `2`, `-1` or `2 as number`
+ * (TypeScript wrappers are transparent, §11.3.1); `undefined` for anything else.
+ */
+function literalIndex(argument: TSESTree.Node | undefined): number | undefined {
+  const index = argument === undefined ? undefined : unwrap(argument);
   if (index?.type === AST_NODE_TYPES.Literal && typeof index.value === "number") {
     return Number.isInteger(index.value) ? index.value : undefined;
   }

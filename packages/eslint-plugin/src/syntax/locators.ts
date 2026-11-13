@@ -10,7 +10,7 @@ import {
   LOCATOR_REFINEMENTS,
   ROLE_LOCATOR,
 } from "../defaults.js";
-import { calleeName, chainOf, isCypressChain, isMethodCall, isOneOf } from "./ast.js";
+import { calleeName, chainOf, isCypressChain, isMethodCall, isOneOf, unwrap } from "./ast.js";
 import type { Framework } from "./framework.js";
 
 /** Playwright's `getBy*` locators: the prefix followed by a capital, such as `getByText`. */
@@ -70,7 +70,8 @@ function isNameKey(property: TSESTree.ObjectLiteralElement): boolean {
 }
 
 function hasNameOption(call: TSESTree.CallExpression): boolean {
-  const options = call.arguments[1];
+  const argument = call.arguments[1];
+  const options = argument === undefined ? undefined : unwrap(argument);
   return options?.type === AST_NODE_TYPES.ObjectExpression && options.properties.some(isNameKey);
 }
 

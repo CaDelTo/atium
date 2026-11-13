@@ -336,7 +336,7 @@ export const FRAGILE_SELECTOR_DEFAULTS = Object.freeze({ depth: 3 });
 /**
  * Default options of `atium/no-positional-locator` (E2E004): `.nth(n)` is
  * reported from `minIndex` on, so with the default any `n > 0`. Source:
- * 03-linter.md §11.3, E2E004 ("`.nth(n)` con n > 0", threshold
- * "Configurable"), and §11.3.1 (decided in #55).
+ * 03-linter.md §11.3, E2E004 ("`.nth(n)` con n > 0"; "Opción `minIndex`: 1"),
+ * and §11.3.1 (decided in #55).
  */
 export const POSITIONAL_LOCATOR_DEFAULTS = Object.freeze({ minIndex: 1 });
