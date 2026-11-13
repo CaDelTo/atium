@@ -98,7 +98,11 @@ const LocatorSchema = z
     method: NameSchema,
     /** The framework whose syntax the call uses. */
     framework: z.enum(FRAMEWORKS),
-    /** The first argument normalized with `normalizeSelector`; `null` when it is not a literal. */
+    /**
+     * The first argument, normalized with `normalizeSelector`; as written for a
+     * `getBy*`, whose argument is a role, a text or a test id. `null` when it
+     * is not a literal.
+     */
     selector: z.string().nullable(),
     /** Level of the query. */
     level: LevelSchema,

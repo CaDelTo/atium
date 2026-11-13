@@ -19,7 +19,7 @@ export { enclosingBlocks, testContextOf, titlePathOf } from "./context.js";
 export type { Framework } from "./framework.js";
 export { detectFramework, FRAMEWORKS } from "./framework.js";
 export type { LocatorCall, LocatorQuery, LocatorRefinement } from "./locators.js";
-export { locatorOf } from "./locators.js";
+export { isGetByMethod, locatorOf } from "./locators.js";
 export type {
   ClassifyOptions,
   CssAnalysis,
