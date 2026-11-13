@@ -5,8 +5,8 @@ Cypress test suites, such as fixed waits or fragile selectors, in the editor
 and in CI.
 
 > Atium is a provisional codename and this package is not published to npm yet.
-> Its rules so far are `atium/no-hard-wait` (E2E001) and `atium/no-focused-test`
-> (E2E010); the rest arrive with the next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
+> Its rules so far are `atium/no-hard-wait` (E2E001), `atium/no-fragile-css-selector`
+> (E2E002) and `atium/no-focused-test` (E2E010); the rest arrive with the next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
 
 ## Installation
 
@@ -66,6 +66,11 @@ export default [
 | `pageObjectDirs`      | `[]`                       | Globs of the Page Object code, where selectors are allowed                    |
 | `assertFunctionNames` | `[]`                       | Helpers that count as an assertion, by function or method name; `*` is the only wildcard, as in `verify*` |
 | `i18n`                | `false`                    | Penalize selectors by visible text, because they change with the language    |
+
+`pageObjectDirs` globs are matched against the path of each file relative to
+the directory ESLint runs from: `*` does not cross `/`, matching is
+case-sensitive, a leading `./` is ignored, and a path without wildcards
+(`tests/pages`) covers everything inside it.
 
 Without `framework`, a file counts as Playwright when it imports
 `@playwright/test` or `playwright/test`, and as Cypress when it imports
