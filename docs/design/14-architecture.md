@@ -144,6 +144,17 @@ interface Plugin {
 }
 ```
 
+Un `Reporter` convierte el reporte (§21.5) en texto o bytes; no escribe archivos, eso lo hace el CLI ([ADR-0027](../adr/0027-modelo-reporte-json.md)):
+
+```ts
+interface Reporter {
+  id: string;                                            // valor de --format: "console", "json", "sarif"
+  render(report: Report): Promise<string | Uint8Array>;
+}
+```
+
+Sus opciones (por ejemplo, el color de la consola) se pasan a la función que lo crea.
+
 ### 22.5 Proveedor LLM (opcional)
 
 ```ts
