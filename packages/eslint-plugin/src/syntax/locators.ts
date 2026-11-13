@@ -2,6 +2,7 @@ import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESTree } from "@typescript-eslint/types";
 import {
   CYPRESS_QUERY,
+  CYPRESS_XPATH_QUERY,
   GET_BY_PREFIX,
   INDEXED_REFINEMENT,
   LOCATOR_QUERIES,
@@ -15,15 +16,15 @@ import type { Framework } from "./framework.js";
 const GET_BY = new RegExp(`^${GET_BY_PREFIX}[A-Z]`, "u");
 
 /**
- * A call that queries elements: `locator()`, `$()`, `getBy*()` or `cy.get()`
- * (03-linter.md §11.3).
+ * A call that queries elements: `locator()`, `$()`, `getBy*()`, `cy.get()` or
+ * `cy.xpath()` (03-linter.md §11.3 and §11.3.1).
  */
 export interface LocatorQuery {
   /** Discriminant. */
   readonly kind: "query";
   /** The call. */
   readonly node: TSESTree.CallExpression;
-  /** The method, such as `locator`, `getByRole` or `get`. */
+  /** The method, such as `locator`, `getByRole`, `get` or `xpath`. */
   readonly method: string;
   /** The framework whose syntax the call uses. */
   readonly framework: Framework;
@@ -80,9 +81,20 @@ export function isGetByMethod(method: string): boolean {
   return GET_BY.test(method);
 }
 
+/**
+ * Whether a query is Cypress's `cy.xpath()`, from the cypress-xpath plugin,
+ * whose argument is always XPath (03-linter.md §11.3.1).
+ *
+ * @param query - A locator query.
+ * @returns `true` for `cy.xpath()`, also on a longer `cy` chain.
+ */
+export function isCypressXPathCommand(query: LocatorQuery): boolean {
+  return query.framework === "cypress" && query.method === CYPRESS_XPATH_QUERY;
+}
+
 function frameworkOfQuery(call: TSESTree.CallExpression, method: string): Framework | undefined {
   if (isCypressChain(call)) {
-    return method === CYPRESS_QUERY ? "cypress" : undefined;
+    return method === CYPRESS_QUERY || method === CYPRESS_XPATH_QUERY ? "cypress" : undefined;
   }
   return isOneOf(LOCATOR_QUERIES, method) || isGetByMethod(method) ? "playwright" : undefined;
 }

@@ -5,13 +5,14 @@ import {
   ROLE_LOCATOR,
   SELECTOR_LEVELS,
   SELECTOR_MAX_LENGTH,
+  SELECTOR_PREFIXES,
   TEST_ID_ATTRIBUTES,
   VISIBLE_TEXT_LOCATORS,
 } from "../defaults.js";
 import { isOneOf, isStringLiteral, unwrap } from "./ast.js";
 import { cssSegments, cssTokens, serializeCss } from "./css-selector.js";
 import type { CssSegment } from "./css-selector.js";
-import { isGetByMethod } from "./locators.js";
+import { isCypressXPathCommand, isGetByMethod } from "./locators.js";
 import type { LocatorQuery } from "./locators.js";
 import { collapseWhitespace } from "./whitespace.js";
 import { isXPath, scanXPath, xpathPath } from "./xpath-selector.js";
@@ -59,13 +60,22 @@ export interface ClassifyOptions {
 
 /**
  * The text of the selector of a query, when its first argument is a string
- * literal or a template without `${}`.
+ * literal or a template without `${}`. The argument of Cypress's `cy.xpath()`
+ * is always XPath, so its text gets the `xpath=` prefix: `cy.xpath("tr[2]")`
+ * reads as `xpath=tr[2]` (03-linter.md §11.3.1).
  *
  * @param query - A locator query.
- * @returns The text, or `undefined` when the argument is missing, a spread or
- *   not a literal.
+ * @returns The text, with the `xpath=` prefix for `cy.xpath()`, or `undefined`
+ *   when the argument is missing, a spread or not a literal.
  */
 export function selectorText(query: LocatorQuery): string | undefined {
+  const text = literalText(query);
+  return text !== undefined && isCypressXPathCommand(query)
+    ? `${SELECTOR_PREFIXES.xpath[0]}${text}`
+    : text;
+}
+
+function literalText(query: LocatorQuery): string | undefined {
   const { selector } = query;
   if (selector === undefined || selector.type === AST_NODE_TYPES.SpreadElement) {
     return undefined;
@@ -230,8 +240,8 @@ function methodLevel(query: LocatorQuery, options: ClassifyOptions): SelectorLev
  * Classifies a locator query in the hierarchy of 06-selector-advisor.md §14.1.
  *
  * A `getBy*` is classified by its method, whatever its argument: a
- * `getByRole` with `name` is 5 and `getByTestId` is 3. `locator`, `$` and
- * `cy.get` are classified by their selector (03-linter.md §11.3.1): 1 with
+ * `getByRole` with `name` is 5 and `getByTestId` is 3. `locator`, `$`,
+ * `cy.get` and `cy.xpath` are classified by their selector (03-linter.md §11.3.1): 1 with
  * any pattern of E2E002 or E2E003; otherwise 3 with a test id attribute, 2
  * with any other id or attribute, and 1 with only types and classes. In a
  * list, the item with the lowest level wins.

@@ -8,6 +8,53 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #54 v1-14-rule-e2e003-positional-xpath
+
+- **Hecho:**
+  - **Antes, en la misma sesión:** PR #143 (#53, E2E002) mergeado.
+  - **Rama y PR de #54:**
+    - Rama `feat/54-rule-e2e003-positional-xpath`, creada desde `origin/main`.
+    - PR #144 en borrador, con `Closes #54` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **Commits:**
+    - `27be213` `test(eslint-plugin): specify no-positional-xpath`:
+      - tests AC en `src/rules/no-positional-xpath.test.ts`;
+      - tests de `cy.xpath` en `src/syntax/selectors.cypress-xpath.test.ts`;
+      - 18 en rojo;
+      - `CYPRESS_XPATH_QUERY` en `defaults.ts`.
+    - `79ff273` `feat(eslint-plugin): add no-positional-xpath (E2E003)`:
+      - la regla;
+      - `locatorOf` reconoce `cy.xpath` en una cadena `cy` (`syntax/locators.ts`);
+      - `selectorText` prefija `xpath=` en `cy.xpath` (`syntax/selectors.ts`);
+      - el registro de la regla y `docs/rules/e2e003.md`.
+    - `7c3f6fc` `docs(docs)`: §11.3.1 de 03-linter.md y el README del plugin.
+    - `5330a3f` `test`: casos borde, de test-writer.
+    - `05cbf18` `refactor`:
+      - `isCypressXPathCommand` compartido;
+      - TSDoc;
+      - 06-selector-advisor.md §14.1 incluye `cy.xpath`;
+      - la fila de E2E003 en §11.3 y la viñeta XPath.
+  - **Puertas:**
+    - `plan-reviewer`: CAMBIOS, después APROBADO.
+    - Rojo verificado.
+    - `/verify`: PASS, con 648 tests en eslint-plugin.
+    - `/review`: sin bloqueantes; `design-auditor` NO CONFORME solo por documentación, corregido en `05cbf18`; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO a la primera. Son 382 líneas, sin excepción de tamaño.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #54.
+- **En curso:** PR #144 en borrador. Al crearlo, la CI todavía no había reportado ningún check. Falta `gh pr ready 144` cuando estén en verde.
+- **Decisiones** (en 03-linter.md §11.3.1 y en 06 §14.1, como "Decidido en #54"; `plan-reviewer` confirmó que no necesitaban persona):
+  - `cy.xpath()` del plugin cypress-xpath es un locator de Cypress, también encadenado tras `cy.get()`. Su texto siempre es XPath: se lee como `xpath=` + texto, también para la clasificación de §14.1 y la normalización de E2E007.
+  - E2E003 da un hallazgo por selector, con el predicado posicional antes que la ruta absoluta.
+  - `cy.get("//tr[2]")` no se reporta, porque `cy.get` lee CSS.
+  - Una ruta absoluta se reporta aunque use atributos.
+- **Problemas:**
+  - Límite documentado en el PR: `cy.xpath("xpath=/html/body")`, con el prefijo doble que cypress-xpath no acepta, no se detecta como absoluta.
+  - **Worktree antiguo:** `verifier` vio que el test de `example-playwright-demo` se ejecutó desde `.claude/worktrees/cranky-kowalevski-258155/examples/playwright-demo`, un worktree antiguo. No afectó al resultado, pero conviene limpiar ese worktree o revisar por qué turbo lo recoge. Sin issue.
+  - **Sesión propuesta sin iniciar:** "Align §14.1 selector levels with E2E002 depth" (de #53).
+  - `08-git-workflow.md:110` sigue sin decir cómo se aprueba una excepción de tamaño.
+  - Preexistente: `max-lines` en `packages/core/src/storage/run-file.test.ts` y 2 clones de `vitest.config.ts`.
+- **Siguiente paso:** con la CI de #144 en verde, ejecutar `gh pr ready 144`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #55 (v1-15, E2E004 uso de `.nth()`), con el umbral "configurable, sin valor por defecto" pendiente según su tarea. Usará los refinamientos de `locatorOf`, que ya pueden tener `cy.xpath` como base.
+
 ### 2026-11-13 — #53 v1-13-rule-e2e002-fragile-css
 
 - **Hecho:**
@@ -429,44 +476,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Una persona revisa y mergea #103.
   - Decidir si se mueve el test AC-2 a `run-file-modes.test.ts` y si las dos sugerencias de seguridad merecen un issue.
   - Para reanudar el loop: `/loop /dev-loop`.
-
-### 2026-10-15 — #99 Test de propiedades de context.test.ts supera el timeout en CI
-
-- **Hecho:**
-  - **#42 cerrada:** la persona mergeó el PR #98 (`0811ac3`).
-  - **#99 abierto en esta sesión** a petición de la persona, con etiqueta `bug` y milestone V1. No tiene archivo en `docs/tasks/`.
-    - Trabajado con el flujo de `/task` en el worktree `atium-loop`. `plan-reviewer` agotó sus 2 rondas con `CAMBIOS`; su último cambio se aplicó y la persona aprobó el plan.
-    - Rama `test/99-property-test-timeout`. PR #100 con `Closes #99`, listo para revisión, con los 7 checks de CI en verde.
-  - **Diagnóstico:**
-    - `packages/eslint-plugin/src/syntax/context.test.ts:174` ya tenía semilla fija (`20261013`) y 300 ejecuciones.
-    - En local tarda de 0,4 a 0,6 s aislado y de 1,2 a 3,8 s con todas las suites en paralelo. En `verify (ubuntu-latest, Node 22)` de #97 superó el timeout de 5 s.
-    - Causa: un runner de CI cargado, no una entrada patológica.
-    - Corrección del handoff anterior: la entrada de #42 decía que el test no tenía semilla fija y hacía 100 ejecuciones; no es así.
-  - **Commits:**
-    - `d187a9f` (eslint-plugin), `95e0745` (core), `eaf2f62` (core) y `0d03185` (storage-sqlite): `HEAVY_TEST_TIMEOUT_MS` (60 s) como tercer argumento de `it` en seis tests:
-      - context "is stable when spaces and line breaks change…";
-      - stderr-logger "writes exactly one line…";
-      - en cap-run: "keeps pending calls first…", "keeps the testId computed…" y "leaves texts at their cap as they are";
-      - run-rows "rebuild a run without adding or losing keys…".
-    - `d8370b5` (correcciones de `/review`): la constante pasa de `core/src/storage/samples.test-support.ts` a `core/src/testing/timeouts.ts` y se exporta desde `@atium/core/testing`, sin copias locales. Los comentarios citan #99, sin duraciones medidas.
-    - `603d949`: viñeta en `docs/engineering/04-testing.md`, "Determinismo", con la convención y el umbral.
-  - **Verificado:**
-    - `pnpm verify` con exit 0.
-    - `/review` (code-reviewer, duplication-auditor, docs-checker): sin bloqueantes; todo aplicado y aprobado en una segunda pasada.
-    - `delivery-auditor` dio APROBADO en la segunda ronda. En la primera rechazó por el umbral escrito, por tres tests sin proteger y por el cambio al plan sin registrar.
-- **En curso:** nada. El PR #100 espera revisión y merge.
-- **Decisiones:**
-  - **Convención:** todo test que tarda 0,8 s o más en alguna ejecución de `pnpm test --force` recibe `HEAVY_TEST_TIMEOUT_MS`. Nunca se sube el `testTimeout` global ni se reducen las ejecuciones o la semilla de una propiedad. Está escrito en `04-testing.md` y en el TSDoc de `core/src/testing/timeouts.ts`.
-  - **Ubicación de la constante:** `@atium/core/testing` (interno), aprobado por la persona en `/review` ("Corrige todo").
-  - **Cambios al plan:** registrados en #99 bajo "Cambio al plan aprobado".
-- **Problemas:**
-  - **Tests de propiedades sin semilla fija** (`04-testing.md` la exige): `packages/core/src/ci/env.test.ts` y `packages/storage/sqlite/src/run-rows.test.ts`. No hay issue abierto.
-  - **Candidatos a proteger:** en el `pnpm verify` del auditor, con más carga, tres propiedades sin timeout pasaron de 0,8 s, aunque lejos de 5 s: `core/src/redact/fields.test.ts:114` (1,87 s), `core/src/findings/fingerprint-of.test.ts:52` (1,21 s) y `cli/src/doctor/checks/node.test.ts:37` (1,03 s). En esa misma ejecución, `context.test.ts` tardó 9,5 s.
-  - **Margen del test más pesado:** `cap-run.test.ts` "gives a result that passes the schema…", que ya tenía 60 s de timeout, llegó a 35 s en local con carga. Hay que vigilarlo.
-  - **Permisos y scratchpad:** sigue denegado `git commit --amend`, `gh run view` y `gh api`, y el scratchpad no está disponible.
-  - **Worktree del loop ocupado:** `atium-loop` quedó en la rama `test/99-property-test-timeout`.
-- **Siguiente paso:**
-  1. Revisar y mergear el PR #100.
-  2. `git -C ../atium-loop switch --detach origin/main`.
-  3. Abrir el issue de las semillas que faltan.
-  4. Contestar las decisiones abiertas de #43 (reintentos del borrado temporal y modo del directorio de runs) y de #44 (si un `headSha` que no cabe es un aviso o `MODEL_INVALID`) antes de lanzar `/dev-loop V1`.
