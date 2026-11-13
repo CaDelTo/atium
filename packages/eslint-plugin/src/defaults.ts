@@ -156,6 +156,13 @@ export const GET_BY_PREFIX = "getBy";
 export const CYPRESS_QUERY = "get";
 
 /**
+ * Command of the cypress-xpath plugin that queries elements by XPath on a
+ * `cy` chain; its argument is always XPath. Source: task v1-14 and
+ * 03-linter.md §11.3.1 (decided in #54).
+ */
+export const CYPRESS_XPATH_QUERY = "xpath";
+
+/**
  * Playwright's locator by ARIA role and its option with the accessible name,
  * which E2E004 accepts before `.nth()`. Source: 03-linter.md §11.3, E2E004, and §11.3.1.
  */
