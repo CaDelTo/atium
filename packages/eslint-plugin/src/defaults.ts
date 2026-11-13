@@ -135,6 +135,91 @@ export const CYPRESS_ROOT = "cy";
 export const EXPECT_CALLS = Object.freeze(["expect", "expect.soft", "expect.poll"] as const);
 
 /**
+ * Calls whose value E2E009 reads: `expect.poll` already retries. Source:
+ * 03-linter.md §11.3, E2E009, and §11.3.1 (decided in #56).
+ */
+export const WEB_FIRST_EXPECT_CALLS = Object.freeze(["expect", "expect.soft"] as const);
+
+/**
+ * Methods that read the page once, whose awaited value E2E009 reports inside
+ * `expect`. Source: 03-linter.md §11.3, E2E009, and §11.3.1.
+ */
+export const NON_WEB_FIRST_QUERIES = Object.freeze(["isVisible", "textContent", "count"] as const);
+
+/**
+ * A matcher of a row of {@link WEB_FIRST_REPLACEMENTS}: its name and, for
+ * `toBe(true)` and the like, the boolean literal its only argument must be.
+ */
+export interface WebFirstMatcher {
+  readonly name: string;
+  readonly argument?: boolean;
+}
+
+/** A row of the E2E009 replacements. */
+export interface WebFirstReplacement {
+  /** The method awaited inside `expect`. */
+  readonly query: (typeof NON_WEB_FIRST_QUERIES)[number];
+  /** The matchers the row replaces. */
+  readonly matchers: readonly WebFirstMatcher[];
+  /** The web-first matcher that replaces them. */
+  readonly replacement: string;
+  /** Whether the replacement keeps the matcher's only argument, as `toHaveCount(n)`. */
+  readonly keepsArgument: boolean;
+  /** Whether the row is an autofix (on a recognized locator) rather than a suggestion. */
+  readonly autofix: boolean;
+}
+
+/**
+ * The replacements of E2E009, row by row. Source: 03-linter.md §11.3.1,
+ * E2E009 (decided in #56).
+ */
+export const WEB_FIRST_REPLACEMENTS: readonly WebFirstReplacement[] = Object.freeze([
+  {
+    query: "isVisible",
+    matchers: [
+      { name: "toBe", argument: true },
+      { name: "toEqual", argument: true },
+      { name: "toBeTruthy" },
+    ],
+    replacement: "toBeVisible",
+    keepsArgument: false,
+    autofix: true,
+  },
+  {
+    query: "isVisible",
+    matchers: [
+      { name: "toBe", argument: false },
+      { name: "toEqual", argument: false },
+      { name: "toBeFalsy" },
+    ],
+    replacement: "toBeHidden",
+    keepsArgument: false,
+    autofix: true,
+  },
+  {
+    query: "count",
+    matchers: [{ name: "toBe" }, { name: "toEqual" }],
+    replacement: "toHaveCount",
+    keepsArgument: true,
+    autofix: true,
+  },
+  {
+    query: "textContent",
+    matchers: [{ name: "toBe" }, { name: "toEqual" }, { name: "toMatch" }],
+    replacement: "toHaveText",
+    keepsArgument: true,
+    autofix: false,
+  },
+  {
+    query: "textContent",
+    matchers: [{ name: "toContain" }],
+    replacement: "toContainText",
+    keepsArgument: true,
+    autofix: false,
+  },
+]);
+
+/**
  * Chained methods that are an assertion, and so not a Cypress action.
  * Source: 03-linter.md §11.3, E2E006, and §11.3.1.
  */
@@ -145,6 +230,13 @@ export const CHAINED_ASSERTIONS = Object.freeze(["should", "and"] as const);
  * `cy.get()` and `cy.xpath()`. Source: 03-linter.md §11.3, E2E002, and §11.3.1.
  */
 export const LOCATOR_QUERIES = Object.freeze(["locator", "$"] as const);
+
+/**
+ * Playwright's query that returns an ElementHandle, not a Locator, so
+ * web-first assertions do not accept it. Source: 03-linter.md §11.3.1, E2E009
+ * (decided in #56).
+ */
+export const ELEMENT_HANDLE_QUERY = "$";
 
 /**
  * Prefix of Playwright's locators by role, text, label and so on; a capital

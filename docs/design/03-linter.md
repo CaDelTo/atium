@@ -69,7 +69,7 @@ El autofix solo se ofrece cuando la transformación es segura. Para E2E001 no ha
 | E2E004 | Uso de `.nth()` | `.nth(n)` con n > 0, `.first()` / `.last()` encadenados a locators no únicos | `.nth()` sobre `getByRole` con nombre | Opción `minIndex`: 1 (se reporta `.nth(n)` con n ≥ 1) |
 | E2E005 | Test demasiado grande | Acciones (`click`, `fill`, `goto`, `press`, `check`, `selectOption`, comandos `cy.*`) o líneas por test | — | 25 acciones o 150 líneas |
 | E2E006 | Assertions insuficientes | Tests con acciones y cero assertions. Cuenta: `expect(...)`, `.should()` / `.and()`, funciones en `assertFunctionNames` y helpers del mismo archivo que contengan assertions (un nivel) | Helpers de otros archivos se resuelven en el motor cross-file | 1 assertion |
-| E2E009 | Assertions no web-first | `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...`, `expect(await locator.count())...` | — | — |
+| E2E009 | Assertions no web-first | `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...`, `expect(await locator.count())...` | Un valor guardado antes en una variable, `expect.poll`, `innerText` / `inputValue` / `getAttribute`, la consulta sin `await` y Cypress | — |
 | E2E010 | `.only` olvidado | `test.only`, `describe.only`, `it.only` | Un `.only` cuyo callback no es una función literal (`describe.only("d", suite)`); el resto de modificadores | — |
 | E2E012 | Secretos en tests | Literales asignados a identificadores tipo `password`, `token`, `secret`, `apiKey` con entropía alta; patrones conocidos (JWT, claves de nube) | Valores obviamente ficticios (`"password123"`, `"test"`) | Entropía ≥ 3.5 bits/char |
 
@@ -130,7 +130,21 @@ Los envoltorios de TypeScript (`x!`, `x as T`, `<T>x`, `x satisfies T`) y el enc
   - **E2E003:** el texto de `cy.xpath()` siempre es XPath, aunque no empiece por `/`, `(` o `..`: se lee como `xpath=` + texto, también para la clasificación de §14.1 y la normalización. Un hallazgo por selector, con el primer motivo en el orden de §11.3: predicado posicional y después ruta absoluta. `cy.get("//tr[2]")` no se reporta, porque `cy.get()` lee CSS, aunque la clasificación de §14.1 le dé nivel 1. Decidido en #54.
   - **E2E004:** `.nth(n)` y `.eq(n)` se reportan cuando `n` es un literal numérico entero ≥ `minIndex` (por defecto 1), tenga o no locator base reconocido (`items.nth(2)` se reporta), salvo si la base es un `getByRole` con `name`. Un índice no literal o no entero (`.nth(i)`, `.nth(1.5)`) no se reporta. Un índice negativo (`.nth(-1)`, `.eq(-2)`) cuenta desde el final y se trata como `.last()`, sin depender de `minIndex`. `.first()`, `.last()` y el índice negativo se reportan cuando la base existe y no es única: solo son únicas un `getByRole` con `name` y un `getByTestId`; cualquier `locator()`, `$()`, otro `getBy*`, `cy.get()` o `cy.xpath()` no lo es, y sin base reconocida (`items.first()`) no se reporta. Decidido en #55.
 - **Esperas fijas (E2E001):** `waitForTimeout(n)` sobre cualquier objeto, `.wait` con un número literal en una cadena de `cy` (`cy.wait(500)`, también `cy.get("a").wait(500)`), y `new Promise(r => setTimeout(r, n))` cuando la llamada a `setTimeout` es todo el cuerpo del executor y recibe su primer parámetro. No cuentan `cy.wait("@alias")`, `cy.wait(delay)` (el tipo de `delay` no se conoce sin información de tipos), `window.setTimeout`, `return setTimeout(...)` ni `setTimeout(() => r(), n)`. E2E001 reporta `waitForTimeout` y `cy.wait(n)` en cualquier sitio (también hooks, helpers y Page Objects) y la promesa solo cuando está esperada con `await`, a través de `as`, `!`, `satisfies` y `?.`, dentro de un test. Su sugerencia editable reemplaza `X.waitForTimeout(n)` por `expect(X.getByRole("TODO")).toBeVisible()`, con el receptor sin sus `as` ni paréntesis (sin sugerencia si no es un nombre, `this` o una cadena de miembros), `cy.wait(n)` por `cy.get("TODO").should("be.visible")` y un `.wait(n)` encadenado por `.should("be.visible")`; la promesa no tiene sugerencia, porque no se conoce su receptor. Decidido en #52.
-- **E2E009:** no tiene helper en esta sección. Los nombres `isVisible`, `textContent` y `count` llegan con la regla.
+- **E2E009:** se reporta un `expect(…)` o `expect.soft(…)` cuyo primer argumento es `await x.isVisible()`, `await x.textContent()` o `await x.count()`, con o sin argumentos en la consulta y con cualquier matcher o ninguno. No cuentan `expect.poll`, la consulta sin `await` (`expect(x.isVisible())`), otros métodos (`innerText`, `inputValue`, `getAttribute`) ni un valor guardado antes en una variable; en Cypress no hay `await` sobre comandos y `.should()` ya reintenta. Reemplazos, que conservan `.not`, `expect.soft` y el segundo argumento de `expect`, y añaden `await` si la llamada no lo tiene:
+
+  | Consulta | Matcher | Reemplazo |
+  | --- | --- | --- |
+  | `x.isVisible()` | `toBe(true)`, `toEqual(true)`, `toBeTruthy()` | `toBeVisible()` |
+  | `x.isVisible()` | `toBe(false)`, `toEqual(false)`, `toBeFalsy()` | `toBeHidden()` |
+  | `x.count()` | `toBe(n)`, `toEqual(n)` | `toHaveCount(n)` |
+  | `x.textContent()` | `toBe(s)`, `toEqual(s)` | `toHaveText(s)` |
+  | `x.textContent()` | `toContain(s)` | `toContainText(s)` |
+  | `x.textContent()` | `toMatch(re)` | `toHaveText(re)` |
+
+  - **Autofix:** solo en las filas de `isVisible` y `count`, y solo si el receptor `x`, sin envoltorios, es una consulta de Playwright distinta de `$()` (que da un ElementHandle), es decir `locator()` o `getBy*`, o un refinamiento (`.nth()`, `.first()`, `.last()`) cuyo locator base es una consulta así.
+  - **Sugerencia:** en las filas de `textContent`, porque `toHaveText` normaliza los espacios y `textContent()` puede ser `null`, y en las de `isVisible` y `count` con cualquier otro receptor (un identificador, `page.$("a")`, `items.first()`, `cy.get("a").first()`, `page.locator("a").filter(…)`).
+  - **Solo el hallazgo:** con otro matcher o ninguno, con argumentos en la consulta (`page.isVisible("#a")`), con un número de argumentos del matcher distinto del de su fila o con comentarios en el código que se reemplaza.
+  - Decidido en #56.
 
 ### 11.4 Reglas cross-file
 

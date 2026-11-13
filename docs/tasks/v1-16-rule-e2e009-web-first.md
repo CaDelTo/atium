@@ -14,7 +14,7 @@
 ## Hacer
 
 - Detectar `expect(await x.isVisible()).toBe(true)`, `expect(await x.textContent())...` y `expect(await locator.count())...`.
-- Autofix solo cuando la transformación a la assertion web-first equivalente es segura (por ejemplo, `toBeVisible()`, `toHaveText()` y `toHaveCount()`). En los demás casos, sugerencia.
+- Autofix solo cuando la transformación a la assertion web-first equivalente es segura (por ejemplo, `toBeVisible()` y `toHaveCount()`; `toHaveText()` es sugerencia, decidido en #56). En los demás casos, sugerencia.
 - Severidad, categoría y nombre en ESLint según el catálogo de 03-linter.md §11.8 (ADR-0023); constante `RULE_*` con el código.
 - `meta.messages` en inglés (ADR-0019).
 - Página de documentación de la regla en inglés (ADR-0020), con las 5 secciones de 09-documentation.md.
