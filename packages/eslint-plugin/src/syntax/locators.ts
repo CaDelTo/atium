@@ -2,6 +2,7 @@ import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESTree } from "@typescript-eslint/types";
 import {
   CYPRESS_QUERY,
+  CYPRESS_XPATH_QUERY,
   GET_BY_PREFIX,
   INDEXED_REFINEMENT,
   LOCATOR_QUERIES,
@@ -82,7 +83,7 @@ export function isGetByMethod(method: string): boolean {
 
 function frameworkOfQuery(call: TSESTree.CallExpression, method: string): Framework | undefined {
   if (isCypressChain(call)) {
-    return method === CYPRESS_QUERY ? "cypress" : undefined;
+    return method === CYPRESS_QUERY || method === CYPRESS_XPATH_QUERY ? "cypress" : undefined;
   }
   return isOneOf(LOCATOR_QUERIES, method) || isGetByMethod(method) ? "playwright" : undefined;
 }

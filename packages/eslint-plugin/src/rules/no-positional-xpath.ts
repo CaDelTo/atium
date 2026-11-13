@@ -1,5 +1,34 @@
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
+import { CYPRESS_XPATH_QUERY, LOCATOR_QUERIES } from "../defaults.js";
+import { isOneOf } from "../syntax/ast.js";
+import { locatorOf } from "../syntax/locators.js";
+import type { LocatorQuery } from "../syntax/locators.js";
+import { analyzeSelector, selectorText } from "../syntax/selectors.js";
+
+type MessageId = "positionalPredicate" | "absolutePath";
+
+/** Queries that can hold XPath: `locator()` and `$()` in Playwright, `cy.xpath()` in Cypress. */
+function isXPathQuery(query: LocatorQuery): boolean {
+  return query.framework === "cypress"
+    ? query.method === CYPRESS_XPATH_QUERY
+    : isOneOf(LOCATOR_QUERIES, query.method);
+}
+
+/**
+ * Why a selector text is a positional XPath, in the order of 03-linter.md
+ * §11.3: a positional predicate, then an absolute path (decided in #54).
+ */
+function reasonOf(text: string): MessageId | undefined {
+  const analysis = analyzeSelector(text);
+  if (analysis.kind !== "xpath") {
+    return undefined;
+  }
+  if (analysis.positionalPredicates > 0) {
+    return "positionalPredicate";
+  }
+  return analysis.absolute ? "absolutePath" : undefined;
+}
 
 /** Code of the rule that reports positional XPath (03-linter.md §11.3, E2E003). */
 export const RULE_POSITIONAL_XPATH = "E2E003";
@@ -11,11 +40,7 @@ export const RULE_POSITIONAL_XPATH = "E2E003";
  * root of the document (`/html/...`). One finding per selector, for its first
  * reason in that order (03-linter.md §11.3).
  */
-export const noPositionalXPath = createRule<
-  [],
-  "positionalPredicate" | "absolutePath",
-  AtiumCatalogDocs
->({
+export const noPositionalXPath = createRule<[], MessageId, AtiumCatalogDocs>({
   name: "no-positional-xpath",
   meta: {
     type: "problem",
@@ -37,5 +62,19 @@ export const noPositionalXPath = createRule<
     },
   },
   defaultOptions: [],
-  create: () => ({}),
+  create(context) {
+    return {
+      CallExpression(node) {
+        const locator = locatorOf(node);
+        if (locator?.kind !== "query" || !isXPathQuery(locator) || locator.selector === undefined) {
+          return;
+        }
+        const text = selectorText(locator);
+        const messageId = text === undefined ? undefined : reasonOf(text);
+        if (messageId !== undefined) {
+          context.report({ node: locator.selector, messageId });
+        }
+      },
+    };
+  },
 });

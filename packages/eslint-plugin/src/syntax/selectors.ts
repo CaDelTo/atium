@@ -1,10 +1,12 @@
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { Token } from "parsel-js";
 import {
+  CYPRESS_XPATH_QUERY,
   LOCATOR_METHOD_LEVELS,
   ROLE_LOCATOR,
   SELECTOR_LEVELS,
   SELECTOR_MAX_LENGTH,
+  SELECTOR_PREFIXES,
   TEST_ID_ATTRIBUTES,
   VISIBLE_TEXT_LOCATORS,
 } from "../defaults.js";
@@ -59,13 +61,21 @@ export interface ClassifyOptions {
 
 /**
  * The text of the selector of a query, when its first argument is a string
- * literal or a template without `${}`.
+ * literal or a template without `${}`. The argument of Cypress's `cy.xpath()`
+ * is always XPath, so its text gets the `xpath=` prefix: `cy.xpath("tr[2]")`
+ * reads as `xpath=tr[2]` (03-linter.md §11.3.1).
  *
  * @param query - A locator query.
  * @returns The text, or `undefined` when the argument is missing, a spread or
  *   not a literal.
  */
 export function selectorText(query: LocatorQuery): string | undefined {
+  const text = literalText(query);
+  const isXPathCommand = query.framework === "cypress" && query.method === CYPRESS_XPATH_QUERY;
+  return text !== undefined && isXPathCommand ? `${SELECTOR_PREFIXES.xpath[0]}${text}` : text;
+}
+
+function literalText(query: LocatorQuery): string | undefined {
   const { selector } = query;
   if (selector === undefined || selector.type === AST_NODE_TYPES.SpreadElement) {
     return undefined;
