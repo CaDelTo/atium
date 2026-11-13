@@ -168,12 +168,6 @@ export const CYPRESS_XPATH_QUERY = "xpath";
  */
 export const ROLE_LOCATOR = Object.freeze({ method: "getByRole", nameOption: "name" });
 
-/** Methods that pick one element of a locator. Source: 03-linter.md §11.3, E2E004, and §11.3.1. */
-export const LOCATOR_REFINEMENTS = Object.freeze(["nth", "first", "last"] as const);
-
-/** The refinement that takes an index. Source: 03-linter.md §11.3, E2E004. */
-export const INDEXED_REFINEMENT = "nth";
-
 /**
  * Cypress's equivalent of `.nth()`, a refinement with an index only on a `cy`
  * chain. Source: 03-linter.md §11.3, E2E004, and §11.3.1 (decided in #55).
@@ -185,6 +179,23 @@ export const CYPRESS_INDEXED_REFINEMENT = "eq";
  * Source: 03-linter.md §11.3, E2E004, and §11.3.1 (decided in #55).
  */
 export const INDEXED_REFINEMENTS = Object.freeze(["nth", CYPRESS_INDEXED_REFINEMENT] as const);
+
+/**
+ * Methods that pick one element of a locator; `.eq()` only on a `cy` chain.
+ * Source: 03-linter.md §11.3, E2E004, and §11.3.1 (`.eq()` decided in #55).
+ */
+export const LOCATOR_REFINEMENTS = Object.freeze([
+  ...INDEXED_REFINEMENTS,
+  "first",
+  "last",
+] as const);
+
+/**
+ * Playwright's locator by test id, which E2E004 takes as unique, like a
+ * `getByRole` with a name. Source: 03-linter.md §11.3, E2E004, and §11.3.1
+ * (decided in #55).
+ */
+export const TEST_ID_LOCATOR = "getByTestId";
 
 /**
  * Calls that wait a fixed time: Playwright's `waitForTimeout`, Cypress's

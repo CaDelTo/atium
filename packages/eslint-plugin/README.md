@@ -6,7 +6,7 @@ and in CI.
 
 > Atium is a provisional codename and this package is not published to npm yet.
 > Its rules so far are `atium/no-hard-wait` (E2E001), `atium/no-fragile-css-selector`
-> (E2E002), `atium/no-positional-xpath` (E2E003) and `atium/no-focused-test` (E2E010); the rest arrive with the next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
+> (E2E002), `atium/no-positional-xpath` (E2E003), `atium/no-positional-locator` (E2E004) and `atium/no-focused-test` (E2E010); the rest arrive with the next tasks of the V1 phase. Each rule has a page in [`docs/rules/`](../../docs/rules/).
 
 ## Installation
 

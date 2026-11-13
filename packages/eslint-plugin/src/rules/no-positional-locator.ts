@@ -1,8 +1,58 @@
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
+import type { TSESTree } from "@typescript-eslint/types";
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
-import { POSITIONAL_LOCATOR_DEFAULTS } from "../defaults.js";
+import { INDEXED_REFINEMENTS, POSITIONAL_LOCATOR_DEFAULTS, TEST_ID_LOCATOR } from "../defaults.js";
+import { isOneOf, unwrap } from "../syntax/ast.js";
+import { locatorOf } from "../syntax/locators.js";
+import type { LocatorQuery, LocatorRefinement } from "../syntax/locators.js";
 
 type MessageId = "nth" | "firstOrLast";
+
+/** What to report: the message and its data. */
+interface Reason {
+  readonly messageId: MessageId;
+  readonly data: Readonly<Record<string, string>>;
+}
+
+/** The value of a literal integer index, such as `2` or `-1`; `undefined` for anything else. */
+function literalIndex(index: TSESTree.CallExpressionArgument | undefined): number | undefined {
+  if (index?.type === AST_NODE_TYPES.Literal && typeof index.value === "number") {
+    return Number.isInteger(index.value) ? index.value : undefined;
+  }
+  if (index?.type === AST_NODE_TYPES.UnaryExpression && index.operator === "-") {
+    const positive = literalIndex(index.argument);
+    return positive === undefined ? undefined : -positive;
+  }
+  return undefined;
+}
+
+/** A `getByRole` with a name or a `getByTestId`; any other locator may match several elements (D2 of #55). */
+function isUnique(base: LocatorQuery): boolean {
+  return base.hasName || base.method === TEST_ID_LOCATOR;
+}
+
+/** Why a refinement picks by position, or `undefined` when it is not reported (D1 and D2 of #55). */
+function reasonOf(refinement: LocatorRefinement, minIndex: number): Reason | undefined {
+  const { method, base } = refinement;
+  const nonUnique = base !== undefined && !isUnique(base);
+  if (!isOneOf(INDEXED_REFINEMENTS, method)) {
+    return nonUnique ? { messageId: "firstOrLast", data: { method } } : undefined;
+  }
+  const index = literalIndex(refinement.index);
+  if (index === undefined) {
+    return undefined;
+  }
+  if (index < 0) {
+    // A negative index counts from the end, like `.last()`.
+    const data = { method: `${method}(${String(index)})` };
+    return nonUnique ? { messageId: "firstOrLast", data } : undefined;
+  }
+  // Only a getByRole with a name may be refined by index: the "does not detect" case of §11.3.
+  return index >= minIndex && base?.hasName !== true
+    ? { messageId: "nth", data: { method, index: String(index) } }
+    : undefined;
+}
 
 /** Code of the rule that reports locators refined by position (03-linter.md §11.3, E2E004). */
 export const RULE_POSITIONAL_LOCATOR = "E2E004";
@@ -50,8 +100,19 @@ export const noPositionalLocator = createRule<
     },
   },
   defaultOptions: [POSITIONAL_LOCATOR_DEFAULTS],
-  create() {
-    // Stub for the red phase of #55; the implementation comes next.
-    return {};
+  create(context, [{ minIndex }]) {
+    return {
+      CallExpression(node) {
+        const locator = locatorOf(node);
+        const callee = unwrap(node.callee);
+        if (locator?.kind !== "refinement" || callee.type !== AST_NODE_TYPES.MemberExpression) {
+          return;
+        }
+        const reason = reasonOf(locator, minIndex);
+        if (reason !== undefined) {
+          context.report({ node: callee.property, ...reason });
+        }
+      },
+    };
   },
 });
