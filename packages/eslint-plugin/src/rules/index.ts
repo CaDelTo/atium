@@ -4,6 +4,7 @@ import { noFragileCssSelector } from "./no-fragile-css-selector.js";
 import { noHardWait } from "./no-hard-wait.js";
 import { noPositionalLocator } from "./no-positional-locator.js";
 import { noPositionalXPath } from "./no-positional-xpath.js";
+import { preferWebFirstAssertion } from "./prefer-web-first-assertion.js";
 
 /**
  * Rules of the plugin, by their ESLint name without the `atium/` prefix
@@ -16,4 +17,5 @@ export const rules: Readonly<Record<string, AtiumCatalogRuleModule>> = Object.fr
   "no-hard-wait": noHardWait,
   "no-positional-locator": noPositionalLocator,
   "no-positional-xpath": noPositionalXPath,
+  "prefer-web-first-assertion": preferWebFirstAssertion,
 });

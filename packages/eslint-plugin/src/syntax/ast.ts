@@ -31,8 +31,11 @@ export function isStringLiteral(node: TSESTree.Node): node is TSESTree.StringLit
 /**
  * Name of the property of a member expression: `click` in `page.click` and in
  * `page["click"]`; `undefined` for a private or computed non-literal key.
+ *
+ * @param member - A member expression.
+ * @returns The property name, or `undefined`.
  */
-function propertyName(member: TSESTree.MemberExpression): string | undefined {
+export function propertyName(member: TSESTree.MemberExpression): string | undefined {
   if (!member.computed) {
     return member.property.type === AST_NODE_TYPES.Identifier ? member.property.name : undefined;
   }
