@@ -1,6 +1,55 @@
 import { createRule } from "../create-rule.js";
 import type { AtiumCatalogDocs } from "../create-rule.js";
-import { FRAGILE_SELECTOR_DEFAULTS } from "../defaults.js";
+import { CYPRESS_QUERY, FRAGILE_SELECTOR_DEFAULTS, LOCATOR_QUERIES } from "../defaults.js";
+import { isPageObjectFile } from "../page-objects.js";
+import { readSettings } from "../settings.js";
+import { isOneOf } from "../syntax/ast.js";
+import { locatorOf } from "../syntax/locators.js";
+import type { LocatorQuery } from "../syntax/locators.js";
+import { analyzeSelector, normalizeSelector, selectorText } from "../syntax/selectors.js";
+import type { CssAnalysis } from "../syntax/selectors.js";
+
+type MessageId = "positionalPseudoClass" | "tooManyCombinators" | "generatedClass" | "numericId";
+
+/** Why a selector is fragile: the message and its data. */
+interface Reason {
+  readonly messageId: MessageId;
+  readonly data: Readonly<Record<string, string>>;
+}
+
+/** Why a selector text is fragile, or `undefined` when it is not CSS or not fragile. */
+function reasonOf(text: string, depth: number): Reason | undefined {
+  const analysis = analyzeSelector(text);
+  return analysis.kind === "css" ? firstReason(analysis, depth) : undefined;
+}
+
+/** Queries whose selector is CSS: `locator()` and `$()` in Playwright, `cy.get()` in Cypress. */
+function isCssQuery(query: LocatorQuery): boolean {
+  return query.framework === "cypress"
+    ? query.method === CYPRESS_QUERY
+    : isOneOf(LOCATOR_QUERIES, query.method);
+}
+
+/**
+ * The first reason a CSS selector is fragile, in a fixed order: positional
+ * pseudo-class, combinators, generated class, numeric id (decided in #53).
+ */
+function firstReason(analysis: CssAnalysis, depth: number): Reason | undefined {
+  const [pseudoClass] = analysis.positionalPseudoClasses;
+  if (pseudoClass !== undefined) {
+    return { messageId: "positionalPseudoClass", data: { pseudoClass } };
+  }
+  if (analysis.combinators >= depth) {
+    const data = { count: String(analysis.combinators), depth: String(depth) };
+    return { messageId: "tooManyCombinators", data };
+  }
+  const [className] = analysis.generatedClasses;
+  if (className !== undefined) {
+    return { messageId: "generatedClass", data: { className } };
+  }
+  const [id] = analysis.numericIds;
+  return id === undefined ? undefined : { messageId: "numericId", data: { id } };
+}
 
 /** Code of the rule that reports fragile CSS selectors (03-linter.md §11.3, E2E002). */
 export const RULE_FRAGILE_CSS_SELECTOR = "E2E002";
@@ -21,7 +70,7 @@ export interface FragileSelectorOptions {
  */
 export const noFragileCssSelector = createRule<
   [FragileSelectorOptions],
-  "positionalPseudoClass" | "tooManyCombinators" | "generatedClass" | "numericId",
+  MessageId,
   AtiumCatalogDocs
 >({
   name: "no-fragile-css-selector",
@@ -55,5 +104,31 @@ export const noFragileCssSelector = createRule<
     },
   },
   defaultOptions: [FRAGILE_SELECTOR_DEFAULTS],
-  create: () => ({}),
+  create(context, [{ depth }]) {
+    const settings = readSettings(context.settings);
+    const pageObject = isPageObjectFile(context.filename, context.cwd, settings.pageObjectDirs);
+    // In Page Object code a selector is reported where it first appears (D2 of #53).
+    const reported = new Set<string>();
+    return {
+      CallExpression(node) {
+        const locator = locatorOf(node);
+        if (locator?.kind !== "query" || !isCssQuery(locator) || locator.selector === undefined) {
+          return;
+        }
+        const text = selectorText(locator);
+        const reason = text === undefined ? undefined : reasonOf(text, depth);
+        if (text === undefined || reason === undefined) {
+          return;
+        }
+        if (pageObject) {
+          const key = normalizeSelector(text);
+          if (reported.has(key)) {
+            return;
+          }
+          reported.add(key);
+        }
+        context.report({ node: locator.selector, ...reason });
+      },
+    };
+  },
 });
