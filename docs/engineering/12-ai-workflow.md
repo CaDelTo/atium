@@ -51,7 +51,7 @@ Los subagentes no ven la conversación principal: cada invocación debe incluir 
 
 | Comando | Qué hace |
 |---|---|
-| `/task [n …\|archivo]` | Orquestador: lanza un `task-runner` por tarea (hasta 3 a la vez; sin argumentos elige Pendientes independientes). Cada runner prepara el plan con `plan-reviewer`; el orquestador te lo presenta, te reenvía la aprobación y el runner sigue el [pipeline de entrega](#pipeline-de-entrega) |
+| `/task [n …\|archivo]` | Orquestador: lanza un `task-runner` por tarea (hasta 3 a la vez; sin argumentos, modo continuo: elige Pendientes independientes y sigue lanzando hasta que le digas que pare, con un máximo de 4 PRs sin mergear). Cada runner prepara el plan con `plan-reviewer`; el orquestador te lo presenta, te reenvía la aprobación y el runner sigue el [pipeline de entrega](#pipeline-de-entrega) |
 | `/deliver` | Puerta final: comprueba que `/review` terminó con `delivery-auditor` en `APROBADO`; push de la rama y PR en borrador con `Closes #N` mediante `.claude/scripts/open-pr.mjs`; PR listo con la CI en verde |
 | `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes con el pipeline de entrega, hasta 3 a la vez en runners, aprobando planes con `plan-reviewer`. Se lanza con `/loop /dev-loop` (ver [Loop de desarrollo](#loop-de-desarrollo)) |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |

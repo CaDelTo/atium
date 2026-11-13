@@ -1,18 +1,18 @@
 ---
 description: Empieza una o varias tareas (hasta 3 a la vez), cada una en un subagente task-runner con su worktree y contexto limpio
-argument-hint: "[números de issue (#6 o 6), hasta 3, o un archivo de docs/tasks/; vacío: elige hasta 3 Pendientes independientes]"
+argument-hint: "[números de issue (#6 o 6), hasta 3, o un archivo de docs/tasks/; vacío: modo continuo, elige él las tareas]"
 ---
 
 Eres el orquestador (ADR-0026): coordinas, no implementas. Cada tarea la ejecuta un subagente `task-runner` con contexto limpio; tu contexto solo recibe planes, preguntas e informes, así que puedes encadenar tareas en esta conversación sin `/clear`. No leas código ni diffs de las tareas: eso lo hacen los runners.
 
 ## Orquestación
 
-1. **Tareas:** las de `$ARGUMENTS` (un archivo de `docs/tasks/` se resuelve a su issue como en el paso 1 de "Pasos de la tarea"). Si está vacío, elige hasta 3 con "Proponer" (pasos 4 a 7) de `.claude/commands/parallel.md`: Pendientes, con dependencias cerradas y que no toquen el mismo paquete. Dilo en una línea y sigue. Como máximo 3 runners activos a la vez.
+1. **Tareas:** las de `$ARGUMENTS` (un archivo de `docs/tasks/` se resuelve a su issue como en el paso 1 de "Pasos de la tarea"). Si está vacío, **modo continuo**: elige con "Proponer" (pasos 4 a 7) de `.claude/commands/parallel.md` (Pendientes, con dependencias cerradas, sin la tarea de aceptación de la fase y sin repetir paquete con otro runner activo), dilo en una línea y sigue sin esperar confirmación. Como máximo 3 runners activos a la vez y 4 PRs de tareas abiertos sin mergear (el `--max-open-prs` de `/dev-loop`): si se llega a 4, espera a que la persona mergee.
 2. **Lanza** un `task-runner` por tarea, en segundo plano y con `isolation: "worktree"`, con el prompt: issue `N`, modo `plan` y los demás issues en paralelo (`#M …`). Lánzalos en el mismo mensaje.
 3. **Cuando un runner devuelve:**
    - `PLAN`: presenta a la persona el plan y el veredicto, con el issue en el título. Con su aprobación, envía al runner (`SendMessage`) "Plan aprobado por la persona", con sus cambios si los pidió. No apruebes tú.
    - `NECESITA PERSONA`: presenta la pregunta y reenvía la respuesta al runner.
-   - `ENTREGADA` o `FALLÓ`: muestra el informe. Si quedan tareas pedidas sin lanzar, lanza la siguiente.
+   - `ENTREGADA` o `FALLÓ`: muestra el informe. Si quedan tareas pedidas sin lanzar, lanza la siguiente; en modo continuo, elige otra y lánzala. El modo continuo termina cuando la persona dice que pares o no queda ninguna tarea que se pueda tomar.
 4. **Merges:** cuando la persona diga que se mergeó un PR, envía a cada runner activo "Se mergeó #<n>; actualiza la rama según 'Trabajo en paralelo' de 12-ai-workflow.md".
 5. **Al terminar** todas: resume en una tabla issue → PR → estado. Los worktrees de los runners se retiran con `/parallel --cleanup` cuando sus PRs se mergeen.
 

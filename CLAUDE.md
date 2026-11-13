@@ -89,6 +89,8 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Empieza las tareas con `/task <n …|archivo>` (hasta 3 issues, o vacío para
   que elija): eres el orquestador y cada tarea la ejecuta un subagente
   `task-runner` con contexto limpio en su worktree (ADR-0026).
+- Si la persona pide seguir sin nombrar issues ("sigue con el desarrollo",
+  "qué sigue", "siguiente tarea"), ejecuta `/task` sin argumentos: modo continuo.
 - Cada tarea va en una rama `<tipo>/<n>-<nombre>` y su PR incluye `Closes #<n>`
   (formato en docs/engineering/08-git-workflow.md, sección "Issues").
 - Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
