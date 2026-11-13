@@ -86,24 +86,29 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 
 # Flujo de trabajo
 
-- Empieza las tareas con `/task <n|archivo>` (número de issue o
-  `docs/tasks/<archivo>`).
+- Empieza las tareas con `/task <n …|archivo>` (hasta 3 issues, o vacío para
+  que elija): eres el orquestador y cada tarea la ejecuta un subagente
+  `task-runner` con contexto limpio en su worktree (ADR-0026).
+- Si la persona pide seguir sin nombrar issues ("sigue con el desarrollo",
+  "qué sigue", "siguiente tarea"), ejecuta `/task` sin argumentos: modo continuo.
 - Cada tarea va en una rama `<tipo>/<n>-<nombre>` y su PR incluye `Closes #<n>`
   (formato en docs/engineering/08-git-workflow.md, sección "Issues").
 - Nunca cierres issues ni mergees PRs: lo hace una persona. Solo haces push de
   ramas de tarea y solo con `node .claude/scripts/push-branch.mjs <rama>`
-  (ADR-0025).
+  o `open-pr.mjs`, que lo usa (ADR-0025, ADR-0026).
 - Cada tarea sigue el pipeline de entrega (docs/engineering/12-ai-workflow.md):
   plan → `plan-reviewer` → aprobación → [TDD] → implementación → `test-writer`
-  → `/verify` → `/review` → `/deliver` → `/handoff`.
+  → `/verify` → `/review` (incluye `delivery-auditor`) → `/deliver` → `/handoff`.
 - Antes de escribir código, presenta el plan con el veredicto de `plan-reviewer`
   y espera aprobación. Solo en `/dev-loop` aprueba `plan-reviewer`; lo que
   requiera una decisión humana se detiene igualmente.
-- Una tarea a la vez por sesión. No avances a la siguiente ni hagas cambios
-  fuera del alcance pedido; si ves algo que mejorar, menciónalo al final.
-- Para trabajar varias tareas a la vez, cada una en su worktree y su sesión:
-  `/parallel` (docs/engineering/12-ai-workflow.md, "Trabajo en paralelo").
-- Para entregar tareas sin intervención, una tras otra: `/loop /dev-loop`
+- Un `task-runner` por tarea; no implementes tareas en el contexto del
+  orquestador. No avances a tareas no pedidas ni hagas cambios fuera del
+  alcance pedido; si ves algo que mejorar, menciónalo al final.
+- Para trabajar varias tareas a la vez: `/task` con varios issues (hasta 3), o
+  `/parallel` con una sesión por tarea (docs/engineering/12-ai-workflow.md,
+  "Trabajo en paralelo").
+- Para entregar tareas sin intervención: `/loop /dev-loop`, hasta 3 a la vez
   (docs/engineering/12-ai-workflow.md, "Loop de desarrollo").
 - TDD cuando la tarea lo permite (docs/engineering/04-testing.md, "TDD"):
   `spec-tester` escribe los tests `AC-n` antes de la implementación y no se
@@ -129,8 +134,9 @@ módulo, los ADR relacionados y el estándar de ingeniería que aplique.
 - Revisión con criterio (`sonnet`): `code-reviewer`, `security-reviewer`,
   `test-writer` (endurecimiento de tests).
 - Lo crítico lo hace el modelo de la sesión: fórmulas, estados, esquemas,
-  decisiones de arquitectura, `design-auditor`, `plan-reviewer`, `spec-tester`
-  y `delivery-auditor`.
+  decisiones de arquitectura, `design-auditor`, `spec-tester`, `delivery-auditor`
+  y `plan-reviewer` en `/dev-loop` o con fórmulas, estados o esquemas (en
+  `/task`, `sonnet`).
 - Nunca delegues decisiones; los subagentes reportan y tú decides.
 - Los subagentes no ven esta conversación: dales siempre alcance (archivos o ref)
   y una pregunta concreta.

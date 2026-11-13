@@ -17,8 +17,8 @@ El agente principal planifica, decide e implementa. Las tareas mecánicas o de l
 | Nivel | Modelo | Para qué | Ejemplos |
 |---|---|---|---|
 | Ligero | `haiku` | Tareas mecánicas, búsqueda, ejecutar herramientas y resumir su salida | `explorer`, `verifier`, `duplication-auditor`, `docs-checker`, `perf-benchmarker`, `issue-writer` |
-| Intermedio | `sonnet` | Juicio sobre código con criterios claros | `code-reviewer`, `security-reviewer`, `test-writer` |
-| Principal | `inherit` (el modelo de la sesión) | Precisión crítica, decisiones, diseño | `design-auditor`, `plan-reviewer`, `spec-tester`, `delivery-auditor`, planificación, implementación de fórmulas, ADRs |
+| Intermedio | `sonnet` | Juicio sobre código con criterios claros | `code-reviewer`, `security-reviewer`, `test-writer`, `plan-reviewer` en `/task` |
+| Principal | `inherit` (el modelo de la sesión) | Precisión crítica, decisiones, diseño | `design-auditor`, `spec-tester`, `delivery-auditor`, `plan-reviewer` en `/dev-loop` o con fórmulas, estados, esquemas o `defaults.ts` (`model: "opus"`), planificación, implementación de fórmulas, ADRs |
 
 Reglas:
 - Si la tarea consiste en ejecutar algo y resumir, o en buscar y listar, va a un agente ligero.
@@ -33,33 +33,34 @@ Reglas:
 | `explorer` | haiku | No | Encontrar código, docs y referencias del diseño |
 | `verifier` | haiku | No | Ejecutar `pnpm verify` y resumir fallos |
 | `duplication-auditor` | haiku | No | Duplicación (jscpd), código sin usar (knip), smells (sonarjs) |
-| `docs-checker` | haiku | No | TSDoc, docs de reglas, changesets, diseño actualizado |
+| `docs-checker` | haiku | No | TSDoc, docs de reglas, changesets, diseño actualizado, en `/audit` (en cada tarea lo comprueba `delivery-auditor`) |
 | `perf-benchmarker` | haiku | No | Benchmarks contra `main` y contra los presupuestos del diseño |
 | `issue-writer` | haiku | No (solo issues en GitHub) | Milestone, etiquetas e issues de una fase con el formato de [08-git-workflow.md](08-git-workflow.md#issues) |
 | `code-reviewer` | sonnet | No | Revisión contra [11-code-review.md](11-code-review.md) |
 | `security-reviewer` | sonnet | No | Revisión contra [06-security.md](06-security.md) |
 | `test-writer` | sonnet | Solo tests | Endurecimiento después del verde: casos borde, contratos, property-based |
 | `design-auditor` | inherit | No | Conformidad exacta con `docs/design/` |
-| `plan-reviewer` | inherit | No | Revisión del plan antes de implementar (puerta 0) |
+| `plan-reviewer` | sonnet; opus en `/dev-loop` o con fórmulas, estados, esquemas o `defaults.ts` | No | Revisión del plan antes de implementar (puerta 0) |
 | `spec-tester` | inherit | Solo tests | Tests de especificación `AC-n` antes de la implementación (fase roja del TDD) |
-| `delivery-auditor` | inherit | No | Auditoría final estricta de la entrega (puerta 3), veredicto binario |
+| `task-runner` | inherit | Sí | Ejecuta una tarea completa con el pipeline, en su worktree y con contexto limpio; lo lanzan `/task` y `/dev-loop` ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)) |
+| `delivery-auditor` | inherit | No | Auditoría estricta de la entrega dentro de `/review` (puerta 2), veredicto binario |
 
-Los subagentes no ven la conversación principal: cada invocación debe incluir el alcance (archivos o ref) y la pregunta concreta.
+Los subagentes no ven la conversación principal: cada invocación debe incluir el alcance (archivos o ref) y la pregunta concreta. `task-runner` lanza a su vez los subagentes del pipeline: es el único con dos niveles.
 
 ## Comandos
 
 | Comando | Qué hace |
 |---|---|
-| `/task <n\|archivo> [en paralelo con #M …]` | Lee el issue (número) o el archivo de `docs/tasks/`, comprueba que nadie más la tiene en curso, reúne contexto con `explorer`, presenta el plan con el veredicto de `plan-reviewer` y espera aprobación; después sigue el [pipeline de entrega](#pipeline-de-entrega). Con `en paralelo con #M` aplica las reglas de "Trabajo en paralelo" |
-| `/deliver` | Puerta final: `delivery-auditor`; si aprueba, push de la rama, PR en borrador con `Closes #N` y resumen en el issue |
-| `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes uno tras otro con el pipeline de entrega, aprobando planes con `plan-reviewer`. Se lanza con `/loop /dev-loop` (ver [Loop de desarrollo](#loop-de-desarrollo)) |
+| `/task [n …\|archivo]` | Orquestador: lanza un `task-runner` por tarea (hasta 3 a la vez; sin argumentos, modo continuo: elige Pendientes independientes y sigue lanzando hasta que le digas que pare, con un máximo de 4 PRs sin mergear). Cada runner prepara el plan con `plan-reviewer`; el orquestador te lo presenta, te reenvía la aprobación y el runner sigue el [pipeline de entrega](#pipeline-de-entrega) |
+| `/deliver` | Puerta final: comprueba que `/review` terminó con `delivery-auditor` en `APROBADO`; push de la rama y PR en borrador con `Closes #N` mediante `.claude/scripts/open-pr.mjs`; PR listo con la CI en verde |
+| `/dev-loop [fase] [opciones]` | Loop autónomo: mantiene sus PRs y entrega issues Pendientes con el pipeline de entrega, hasta 3 a la vez en runners, aprobando planes con `plan-reviewer`. Se lanza con `/loop /dev-loop` (ver [Loop de desarrollo](#loop-de-desarrollo)) |
 | `/verify [paquete]` | Ejecuta la verificación con `verifier` |
-| `/review [ref]` | Revisión en paralelo con los agentes de revisión contra `ref` (por defecto `origin/main`); consolida un solo reporte |
+| `/review [ref]` | Revisión en paralelo con los agentes de revisión, incluido `delivery-auditor` en una rama de tarea, contra `ref` (por defecto `origin/main`); consolida un solo reporte |
 | `/audit` | Auditoría de todo el repo y propuesta de tareas |
 | `/adr <título>` | ADR nuevo desde la plantilla |
 | `/plan-phase <fase>` | Divide una fase del roadmap en tareas; propone la lista y espera aprobación; después crea los archivos y, con `issue-writer`, el milestone y los issues |
-| `/handoff` | Cierra la sesión: escribe una entrada en `docs/progress.md` y la comenta en el issue de la tarea |
-| `/parallel [n …]` | Propone tareas Pendientes que se pueden hacer a la vez; tras la aprobación crea un worktree por tarea e imprime el comando para abrir una sesión en cada uno. `--cleanup` retira los worktrees de PRs mergeados |
+| `/handoff` | Cierra la tarea (lo ejecuta el runner): escribe una entrada en `docs/progress.md` y la comenta en el issue si la tarea no tiene PR |
+| `/parallel [n …]` | Alternativa manual a `/task` con varias tareas: propone tareas Pendientes que se pueden hacer a la vez; tras la aprobación crea un worktree por tarea e imprime el comando para abrir una sesión en cada uno. `--cleanup` retira los worktrees de PRs mergeados |
 
 ## Flujo de una tarea
 
@@ -69,14 +70,15 @@ inicio de sesión → leer la última entrada de docs/progress.md
 siguiente tarea → issue abierto más antiguo del milestone actual
                   con las dependencias cerradas o Hechas y sin rama, PR, worktree ni loop:blocked
    ▼
-/task 25   (o /task docs/tasks/v1-04-hard-wait-rule.md)
-   │  gh issue view → explorer reúne contexto → plan → plan-reviewer → aprobación (una persona)
+/task 25 26 27   (orquestador: un task-runner por tarea, hasta 3, cada uno en su worktree)
+   │  runner: gh issue view → explorer → plan → plan-reviewer → PLAN
+   │  orquestador: presenta el plan → aprobación (una persona) → SendMessage al runner
    ▼
 pipeline de entrega (ver abajo)
    │  rama → [TDD: stubs → spec-tester → rojo → commit] → implementación → test-writer
-   │  /verify → /review → /deliver (delivery-auditor → push → PR en borrador)
+   │  /verify → /review (con delivery-auditor) → /deliver (open-pr.mjs → push → PR en borrador)
    ▼
-/handoff → entrada en docs/progress.md + comentario en el issue
+/handoff → entrada en docs/progress.md → informe ENTREGADA al orquestador
    ▼
 CI en verde → PR listo para revisión → revisión humana → merge (una persona) → el issue se cierra
 ```
@@ -88,9 +90,9 @@ Al cerrar una fase: `/audit` y luego `/plan-phase <siguiente fase>`.
 Cada tarea pasa por estos pasos ([ADR-0025](../adr/0025-pipeline-entrega-loop-autonomo.md)). Esta sección es la única fuente; los comandos remiten aquí.
 
 1. **Plan:** archivos, enfoque, riesgos, la decisión `TDD: sí/no` ([04-testing.md](04-testing.md#tdd)) y el mapa `AC-n → archivo → test previsto` para cada criterio de aceptación del issue.
-2. **Puerta 0, `plan-reviewer`:** `CAMBIOS` → se corrige el plan y se vuelve a pasar (máx. 2 rondas). `REQUIERE PERSONA` → la tarea se detiene.
+2. **Puerta 0, `plan-reviewer`:** con `sonnet` en `/task` y con `opus` en `/dev-loop` o si el plan toca fórmulas, estados, esquemas o `defaults.ts` ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)). `CAMBIOS` → se corrige el plan y se vuelve a pasar (máx. 2 rondas). `REQUIERE PERSONA` → la tarea se detiene.
 3. **Aprobación:** en `/task`, una persona, después de ver el plan y el veredicto; en `/dev-loop`, el `APROBADO` de `plan-reviewer`. El plan se comenta en el issue bajo `## Plan aprobado`, indicando quién lo aprobó, y el issue recibe la etiqueta `plan:approved`.
-4. **Rama** `<tipo>/<n>-<nombre>` desde `origin/main` y comentario "Tarea iniciada" en el issue.
+4. **Rama** `<tipo>/<n>-<nombre>` desde `origin/main`.
 5. **Especificación (solo con TDD):**
    1. Stubs de las firmas públicas del plan, con TSDoc, que lanzan `new Error("not implemented")`.
    2. `spec-tester` escribe los tests `AC-n`.
@@ -99,8 +101,8 @@ Cada tarea pasa por estos pasos ([ADR-0025](../adr/0025-pipeline-entrega-loop-au
 6. **Implementación** mínima hasta verde y refactor con los tests en verde. Los tests `AC-n` no se tocan: si el implementador cree que uno está mal, lo devuelve a `spec-tester` con la justificación (máx. 1 ronda). Si `spec-tester` lo corrige, el cambio va en un commit `test(<scope>): revise AC-n` con el motivo en el cuerpo; si siguen en desacuerdo, la tarea se detiene. Sin TDD, los tests se escriben junto al código.
 7. **Endurecimiento:** `test-writer`. Un bug que encuentre se arregla empezando por su test.
 8. **Puerta 1, `/verify`:** máx. 3 rondas de corrección.
-9. **Puerta 2, `/review`:** bloqueantes e importantes corregidos o justificados por escrito, y una segunda pasada de `code-reviewer` sobre las correcciones (máx. 2 rondas).
-10. **Puerta 3, `/deliver`:** `delivery-auditor`; un `RECHAZADO` vuelve a la puerta 1 (máx. 2 rondas). Si aprueba: push, PR en borrador y resumen en el issue. Con la CI en verde, el PR pasa a listo para revisión. Después, `/handoff` añade al PR la entrada de `docs/progress.md` en un commit que solo toca ese archivo (y el archivo histórico); no se vuelve a auditar.
+9. **Puerta 2, `/review`:** con todo commiteado. Los revisores, `delivery-auditor` incluido, corren en paralelo. Bloqueantes, importantes y motivos de un `RECHAZADO` corregidos o justificados por escrito; las correcciones pasan `/verify` y una segunda pasada de `code-reviewer`, y de `delivery-auditor` si había rechazado (máx. 2 rondas).
+10. **Puerta 3, `/deliver`:** con `delivery-auditor` en `APROBADO`, `.claude/scripts/open-pr.mjs` busca secretos, hace push y abre el PR en borrador. Con la CI en verde, el PR pasa a listo para revisión. No se comenta el resumen en el issue: el PR lo enlaza con `Closes #N`. Después, `/handoff` añade al PR la entrada de `docs/progress.md` en un commit que solo toca ese archivo (y el archivo histórico); no se vuelve a auditar.
 
 La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o hace falta una decisión humana: un valor que el diseño no define, un ADR, un cambio de API pública o de esquema, una dependencia fuera de `17-tech-stack.md`, una decisión abierta de `CLAUDE.md`, un bloqueo de `test-guard`, un test existente que parece incorrecto o un desacuerdo sobre un test `AC-n`. En `/task` el agente pregunta; en `/dev-loop` el issue recibe `loop:blocked` con la pregunta concreta y el trabajo queda en su rama local, sin push.
 
@@ -118,16 +120,16 @@ La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o ha
    cd ../atium-loop && ATIUM_LOOP=1 GH_TOKEN="$(security find-generic-password -s atium-loop -w)" claude --settings .claude/loop-settings.json "/loop /dev-loop V1"
    ```
 
-   `gh` y el script de push usan `GH_TOKEN`; con `ATIUM_LOOP=1`, el script se niega a empujar sin él. `loop-settings.json` permite los comandos del pipeline (para que el loop no se quede esperando una confirmación), activa `acceptEdits` y deniega `gh api`, los comandos de git que destruyen trabajo o cambian la configuración, y la edición de `.claude/`, `CLAUDE.md`, `.github/` y los archivos de dependencias y hooks de la raíz.
+   El loop es un orquestador: cada tarea y cada mantenimiento de PR lo hace un `task-runner` con contexto limpio, en un worktree dentro de `.claude/worktrees/` y con los mismos permisos y variables de entorno ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)). Un runner no puede confirmar permisos: lo que `loop-settings.json` no permite se rechaza y detiene esa tarea. `gh` y los scripts de push y PR usan `GH_TOKEN`; con `ATIUM_LOOP=1`, el script se niega a empujar sin él. `loop-settings.json` permite los comandos del pipeline (para que el loop no se quede esperando una confirmación), activa `acceptEdits` y deniega `gh api`, los comandos de git que destruyen trabajo o cambian la configuración, y la edición de `.claude/`, `CLAUDE.md`, `.github/` y los archivos de dependencias y hooks de la raíz.
 
 **Funcionamiento:**
 
 - Prioridades en cada vuelta: mantener sus PRs (comentarios de la persona, checks rojos, rama desactualizada, pasar a listo), retomar issues desbloqueados y, por último, empezar el siguiente issue Pendiente.
 - No toma issues con `loop:blocked`, la tarea de aceptación de la fase ni tareas que cambien `.claude/`, `.github/`, `CLAUDE.md` o dependencias (`plan-reviewer` las marca como `REQUIERE PERSONA`).
-- **Límites:** `--max-tasks` (tareas entregadas por ejecución, 3), `--max-open-prs` (PRs del loop sin mergear, 4), `--max-failures` (tareas seguidas que agotan sus intentos, 2; una pregunta a la persona no cuenta), `--max-idle` (vueltas seguidas sin cambios, 8), más los límites de cada puerta del pipeline y de intentos por PR. No hay límite de hora.
+- **Límites:** `--max-tasks` (tareas entregadas por ejecución, 3), `--max-parallel` (runners a la vez, 3), `--max-open-prs` (PRs del loop sin mergear, 4), `--max-failures` (tareas seguidas que agotan sus intentos, 2; una pregunta a la persona no cuenta), `--max-idle` (vueltas seguidas sin cambios, 8), más los límites de cada puerta del pipeline y de intentos por PR. No hay límite de hora.
 - **Solo atiende a la persona dueña del repositorio:** los comentarios de cualquier otro autor se ignoran. Los suyos empiezan por `🤖 dev-loop:`, porque usa la misma cuenta. Las peticiones de cambio se dejan como comentarios del PR; los comentarios en línea de una revisión no los lee.
 - **Desbloquear un issue:** responder la pregunta en un comentario del issue y quitar la etiqueta `loop:blocked`.
-- **Estado:** vive en GitHub (etiquetas, ramas, PRs, comentarios) y en el registro `.atium-loop/` del worktree, así que sobrevive a la compactación del contexto y a reinicios. Los contadores del registro son un freno, no un control de seguridad.
+- **Estado:** vive en GitHub (etiquetas, ramas, PRs, comentarios) y en el registro `.atium-loop/` del worktree, así que sobrevive a la compactación del contexto y a reinicios. Los runners no comparten memoria: el orquestador les pasa lo que necesitan. Los contadores del registro son un freno, no un control de seguridad.
 - **Al terminar** abre un PR con la entrada de `docs/progress.md` que resume la ejecución.
 - `--dry-run` describe lo que haría sin escribir nada.
 
@@ -142,7 +144,9 @@ La tarea se detiene, sin entregar nada a medias, cuando se agota un límite o ha
 
 ## Trabajo en paralelo
 
-Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y en su propia sesión de Claude Code; cada tarea sigue el [pipeline de entrega](#pipeline-de-entrega) completo. Esta sección es la única fuente de las reglas; `/parallel` y `/task` remiten a ella.
+Varias tareas de una fase se pueden hacer a la vez si están Pendientes (ver la tabla de estados en [08-git-workflow.md](08-git-workflow.md#estado)). Cada una va en su propio worktree de Git y sigue el [pipeline de entrega](#pipeline-de-entrega) completo. Esta sección es la única fuente de las reglas; `/task`, `/dev-loop` y `/parallel` remiten a ella.
+
+La forma habitual es `/task` con varios issues (o sin argumentos): un `task-runner` por tarea, en `.claude/worktrees/`, todo desde una conversación. `/parallel` es la alternativa manual, con una sesión de terminal por tarea:
 
 ```
 /parallel   (en el repo principal)
@@ -221,7 +225,7 @@ No se ejecuta `pnpm verify` en un hook: es lento y se ejecuta explícitamente co
 ## Permisos
 
 `.claude/settings.json` define:
-- **Permitido sin preguntar:** comandos de verificación, lectura de git y gh, y el script de push `node .claude/scripts/push-branch.mjs`.
+- **Permitido sin preguntar:** comandos de verificación, lectura de git y gh, y los scripts de push (`node .claude/scripts/push-branch.mjs`) y de PR (`node .claude/scripts/open-pr.mjs`).
 - **Prohibido:** `git push` (el agente solo empuja con el script), publicar paquetes, leer `.env`, editar `fixtures/` (se generan con `pnpm fixtures:generate`), cerrar issues, mergear o cerrar PRs, y editar `.claude/settings.json`, `.claude/hooks/` o `.claude/scripts/` (para que el agente no pueda desactivar sus propios controles; esos archivos los cambia una persona).
 
 Todo lo demás pide confirmación. Los permisos se comparan por prefijo del comando y no cubren todas las variantes de un comando: por eso el push pasa por un script que valida la rama y construye el refspec, y la garantía final es el ruleset de `main` en GitHub ([08-git-workflow.md](08-git-workflow.md#ramas)).
@@ -252,11 +256,11 @@ Claude Code no recuerda sesiones anteriores. La continuidad vive en el repositor
 | `docs/progress.md` | Contexto de las últimas sesiones: qué quedó a medias, decisiones, problemas y siguiente paso |
 | `docs/adr/` | Decisiones permanentes |
 
-Cada sesión empieza leyendo la última entrada de `docs/progress.md` y termina con `/handoff`. Una decisión que solo quedó en una conversación se considera perdida.
+Cada sesión empieza leyendo la última entrada de `docs/progress.md`; cada tarea termina con `/handoff`. Cada tarea corre en su propio `task-runner` ([ADR-0026](../adr/0026-pipeline-contexto-por-tarea.md)): encadenar tareas en un mismo contexto hace que cada turno vuelva a leer las anteriores, y la misma clase de tarea llegó a costar cinco veces más. Una decisión que solo quedó en una conversación se considera perdida.
 
 ## Límites
 
 - Los resúmenes de subagentes pueden omitir detalles: el agente principal verifica en el código cada hallazgo bloqueante antes de actuar.
-- Los subagentes de revisión no reemplazan la revisión humana de fórmulas, esquemas públicos y decisiones de diseño. `plan-reviewer` y `delivery-auditor` usan el mismo modelo que el agente: son controles de calidad, no una revisión independiente ni una barrera de seguridad.
+- Los subagentes de revisión no reemplazan la revisión humana de fórmulas, esquemas públicos y decisiones de diseño. `delivery-auditor`, y `plan-reviewer` en `/dev-loop`, usan el mismo modelo que el agente: son controles de calidad, no una revisión independiente ni una barrera de seguridad.
 - `test-guard` es heurístico y fail-open: ayuda, pero no garantiza que ningún test se debilite; por eso `delivery-auditor` compara los tests `AC-n` con su commit de especificación.
 - El agente ejecuta código del repositorio (tests, scripts de `package.json`, hooks) con las credenciales de la persona; no hay aislamiento.

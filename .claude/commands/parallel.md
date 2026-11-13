@@ -52,7 +52,7 @@ Si `$ARGUMENTS` es `--cleanup`, salta a "Limpieza".
 
 ## Limpieza
 
-12. `git worktree list --porcelain`. Considera solo los worktrees cuya ruta es exactamente `<padre>/atium-<dígitos>`; ignora cualquier otro (por ejemplo `atium-bench-main` de `perf-benchmarker`). Para cada uno:
+12. `git worktree list --porcelain`. Considera solo los worktrees cuya ruta es exactamente `<padre>/atium-<dígitos>` o está dentro de `<repo>/.claude/worktrees/` (los de `task-runner`); ignora cualquier otro (por ejemplo `atium-bench-main` de `perf-benchmarker`). Para cada uno:
     - Su rama actual. Si no tiene rama (la sesión no llegó a aprobar el plan), no lo propongas: lístalo aparte.
     - Si su PR está mergeado: `gh pr list --state merged --head <rama> --limit 200 --json number`.
     - Si tiene cambios sin commitear: `git -C <ruta> status --porcelain`.
