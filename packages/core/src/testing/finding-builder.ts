@@ -1,5 +1,6 @@
 import type { z } from "zod";
-import type { Finding, FindingSchema } from "../findings/finding.js";
+import { FindingSchema } from "../findings/finding.js";
+import type { Finding } from "../findings/finding.js";
 
 type FindingInput = z.input<typeof FindingSchema>;
 
@@ -22,6 +23,13 @@ export interface FindingBuilder {
   build(): Finding;
 }
 
+function findingBuilder(state: Readonly<FindingInput>): FindingBuilder {
+  return Object.freeze({
+    with: (patch: Partial<FindingInput>) => findingBuilder({ ...state, ...structuredClone(patch) }),
+    build: () => FindingSchema.parse(state),
+  });
+}
+
 /**
  * Starts a builder of a valid finding with only the required fields: an
  * `E2E001` warning of the `lint` analyzer.
@@ -29,5 +37,14 @@ export interface FindingBuilder {
  * @returns A builder; call `build()` to get the finding.
  */
 export function aFinding(): FindingBuilder {
-  throw new Error("not implemented");
+  return findingBuilder({
+    fingerprint: "0123456789abcdef",
+    analyzer: "lint",
+    ruleId: "E2E001",
+    severity: "warning",
+    category: "reliability",
+    source: "rule",
+    confidence: "high",
+    message: "Avoid fixed waits; wait for a condition instead.",
+  });
 }

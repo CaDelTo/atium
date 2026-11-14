@@ -1,6 +1,8 @@
 import type { Finding } from "../findings/finding.js";
-import type { BaselineState, Report, RuleDescriptor } from "../model/report.js";
+import type { BaselineState, Report, ReportFinding, RuleDescriptor } from "../model/report.js";
 import type { SkippedAnalyzer } from "../pipeline/run-analyzers.js";
+import { createReport } from "../report/create-report.js";
+import type { CreateReportInput } from "../report/create-report.js";
 import type { FindingBuilder } from "./finding-builder.js";
 
 /** Version of Atium that {@link aReport} puts in the report unless set. */
@@ -46,6 +48,21 @@ export interface ReportBuilder {
   build(): Report;
 }
 
+function reportBuilder(state: CreateReportInput): ReportBuilder {
+  return Object.freeze({
+    withFinding: (finding: Finding | FindingBuilder, baselineState: BaselineState = "new") => {
+      const built = "build" in finding ? finding.build() : finding;
+      const added: ReportFinding = { ...built, baselineState };
+      return reportBuilder({ ...state, findings: [...state.findings, added] });
+    },
+    withRule: (rule: RuleDescriptor) => reportBuilder({ ...state, rules: [...state.rules, rule] }),
+    withSkipped: (skipped: SkippedAnalyzer) =>
+      reportBuilder({ ...state, skipped: [...state.skipped, skipped] }),
+    withToolVersion: (toolVersion: string) => reportBuilder({ ...state, toolVersion }),
+    build: () => createReport(state),
+  });
+}
+
 /**
  * Starts a builder of an empty report: no findings, rules or skipped
  * analyzers, and {@link TEST_TOOL_VERSION}.
@@ -53,5 +70,5 @@ export interface ReportBuilder {
  * @returns A builder; call `build()` to get the report.
  */
 export function aReport(): ReportBuilder {
-  throw new Error("not implemented");
+  return reportBuilder({ toolVersion: TEST_TOOL_VERSION, findings: [], rules: [], skipped: [] });
 }

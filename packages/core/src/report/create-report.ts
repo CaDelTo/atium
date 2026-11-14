@@ -1,4 +1,13 @@
-import type { Report, ReportFinding, RuleDescriptor } from "../model/report.js";
+import { compareFindings, compareStrings } from "../findings/compare.js";
+import type { FindingSeverity } from "../findings/finding.js";
+import { REPORT_SCHEMA_VERSION, ReportSchema } from "../model/report.js";
+import type {
+  Report,
+  ReportFinding,
+  RuleDescriptor,
+  SkippedAnalyzerEntry,
+} from "../model/report.js";
+import { CAPABILITIES } from "../pipeline/analyzer.js";
 import type { SkippedAnalyzer } from "../pipeline/run-analyzers.js";
 
 /** Input of {@link createReport}. */
@@ -11,6 +20,11 @@ export interface CreateReportInput {
   readonly rules: readonly RuleDescriptor[];
   /** Skipped analyzers, as `runAnalyzers` returns them, in any order. */
   readonly skipped: readonly SkippedAnalyzer[];
+}
+
+interface Count {
+  total: number;
+  new: number;
 }
 
 /**
@@ -33,7 +47,57 @@ export interface CreateReportInput {
  * @throws `Error` if two rule descriptors have the same `id` (a bug of the caller).
  * @throws `ZodError` if the input makes the report invalid, such as an empty `toolVersion`.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- stub until the implementation commit
 export function createReport(input: CreateReportInput): Report {
-  throw new Error("not implemented");
+  const findings = input.findings.toSorted(compareFindings);
+  const overall: Count = { total: 0, new: 0 };
+  const bySeverity: Record<FindingSeverity, Count> = {
+    error: { total: 0, new: 0 },
+    warning: { total: 0, new: 0 },
+    info: { total: 0, new: 0 },
+  };
+  const byRule = new Map<string, Count>();
+  for (const finding of findings) {
+    const ruleCount = byRule.get(finding.ruleId) ?? { total: 0, new: 0 };
+    byRule.set(finding.ruleId, ruleCount);
+    for (const count of [overall, bySeverity[finding.severity], ruleCount]) {
+      count.total += 1;
+      count.new += finding.baselineState === "new" ? 1 : 0;
+    }
+  }
+  return ReportSchema.parse({
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    toolVersion: input.toolVersion,
+    findings,
+    summary: {
+      overall,
+      bySeverity,
+      byRule: [...byRule]
+        .toSorted(([a], [b]) => compareStrings(a, b))
+        .map(([ruleId, count]) => ({ ruleId, ...count })),
+    },
+    rules: sortedRules(input.rules),
+    skippedAnalyzers: input.skipped
+      .map(toEntry)
+      .toSorted(
+        (a, b) => compareStrings(a.analyzer, b.analyzer) || compareStrings(a.reason, b.reason),
+      ),
+  });
+}
+
+function sortedRules(rules: readonly RuleDescriptor[]): readonly RuleDescriptor[] {
+  const sorted = rules.toSorted((a, b) => compareStrings(a.id, b.id));
+  const repeated = sorted.find((rule, index) => index > 0 && sorted[index - 1]?.id === rule.id);
+  if (repeated !== undefined) {
+    throw new Error(`Two rule descriptors have the id ${JSON.stringify(repeated.id)}.`);
+  }
+  return sorted;
+}
+
+function toEntry({ analyzer, reason }: SkippedAnalyzer): SkippedAnalyzerEntry {
+  // The error text stays out of the report (ADR-0027); runAnalyzers already logged it.
+  if (reason.kind === "missing-capabilities") {
+    const missing = CAPABILITIES.filter((capability) => reason.missing.includes(capability));
+    return { analyzer, reason: reason.kind, missing };
+  }
+  return { analyzer, reason: reason.kind };
 }
