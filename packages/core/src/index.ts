@@ -63,6 +63,21 @@ export { FingerprintSchema, RunIdSchema, TestIdSchema } from "./model/ids.js";
 export type { Fingerprint, RunId, TestId } from "./model/ids.js";
 export { NetworkCallSchema, NetworkSummarySchema } from "./model/network.js";
 export type { NetworkCall, NetworkSummary } from "./model/network.js";
+export {
+  BASELINE_STATES,
+  REPORT_SCHEMA_VERSION,
+  ReportFindingSchema,
+  ReportSchema,
+  RuleDescriptorSchema,
+  SkippedAnalyzerEntrySchema,
+} from "./model/report.js";
+export type {
+  BaselineState,
+  Report,
+  ReportFinding,
+  RuleDescriptor,
+  SkippedAnalyzerEntry,
+} from "./model/report.js";
 export { FRAMEWORK_NAMES, RunSchema, SCHEMA_VERSION } from "./model/run.js";
 export type { FrameworkName, Run } from "./model/run.js";
 export { TestCaseSchema } from "./model/test-case.js";
@@ -71,13 +86,14 @@ export { TEST_OUTCOMES, TestResultSchema } from "./model/test-result.js";
 export type { TestOutcome, TestResult } from "./model/test-result.js";
 export { truncateUtf8 } from "./model/text.js";
 export { displayPath, resolveInside, toPosixRelative } from "./paths.js";
-export { ANALYZER_KINDS, CAPABILITIES } from "./pipeline/analyzer.js";
+export { ANALYZER_KINDS, CAPABILITIES, SKIP_REASON_KINDS } from "./pipeline/analyzer.js";
 export type {
   AnalysisContext,
   Analyzer,
   AnalyzerKind,
   Capability,
   ResolvedProject,
+  SkipReasonKind,
 } from "./pipeline/analyzer.js";
 export { runAnalyzers } from "./pipeline/run-analyzers.js";
 export type {
@@ -91,6 +107,9 @@ export { REDACT_PATTERN_IDS } from "./redact/patterns.js";
 export type { RedactPatternId } from "./redact/patterns.js";
 export { createRedactor, RedactConfigSchema } from "./redact/redactor.js";
 export type { HeaderValue, RedactConfig, Redactor } from "./redact/redactor.js";
+export { createReport } from "./report/create-report.js";
+export type { CreateReportInput } from "./report/create-report.js";
+export type { Reporter } from "./report/reporter.js";
 export { err, ok } from "./result.js";
 export type { Result } from "./result.js";
 export { systemScheduler } from "./scheduler.js";

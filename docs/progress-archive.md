@@ -4,6 +4,64 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-11-10 — #50 v1-10-selector-parsing
+
+- **Hecho:**
+  - **#46 (misma sesión):** PR #138 mergeado por la persona; la #46 está cerrada.
+  - **Rama y PR de #50:**
+    - Rama `feat/50-selector-parsing`, creada desde `origin/main` (`5b3fb27`).
+    - PR #139 en borrador, con `Closes #50` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **Commits:**
+    - `6e6cbdb` `test(eslint-plugin): specify selector parsing`: 119 tests AC en rojo contra stubs. Incluye `parsel-js` 1.2.3 y los patrones y niveles en `packages/eslint-plugin/src/defaults.ts`.
+    - `f3bc0ab` `feat(eslint-plugin): analyze and classify selectors`:
+      - `src/syntax/selectors.ts` con `analyzeSelector`, `classifyLocator`, `selectorText` y `normalizeSelector`;
+      - `css-selector.ts`, que usa solo `tokenize` de parsel;
+      - `xpath-selector.ts`, un escáner lineal.
+    - `05f2a7e` `docs(docs)`: viñeta "Selectores" en `docs/design/03-linter.md` §11.3.1 y casos que faltaban en `06-selector-advisor.md` §14.1.
+    - `aaf89b6` `test(eslint-plugin): cover selector edge cases` (`selectors.edge.test.ts`, de `test-writer`).
+    - `6fd2c3a` `refactor`: `CssAnalysis extends CssSegment`, por un clon que detectó jscpd.
+    - `5943701` `fix(eslint-plugin): cap selector length and address review findings`: tope `SELECTOR_MAX_LENGTH` y correcciones de `/review`. Añade `src/syntax/whitespace.ts` y exporta `isGetByMethod` en `locators.ts`.
+    - `3f0d95d` `fix(eslint-plugin): keep xpath= normalization idempotent`.
+  - **Puertas:**
+    - `plan-reviewer`: REQUIERE PERSONA, resuelto con D1-D5.
+    - Rojo verificado con 119 tests.
+    - `/verify`: PASS sobre `3f0d95d`, con 446 tests en eslint-plugin. `pkg:check`: exit 0.
+    - `/review`: sin bloqueantes; tercera pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #50.
+- **En curso:** PR #139 en borrador. Al crearlo, la CI todavía no había reportado ningún check. Falta `gh pr ready 139` cuando los 7 checks estén en verde.
+- **Decisiones** (de la persona, 2026-11-10):
+  - **D1-D5, en el comentario "Plan aprobado" de #50 y en el diseño:**
+    - Ids numéricos: 3 o más dígitos seguidos.
+    - Clases generadas: `css-` seguido de un hash con al menos un dígito, `sc-*`, y `jsx-` seguido de dígitos.
+    - La normalización reserializa sin reordenar.
+    - Huecos de la tabla de §14.1:
+      - `getByRole` sin `name`, `getByAltText` y `getByTitle` son nivel 4.
+      - Cinco atributos de test id.
+      - Gana el peor nivel.
+    - Con `i18n`, el texto visible baja al nivel 2.
+    - Un solo PR.
+  - **Durante `/review`, en el diseño, en `defaults.ts`, en el commit `5943701`, en el PR y en el comentario de entrega de #50:**
+    - Tope de 2048 caracteres tras colapsar espacios.
+    - La clasificación no cuenta los combinadores; el umbral lo fija v1-13.
+    - Se corrige todo lo corregible.
+    - El test de endurecimiento de 20 000 predicados anidados pasa a 500.
+  - **Mías, en el diseño y en el PR:**
+    - Se usa `tokenize` y no `parse`, que es cuadrático y se queda sin memoria con 1 MiB.
+    - No se analizan los argumentos de pseudoclases como `:has(...)`.
+    - `selectorText` no se unifica con `titleOf`, porque cambiaría cómo se detectan los títulos estáticos.
+- **Problemas:**
+  - El PR tiene unas 1600 líneas añadidas (unas 890 sin tests ni lockfile), el doble de lo estimado en el plan. La persona eligió un solo PR (D5); `delivery-auditor` recomienda confirmarlo.
+  - `pkg:check` no corre en `pnpm verify` ni en la CI. El agente `verifier` tampoco tiene permiso para ejecutarlo; lo ejecuté a mano.
+  - Pendientes heredados para v1-13 (E2E002):
+    - fijar el umbral de combinadores, porque `03-linter.md` dice "≥ 3 combinadores" y también "Profundidad 3";
+    - decidir si `:nth-last-child`, `:eq()` de jQuery y los atributos `[id=ember123]` cuentan como frágiles.
+  - Pendiente para v1-29: normalizar los `getBy*` combinando método y texto, porque `normalizeSelector` solo cubre el texto.
+  - `@atium/eslint-plugin` es `private` aunque ADR-0023 lo llama "paquete publicado". Es una inconsistencia anterior, sin issue.
+  - El checkout principal está ahora en `feat/50-selector-parsing`. La rama local `docs/46-core-api-docs`, ya mergeada, se puede borrar.
+- **Siguiente paso:** con la CI de #139 en verde, ejecutar `gh pr ready 139`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #51 (v1-11, regla E2E010 `.only`); hay que comprobar sus dependencias.
+
 ### 2026-11-10 — #46 v1-06-core-api-docs
 
 - **Hecho:**

@@ -11,7 +11,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 ### 2026-11-13 — #62 v1-22-lint-fingerprint
 
 - **Hecho:**
-  - Rama `feat/62-lint-fingerprint`, creada desde `origin/main` (`7a29001`) y actualizada con merge de `origin/main` tras #149. PR #152 con `Closes #62`. Plan aprobado por la persona y comentado en #62 (etiqueta `plan:approved`). La persona aprobó en #62 que el PR pase de 400 líneas (issuecomment-6869870789): son unas 612, de ellas 513 de tests.
+  - Rama `feat/62-lint-fingerprint`, creada desde `origin/main` (`7a29001`) y actualizada con merge de `origin/main` tras #149, #151 y #150. PR #152 con `Closes #62`. Plan aprobado por la persona y comentado en #62 (etiqueta `plan:approved`). La persona aprobó en #62 que el PR pase de 400 líneas (issuecomment-6869870789): son unas 612, de ellas 513 de tests.
   - `8cb4df3` `test(core): specify lint fingerprint`: stubs, tests `AC-n` en `packages/core/src/findings/lint-fingerprint.test.ts` y §11.5 de `docs/design/03-linter.md`. Rojo verificado: los 25 tests fallaban por el stub.
   - `c9eb214` `feat(core)`: `lintFingerprint`, `lintFingerprints` (ocurrencias por posición) y `normalizeNodeCode` en `packages/core/src/findings/lint-fingerprint.ts`, exportadas (salvo `normalizeNodeCode`) desde `@atium/core` y `@atium/core/pure`.
   - `16c1a52`: tests de casos límite de `test-writer` en `lint-fingerprint.edge.test.ts`.
@@ -26,6 +26,44 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - D2: fuera de un test, el `titlePath` son los títulos de los describes que contienen el nodo; `[]` a nivel de módulo.
 - **Problemas:** el `FileIndex` de #69 (§11.4) da `titlePath: null` para un locator fuera de un test. Con D2, los títulos de los describes los tiene que calcular v1-37 o añadirlos la segunda entrega de #69. No está escrito en esas tareas.
 - **Siguiente paso:** revisar y mergear #152; al hacer v1-37 o la entrega 2 de #69, resolver de dónde salen los describes de D2.
+
+### 2026-11-13 — #64 v1-24-report-model
+
+- **Hecho:**
+  - **Contexto:** la ejecutó un `task-runner` de `/task` en su worktree, en paralelo con #69 y #57.
+  - **Rama y PR:**
+    - Rama `feat/64-report-model`, creada desde `origin/main`.
+    - PR #150 en borrador, con `Closes #64` y sin mergear.
+    - Plan aprobado por la persona, comentado en #64 bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+    - Excepción de tamaño aprobada por la persona en #64 (unas 1580 líneas, la mayoría tests).
+  - **Commits:**
+    - `760854c` `docs(core)`: ADR-0027, la subsección "Modelo del reporte" de §21.5 (13-score-baseline-reports.md) y `Reporter` en §22.4.
+    - `ed5333f` `test(core): specify the report model`: el esquema `model/report.ts`, stubs y 85 tests en rojo.
+    - `289cf5f` `feat(core)`:
+      - `createReport` (`report/create-report.ts`) y la interfaz `Reporter` (`report/reporter.ts`);
+      - `reportJsonSchema` y `schemas/report.v1.json`;
+      - los builders `aFinding` y `aReport`;
+      - `SKIP_REASON_KINDS` en `pipeline/analyzer.ts`;
+      - `compareStrings` exportada dentro de core.
+    - `2ec79d5` y `3af52a9` `test(core)`: casos borde de test-writer (`create-report.edge.test.ts`).
+    - `8622fd1` `fix(core)`: sugerencias de code-reviewer.
+  - **Puertas:**
+    - `plan-reviewer` (opus): REQUIERE PERSONA (D1-D6 y el ADR), resuelto por la persona.
+    - Rojo verificado.
+    - `/verify`: PASS en la ejecución completa final.
+    - `/review`: 0 bloqueantes. `delivery-auditor` dio RECHAZADO solo por tamaño y APROBADO tras la excepción. `code-reviewer` aprobó las dos pasadas.
+- **En curso:** PR #150 en borrador. Falta `gh pr ready 150` cuando la CI esté en verde.
+- **Decisiones:** las tomó la persona y están en ADR-0027 y en §21.5:
+  - Findings planos con `baselineState: "new" | "unchanged"`.
+  - Sin fecha.
+  - `render` asíncrono.
+  - Omitidos sin el texto del error.
+  - `RuleDescriptor.name` legible y obligatorio, y `shortDescription` con el título de §11.2.
+  - Las tomó el agente y están en §21.5: los omitidos se ordenan por `reason` como texto; `missing` no puede estar vacío; un `id` de regla repetido lanza `Error`, porque es un bug del llamador.
+- **Problemas:**
+  - Con la máquina cargada (load average de 12 por los runners en paralelo), los tests de tiempo de `@atium/eslint-plugin` (presupuesto de 2000 ms en `selectors*.test.ts`) fallaron en un `pnpm verify` completo. En aislado y en la ejecución final pasan.
+  - Sugerencias menores sin aplicar: la redacción de la `description` de `report.v1.json` ("…which this schema does not check"); `{ total, new }` repetido en `byRule`; solapes de los edge tests con la especificación.
+- **Siguiente paso:** con la CI de #150 en verde, `gh pr ready 150`. Después, una persona revisa y mergea. Desbloquea v1-25, v1-26 y v1-27 (#65, #66, #67).
 
 ### 2026-11-13 — #57 v1-17-rule-e2e005-test-size
 
@@ -385,61 +423,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - **Para v1-37:** `plugin.rules` se tipa como `Rule.RuleModule` de ESLint (`plugin.ts:11`), así que no expone con tipos los campos del catálogo. v1-37 necesitará un accesor tipado o validar con Zod en el borde.
   - **Preexistente:** `max-lines` en `packages/core/src/storage/run-file.test.ts` y 2 clones de `vitest.config.ts`.
 - **Siguiente paso:** con la CI de #140 en verde, ejecutar `gh pr ready 140`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #52 (v1-12, regla E2E001 de esperas fijas); hay que comprobar sus dependencias y decidir antes si se arregla `test-guard`.
-
-### 2026-11-10 — #50 v1-10-selector-parsing
-
-- **Hecho:**
-  - **#46 (misma sesión):** PR #138 mergeado por la persona; la #46 está cerrada.
-  - **Rama y PR de #50:**
-    - Rama `feat/50-selector-parsing`, creada desde `origin/main` (`5b3fb27`).
-    - PR #139 en borrador, con `Closes #50` y sin mergear.
-    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
-  - **Commits:**
-    - `6e6cbdb` `test(eslint-plugin): specify selector parsing`: 119 tests AC en rojo contra stubs. Incluye `parsel-js` 1.2.3 y los patrones y niveles en `packages/eslint-plugin/src/defaults.ts`.
-    - `f3bc0ab` `feat(eslint-plugin): analyze and classify selectors`:
-      - `src/syntax/selectors.ts` con `analyzeSelector`, `classifyLocator`, `selectorText` y `normalizeSelector`;
-      - `css-selector.ts`, que usa solo `tokenize` de parsel;
-      - `xpath-selector.ts`, un escáner lineal.
-    - `05f2a7e` `docs(docs)`: viñeta "Selectores" en `docs/design/03-linter.md` §11.3.1 y casos que faltaban en `06-selector-advisor.md` §14.1.
-    - `aaf89b6` `test(eslint-plugin): cover selector edge cases` (`selectors.edge.test.ts`, de `test-writer`).
-    - `6fd2c3a` `refactor`: `CssAnalysis extends CssSegment`, por un clon que detectó jscpd.
-    - `5943701` `fix(eslint-plugin): cap selector length and address review findings`: tope `SELECTOR_MAX_LENGTH` y correcciones de `/review`. Añade `src/syntax/whitespace.ts` y exporta `isGetByMethod` en `locators.ts`.
-    - `3f0d95d` `fix(eslint-plugin): keep xpath= normalization idempotent`.
-  - **Puertas:**
-    - `plan-reviewer`: REQUIERE PERSONA, resuelto con D1-D5.
-    - Rojo verificado con 119 tests.
-    - `/verify`: PASS sobre `3f0d95d`, con 446 tests en eslint-plugin. `pkg:check`: exit 0.
-    - `/review`: sin bloqueantes; tercera pasada de `code-reviewer` APROBADO.
-    - `delivery-auditor`: APROBADO.
-    - Push con `push-branch.mjs` y resumen de entrega comentado en #50.
-- **En curso:** PR #139 en borrador. Al crearlo, la CI todavía no había reportado ningún check. Falta `gh pr ready 139` cuando los 7 checks estén en verde.
-- **Decisiones** (de la persona, 2026-11-10):
-  - **D1-D5, en el comentario "Plan aprobado" de #50 y en el diseño:**
-    - Ids numéricos: 3 o más dígitos seguidos.
-    - Clases generadas: `css-` seguido de un hash con al menos un dígito, `sc-*`, y `jsx-` seguido de dígitos.
-    - La normalización reserializa sin reordenar.
-    - Huecos de la tabla de §14.1:
-      - `getByRole` sin `name`, `getByAltText` y `getByTitle` son nivel 4.
-      - Cinco atributos de test id.
-      - Gana el peor nivel.
-    - Con `i18n`, el texto visible baja al nivel 2.
-    - Un solo PR.
-  - **Durante `/review`, en el diseño, en `defaults.ts`, en el commit `5943701`, en el PR y en el comentario de entrega de #50:**
-    - Tope de 2048 caracteres tras colapsar espacios.
-    - La clasificación no cuenta los combinadores; el umbral lo fija v1-13.
-    - Se corrige todo lo corregible.
-    - El test de endurecimiento de 20 000 predicados anidados pasa a 500.
-  - **Mías, en el diseño y en el PR:**
-    - Se usa `tokenize` y no `parse`, que es cuadrático y se queda sin memoria con 1 MiB.
-    - No se analizan los argumentos de pseudoclases como `:has(...)`.
-    - `selectorText` no se unifica con `titleOf`, porque cambiaría cómo se detectan los títulos estáticos.
-- **Problemas:**
-  - El PR tiene unas 1600 líneas añadidas (unas 890 sin tests ni lockfile), el doble de lo estimado en el plan. La persona eligió un solo PR (D5); `delivery-auditor` recomienda confirmarlo.
-  - `pkg:check` no corre en `pnpm verify` ni en la CI. El agente `verifier` tampoco tiene permiso para ejecutarlo; lo ejecuté a mano.
-  - Pendientes heredados para v1-13 (E2E002):
-    - fijar el umbral de combinadores, porque `03-linter.md` dice "≥ 3 combinadores" y también "Profundidad 3";
-    - decidir si `:nth-last-child`, `:eq()` de jQuery y los atributos `[id=ember123]` cuentan como frágiles.
-  - Pendiente para v1-29: normalizar los `getBy*` combinando método y texto, porque `normalizeSelector` solo cubre el texto.
-  - `@atium/eslint-plugin` es `private` aunque ADR-0023 lo llama "paquete publicado". Es una inconsistencia anterior, sin issue.
-  - El checkout principal está ahora en `feat/50-selector-parsing`. La rama local `docs/46-core-api-docs`, ya mergeada, se puede borrar.
-- **Siguiente paso:** con la CI de #139 en verde, ejecutar `gh pr ready 139`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #51 (v1-11, regla E2E010 `.only`); hay que comprobar sus dependencias.
