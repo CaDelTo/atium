@@ -422,5 +422,5 @@
     }
   },
   "title": "Atium report (schemaVersion 1)",
-  "description": "Findings of an analysis with their state against the baseline, a summary, the rules and the skipped analyzers (ADR-0027). docsUrl only accepts http and https URLs. Findings are in the order of compareFindings, and rules, summary.byRule and skippedAnalyzers are sorted; this schema does not check the order or the counts."
+  "description": "Findings of an analysis with their state against the baseline, a summary, the rules and the skipped analyzers (ADR-0027). docsUrl only accepts http and https URLs, which this schema does not check. Findings are in the order of compareFindings, and rules, summary.byRule and skippedAnalyzers are sorted; this schema does not check the order or the counts."
 }

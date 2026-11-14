@@ -88,13 +88,16 @@ function sortedRules(rules: readonly RuleDescriptor[]): readonly RuleDescriptor[
   const sorted = rules.toSorted((a, b) => compareStrings(a.id, b.id));
   const repeated = sorted.find((rule, index) => index > 0 && sorted[index - 1]?.id === rule.id);
   if (repeated !== undefined) {
-    throw new Error(`Two rule descriptors have the id ${JSON.stringify(repeated.id)}.`);
+    throw new Error(
+      `Two rule descriptors have the id ${JSON.stringify(repeated.id)}; pass each rule once.`,
+    );
   }
   return sorted;
 }
 
 function toEntry({ analyzer, reason }: SkippedAnalyzer): SkippedAnalyzerEntry {
   // The error text stays out of the report (ADR-0027); runAnalyzers already logged it.
+  // The return type fails to compile if SkipReason gains a kind missing from SKIP_REASON_KINDS.
   if (reason.kind === "missing-capabilities") {
     const missing = CAPABILITIES.filter((capability) => reason.missing.includes(capability));
     return { analyzer, reason: reason.kind, missing };

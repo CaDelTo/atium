@@ -36,7 +36,7 @@ export function reportJsonSchema(): Record<string, unknown> {
     ...z.toJSONSchema(ReportSchema, { override: withoutReadOnly }),
     title: `Atium report (schemaVersion ${String(REPORT_SCHEMA_VERSION)})`,
     description:
-      "Findings of an analysis with their state against the baseline, a summary, the rules and the skipped analyzers (ADR-0027). docsUrl only accepts http and https URLs. Findings are in the order of compareFindings, and rules, summary.byRule and skippedAnalyzers are sorted; this schema does not check the order or the counts.",
+      "Findings of an analysis with their state against the baseline, a summary, the rules and the skipped analyzers (ADR-0027). docsUrl only accepts http and https URLs, which this schema does not check. Findings are in the order of compareFindings, and rules, summary.byRule and skippedAnalyzers are sorted; this schema does not check the order or the counts.",
   };
 }
 
