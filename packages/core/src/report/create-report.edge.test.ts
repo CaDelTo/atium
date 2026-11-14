@@ -56,7 +56,7 @@ describe("createReport edge cases", () => {
     const report = aReport()
       .withSkipped({
         analyzer: "a",
-        reason: { kind: "timeout", error: new AtiumError("E_X", "boom") },
+        reason: { kind: "timeout", error: new AtiumError("ANALYZER_TIMEOUT", "boom") },
       })
       .withSkipped({ analyzer: "a", reason: { kind: "failed", error: new Error("secret") } })
       .withSkipped({ analyzer: "a", reason: { kind: "aborted", error: undefined } })
