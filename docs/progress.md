@@ -11,7 +11,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 ### 2026-11-13 — #69 v1-29-suite-index-file (PR 1 de 2)
 
 - **Hecho:**
-  - Rama `feat/69-suite-index-file`, creada desde `origin/main` (`7a29001`). PR #149 en borrador con `Part of #69 (1 of 2)`, sin mergear. Plan aprobado por la persona, comentado en #69 (etiqueta `plan:approved`). La persona aprobó en #69 que el PR pase de 400 líneas (issuecomment-6869497757): son unas 1.100, de ellas unas 520 de tests.
+  - Rama `feat/69-suite-index-file`, creada desde `origin/main` (`7a29001`). PR #149 con `Part of #69 (1 of 2)`, listo para revisión, sin mergear. Plan aprobado por la persona, comentado en #69 (etiqueta `plan:approved`). La persona aprobó en #69 que el PR pase de 400 líneas (issuecomment-6869497757): son unas 1.100, de ellas unas 520 de tests.
   - `8d035c6` `test(suite-index): specify file index extraction`:
     - paquete nuevo `@atium/suite-index` (private), con `FileIndexSchema`, `FILE_INDEX_SCHEMA_VERSION = 1`, el stub de `extractFileIndex(program, source, options)` y `test/source.ts` (`parseSource`, `playwrightSpec`);
     - tests `AC-n` en `src/extract-file-index.test.ts`;
@@ -29,7 +29,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
     - `/verify`: PASS sobre `2b215cf`.
     - `/review`: sin bloqueantes. `delivery-auditor` y la segunda pasada de `code-reviewer`, APROBADO.
 - **En curso:**
-  - PR #149 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 149` cuando estén en verde.
+  - PR #149 listo para revisión, con los 7 checks de CI en verde. En la primera ejecución el test de regresión del array largo pasó de los 5 s de timeout por el parseo de 200.000 elementos; `3554665` construye la lista repitiendo un elemento ya parseado.
   - El PR 2 de #69 no está empezado. Va en la rama `feat/69-suite-index-declarations`, creada desde `origin/main` después del merge de #149, con `Closes #69`. Contenido:
     - helpers (funciones de módulo y miembros de clases o Page Objects);
     - fixtures (`X.extend({…})`);
@@ -52,7 +52,7 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Avisos que ya existían, fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas). jscpd marca el `vitest.config.ts` de suite-index como cuarta copia de la misma configuración de cobertura.
   - `options`/`indexOf` se repiten en los dos archivos de test de suite-index, porque el archivo AC no se toca después de la especificación.
   - `calls[]` solo cubre llamadas dentro de los tests; no las de hooks, fixtures, el nivel de módulo ni `new X()`. Lo amplía v1-30 si lo necesita.
-- **Siguiente paso:** con la CI de #149 en verde, `gh pr ready 149`, y que una persona lo revise y lo mergee. Después, empezar el PR 2 de #69 con el plan ya aprobado: en la rama nueva, primero los tests `AC-1` de la segunda parte con `spec-tester`.
+- **Siguiente paso:** que una persona revise y mergee #149. Después, empezar el PR 2 de #69 con el plan ya aprobado: en la rama nueva, primero los tests `AC-1` de la segunda parte con `spec-tester`.
 
 ### 2026-11-13 — #56 v1-16-rule-e2e009-web-first
 
