@@ -12,12 +12,13 @@ export type { Action } from "./actions.js";
 export { actionOf } from "./actions.js";
 export type { Assertion, AssertionKind, NameMatcher } from "./assertions.js";
 export { assertionOf, createNameMatcher } from "./assertions.js";
+export { calleePath } from "./ast.js";
 export type { TestContext, TitlePath } from "./context.js";
 export { enclosingBlocks, testContextOf, titlePathOf } from "./context.js";
 export type { Framework } from "./framework.js";
 export { detectFramework, FRAMEWORKS } from "./framework.js";
 export type { LocatorCall, LocatorQuery, LocatorRefinement } from "./locators.js";
-export { locatorOf } from "./locators.js";
+export { baseQuery, isGetByMethod, locatorOf } from "./locators.js";
 export type {
   ClassifyOptions,
   CssAnalysis,

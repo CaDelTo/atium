@@ -72,6 +72,17 @@ module.exports = {
       },
     },
     {
+      // 02-code-design.md: suite-index depends only on `core` and on
+      // `@atium/eslint-plugin/syntax`, never on the rest of the plugin.
+      name: "suite-index-only-core-and-syntax",
+      severity: "error",
+      from: { path: "^packages/suite-index/" },
+      to: {
+        path: "^packages/(?!suite-index/)",
+        pathNot: ["^packages/core/dist/", "^packages/eslint-plugin/dist/syntax/"],
+      },
+    },
+    {
       name: "no-test-code-in-src",
       severity: "error",
       // Covers packages/<name>/src and nested ones such as packages/analyzers/<name>/src.

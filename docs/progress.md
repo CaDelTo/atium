@@ -46,6 +46,52 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Sugerencias menores sin aplicar: la redacción de la `description` de `report.v1.json` ("…which this schema does not check"); `{ total, new }` repetido en `byRule`; solapes de los edge tests con la especificación.
 - **Siguiente paso:** con la CI de #150 en verde, `gh pr ready 150`. Después, una persona revisa y mergea. Desbloquea v1-25, v1-26 y v1-27 (#65, #66, #67).
 
+### 2026-11-13 — #69 v1-29-suite-index-file (PR 1 de 2)
+
+- **Hecho:**
+  - Rama `feat/69-suite-index-file`, creada desde `origin/main` (`7a29001`). PR #149 con `Part of #69 (1 of 2)`, listo para revisión, sin mergear. Plan aprobado por la persona, comentado en #69 (etiqueta `plan:approved`). La persona aprobó en #69 que el PR pase de 400 líneas (issuecomment-6869497757): son unas 1.100, de ellas unas 520 de tests.
+  - `8d035c6` `test(suite-index): specify file index extraction`:
+    - paquete nuevo `@atium/suite-index` (private), con `FileIndexSchema`, `FILE_INDEX_SCHEMA_VERSION = 1`, el stub de `extractFileIndex(program, source, options)` y `test/source.ts` (`parseSource`, `playwrightSpec`);
+    - tests `AC-n` en `src/extract-file-index.test.ts`;
+    - regla `suite-index-only-core-and-syntax` en `.dependency-cruiser.cjs`;
+    - subsección "Índice por archivo (`FileIndex`)" en `docs/design/03-linter.md` §11.4.
+    - Rojo verificado: los 9 tests fallaban por el stub.
+  - `19161d8` `feat(suite-index): extract tests and locators of a file`: `src/extract-file-index.ts` y `src/calls.ts`, que recorre el AST sin cargar el parser.
+  - `875bc23`: 21 tests de casos límite de `test-writer`, en `extract-file-index.edge.test.ts`.
+  - `04bf308` `fix(suite-index)`: un array literal de más de 100.000 elementos daba `RangeError`, porque se hacía `push(...spread)`. Corregido, con test de regresión.
+  - `26afd55` `refactor(suite-index)`: `nearestQuery` reutiliza `baseQuery`, que ahora exporta `@atium/eslint-plugin/syntax`.
+  - `2b215cf` `docs(docs)`: en 08-git-workflow.md, una tarea dividida en varios PRs usa `Part of #N (k of m)` y solo el último lleva `Closes #N`.
+  - `@atium/eslint-plugin/syntax` exporta además `calleePath`, `baseQuery` e `isGetByMethod`.
+  - Puertas:
+    - `plan-reviewer` (opus): REQUIERE PERSONA; la persona decidió.
+    - `/verify`: PASS sobre `2b215cf`.
+    - `/review`: sin bloqueantes. `delivery-auditor` y la segunda pasada de `code-reviewer`, APROBADO.
+- **En curso:**
+  - PR #149 listo para revisión, con los 7 checks de CI en verde. En la primera ejecución el test de regresión del array largo pasó de los 5 s de timeout por el parseo de 200.000 elementos; `3554665` construye la lista repitiendo un elemento ya parseado.
+  - El PR 2 de #69 no está empezado. Va en la rama `feat/69-suite-index-declarations`, creada desde `origin/main` después del merge de #149, con `Closes #69`. Contenido:
+    - helpers (funciones de módulo y miembros de clases o Page Objects);
+    - fixtures (`X.extend({…})`);
+    - imports con alias y exports;
+    - `moduleReads`/`moduleWrites` por test, con `@typescript-eslint/scope-manager` como dependencia directa (confirmada por la persona), añadida a la fila Linter de 17-tech-stack.md;
+    - `fileReads`/`fileWrites` con la lista mínima de `defaults.ts` (`writeFile*`, `appendFile*`, `readFile*`);
+    - notas en `docs/tasks/v1-34-crossfile-e2e008.md` y `v1-35-crossfile-e2e011.md` de que esas tareas modificarán `suite-index`;
+    - los tests AC-1 de helpers exportados e imports con alias.
+- **Decisiones:**
+  - De la persona, en el comentario "Plan aprobado" de #69:
+    - dos PRs;
+    - la lista mínima de archivos para E2E008;
+    - solo `let`/`var` de módulo;
+    - fuera del índice v1: `serial`, fixtures por test, hooks y `require`/`import()`;
+    - `scope-manager` como dependencia directa.
+  - De la persona, en `08-git-workflow.md`: el formato `Part of #N (k of m)`.
+  - Tomada en la implementación, en 03-linter.md §11.4: el argumento de un `getBy*` se guarda tal como está escrito, sin normalizarlo como CSS.
+  - `extractFileIndex` recibe un AST que ya tiene `parent` (TSDoc y §11.4). `typescript-estree` solo está en devDependencies.
+- **Problemas:**
+  - Avisos que ya existían, fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas). jscpd marca el `vitest.config.ts` de suite-index como cuarta copia de la misma configuración de cobertura.
+  - `options`/`indexOf` se repiten en los dos archivos de test de suite-index, porque el archivo AC no se toca después de la especificación.
+  - `calls[]` solo cubre llamadas dentro de los tests; no las de hooks, fixtures, el nivel de módulo ni `new X()`. Lo amplía v1-30 si lo necesita.
+- **Siguiente paso:** que una persona revise y mergee #149. Después, empezar el PR 2 de #69 con el plan ya aprobado: en la rama nueva, primero los tests `AC-1` de la segunda parte con `spec-tester`.
+
 ### 2026-11-13 — #56 v1-16-rule-e2e009-web-first
 
 - **Hecho:**
@@ -418,52 +464,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
   - El milestone V0 sigue abierto con 0 issues abiertos; lo cierra una persona.
 - **Siguiente paso:** con la CI de #138 en verde, ejecutar `gh pr ready 138`; después, una persona revisa y mergea. La siguiente tarea Pendiente de V1 por antigüedad es #50 (v1-10, análisis y clasificación de selectores); conviene comprobar sus dependencias. Las de auditoría más urgentes siguen siendo #116 (v1-46) y #118 (v1-48).
-
-### 2026-11-06 — #45 v1-05-design-alignment
-
-- **Hecho:**
-  - **Rama y PR:**
-    - Rama `docs/45-design-alignment`, creada desde `origin/main` (`c165711`).
-    - PR #135 en borrador, con `Closes #45` y sin mergear.
-    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
-  - **`a694d84` `docs(docs): align design with V0 implementation`:**
-    - `17-tech-stack.md`, fila Compresión: los runs `.ndjson.gz` usan `node:zlib`; fflate queda previsto para los datos del reporte HTML.
-    - `02-data-model.md`:
-      - Tabla de CI: en GitLab, `CI_JOB_ID` es el `jobId`, no el intento.
-      - §9.2: `message` 2 KiB y `stack` 8 KiB; tras la garantía final, la línea "nunca supera" 768 KiB.
-      - §10.1: si hay variables de varios proveedores, gana el orden de la tabla.
-      - §10.1: mapeo de env-ci `build` → `runId`, `job` → `jobId` y `pr` → `prNumber`.
-      - §10.1: el payload de GitHub solo se lee con el proveedor `github`.
-    - `15-storage.md` §23.2.1:
-      - Endpoints: cuenta como fallo una clave de `statuses` ≥ 400 aunque su conteo sea 0, y los que tienen fallos se ordenan entre sí por `count`.
-      - Una línea de exactamente 768 KiB no se recorta.
-      - Los tres límites del lector (64 KiB de encabezado, 1 MiB por línea y 256 MiB en total) son inclusivos.
-    - `20-security-privacy.md`: en `aws-key`, una letra mayúscula o un dígito tras `A3T`; la normalización de nombres conserva `\p{L}` y `\p{N}`.
-    - `05-performance.md`: 2 KiB y 8 KiB.
-    - `04-testing.md`: la tabla de cobertura es un mínimo.
-    - `packages/cli/src/defaults.ts`: la cita pasa a `engineering/03-errors-logging.md`.
-  - **`29fb3bf` `docs(docs): clarify compression, aws-key and coverage wording`:** corrige los hallazgos de `/review`.
-    - I1 y I2: zlib no limita bytes, lo hace el lector de líneas; fflate es un uso previsto.
-    - S1: el carácter extra de `aws-key` solo va tras `A3T`.
-    - S2: "`jobId` solo en GitLab" vale para las reglas propias.
-    - S3: 04-testing.md remite a `vitest.config.ts` en lugar de listar paquetes.
-  - **Puertas:**
-    - `plan-reviewer`: REQUIERE PERSONA, por las tres decisiones de abajo.
-    - `/verify`: PASS.
-    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
-    - `delivery-auditor`: APROBADO, con `pnpm verify` en exit 0 sobre `29fb3bf`.
-    - Push con `push-branch.mjs` y resumen de entrega comentado en #45.
-- **En curso:** PR #135 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 135` cuando estén en verde.
-- **Decisiones** (de la persona, 2026-11-06; están en el comentario "Plan aprobado" de #45 y en el PR):
-  - Documentar `node:zlib` en lugar de migrar a fflate.
-  - La tabla de cobertura es un mínimo; no se tocan los `vitest.config.ts`, que exigen 90 %.
-  - Documentar el comportamiento actual de los 8 puntos de la tarea, sin tareas de cambio de código.
-  - ADR-0018 no se edita, aunque diga "2 KB"/"8 KB" y "queda por debajo": remite la unidad a §9.2 y su "supera 768 KiB" hace compatible el `<=`. Quedó escrito en el PR y en el comentario de entrega de #45.
-- **Problemas:** imprecisiones que ya existían, fuera del alcance de #45. Las encontró `design-auditor` y no tienen issue:
-  - La fila de Jenkins de `02-data-model.md` pone `GIT_BRANCH` / `CHANGE_BRANCH`, al revés que la precedencia del código.
-  - "Paso 5" en `15-storage.md:46` es ambiguo junto a una lista de 4 pasos.
-  - El encabezado del run no se mide contra los 64 KiB del lector (`run-file-writer.ts`).
-  - Las claves de `statuses` se interpretan con `Number()` (`cap-run.ts`), así que `"4e2"` cuenta como 400.
-  - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
-  - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
-- **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.

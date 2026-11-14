@@ -120,7 +120,15 @@ function queryOf(call: TSESTree.CallExpression): LocatorQuery | undefined {
   };
 }
 
-function baseQuery(call: TSESTree.CallExpression): LocatorQuery | undefined {
+/**
+ * The nearest query earlier in the chain of a call, such as the `getByRole`
+ * of `page.getByRole("row").filter(...).nth(1)`; calls and properties between
+ * them are skipped (03-linter.md §11.3.1).
+ *
+ * @param call - Any call.
+ * @returns The query, or `undefined` when no earlier call of the chain is one.
+ */
+export function baseQuery(call: TSESTree.CallExpression): LocatorQuery | undefined {
   for (const earlier of chainOf(call).calls) {
     const query = queryOf(earlier);
     if (query !== undefined) {
