@@ -15,7 +15,7 @@ export interface LintFingerprintParts {
   readonly titlePath: readonly string[];
   /** Source text of the reported node, as written: it is normalized here. */
   readonly nodeCode: string;
-  /** Index of the finding among the identical ones, by position, from 0. */
+  /** Index of the finding among the identical ones, by position: an integer from 0. */
   readonly occurrence: number;
 }
 
@@ -65,12 +65,11 @@ export function lintFingerprints(findings: readonly LintFindingInput[]): Finding
   const seen = new Map<string, number>();
   const result: FindingFingerprint[] = [];
   for (const { finding, index } of byPosition) {
-    const parts = partsWithoutOccurrence(finding);
     // JSON.stringify keeps the key unambiguous, as in fingerprintOf (14-architecture.md §22.3).
-    const key = JSON.stringify(parts);
+    const key = JSON.stringify(partsWithoutOccurrence(finding));
     const occurrence = seen.get(key) ?? 0;
     seen.set(key, occurrence + 1);
-    result[index] = fingerprintOf([...parts, String(occurrence)]);
+    result[index] = lintFingerprint({ ...finding, occurrence });
   }
   return result;
 }
