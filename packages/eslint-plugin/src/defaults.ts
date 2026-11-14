@@ -440,3 +440,11 @@ export const FRAGILE_SELECTOR_DEFAULTS = Object.freeze({ depth: 3 });
  * and §11.3.1 (decided in #55).
  */
 export const POSITIONAL_LOCATOR_DEFAULTS = Object.freeze({ minIndex: 1 });
+
+/**
+ * Default options of `atium/max-test-size` (E2E005): a test is too large with
+ * more than `maxActions` actions or a callback of more than `maxLines` lines.
+ * Source: 03-linter.md §11.3, E2E005 ("25 acciones o 150 líneas"), and
+ * §11.3.1 (option names decided in #57).
+ */
+export const TEST_SIZE_DEFAULTS = Object.freeze({ maxActions: 25, maxLines: 150 });

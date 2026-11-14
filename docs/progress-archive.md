@@ -4,6 +4,51 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-11-10 — #46 v1-06-core-api-docs
+
+- **Hecho:**
+  - **Rama y PR:**
+    - Rama `docs/46-core-api-docs`, creada desde `origin/main` (`ce8f01c`).
+    - PR #138 en borrador, con `Closes #46` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **`6f11883` `docs(core): document public schema members and entry points`:** TSDoc en cada miembro de los esquemas públicos, objetos anidados incluidos:
+    - `findings/finding.ts`, `model/{run,test-result,attempt,error-occurrence,network,bdd}.ts` y `config/schema.ts` (`quarantine`).
+    - `@packageDocumentation` en `src/index.ts` y `test-contracts/storage.contract.ts`.
+  - **`37dbef8` `docs(core): list every export in the README`:**
+    - La lista "Today it provides" de `packages/core/README.md` nombra exactamente las 129 exportaciones de `src/index.ts`.
+    - La sección de testing nombra los tipos de los builders, `LogEntry` y `HEAVY_TEST_TIMEOUT_MS`.
+  - **`5e00178` `build(core): build test-contracts as ESM only`:**
+    - `test-contracts` se construye aparte con `packages/core/tsup.test-contracts.config.ts`, solo ESM y con `outDir: dist/test-contracts`.
+    - `tsup.config.ts` exporta `sharedOptions` y ya no incluye esa entrada.
+    - El script `build` corre las dos configs en serie: `tsup && tsup --config tsup.test-contracts.config.ts`. tsup ejecuta en paralelo las configs de un array y el `clean` de una borraría la salida de la otra.
+  - **`d3d1732` `docs(core): document inline schema members and the ESM-only contracts`:** correcciones de `/review`.
+    - I1 e I2: TSDoc de `llm.enabled` y de `TestCase.location.line/column`, objetos de una línea que el primer escaneo no detectó.
+    - S1: redacción de `quarantine.auto` ajustada a 07-flaky.md §15.7.
+    - S2: reajuste de líneas en el README.
+    - S3: el README dice que `test-contracts` es solo ESM.
+    - S4: comentario del orden del build.
+  - **Puertas:**
+    - `plan-reviewer`: APROBADO.
+    - `test-writer`: sin tests nuevos; un guard de `dist/` o un test que lea el README serían frágiles.
+    - `/verify`: PASS dos veces, la segunda sobre `d3d1732`. `pkg:check`: exit 0.
+    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #46.
+- **En curso:** PR #138 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 138` cuando estén en verde.
+- **Decisiones:**
+  - Sin TDD y sin tests nuevos, por ser documentación y configuración de build. Quedó en el plan aprobado (comentario de #46) y en el PR.
+  - Dos builds de tsup en serie en lugar de un array de configs o de borrar los `.cjs` tras el build. Quedó en el plan, en el commit `5e00178` y en el comentario de `tsup.test-contracts.config.ts`.
+  - `dist/test-contracts` deja de compartir chunks con `dist/index.js` y lleva su propia copia de los builders y tipos. Se aceptó por inofensivo; está en el PR.
+  - Algunos miembros solo se documentan con lo que garantiza el código, porque el diseño no les da significado: `environment.os/arch/nodeVersion`, `framework.version`, `frameworkConfig.retries/workers`, `workerIndex`, `status` de los pasos BDD y `quarantine.auto`. Está en el PR, no en el diseño.
+  - Los miembros de interfaces que no son esquemas Zod (`Logger`, `Storage`…) quedan fuera de AC-1, porque el criterio habla de "miembros de sus esquemas públicos". No quedó escrito salvo en este handoff.
+- **Problemas:**
+  - `pkg:check` no corre en `pnpm verify` ni en ningún workflow de CI. Una regresión del build de `test-contracts` (volver a emitir CJS) solo la detectaría la revisión.
+  - `docs/engineering/10-tooling.md:54` muestra `pkg:check` sin el `--exclude-entrypoints ./test-contracts` que usa core. Fuera de alcance, sin issue.
+  - El README de core no pasa `prettier --check`: tres bloques de código mal formateados que ya estaban en `main`. El hook de formato no revisa Markdown, así que no bloquea.
+  - Avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
+  - El milestone V0 sigue abierto con 0 issues abiertos; lo cierra una persona.
+- **Siguiente paso:** con la CI de #138 en verde, ejecutar `gh pr ready 138`; después, una persona revisa y mergea. La siguiente tarea Pendiente de V1 por antigüedad es #50 (v1-10, análisis y clasificación de selectores); conviene comprobar sus dependencias. Las de auditoría más urgentes siguen siendo #116 (v1-46) y #118 (v1-48).
+
 ### 2026-11-06 — #45 v1-05-design-alignment
 
 - **Hecho:**
