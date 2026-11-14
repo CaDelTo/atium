@@ -29,18 +29,26 @@ export function callsOf(program: TSESTree.Program): readonly TSESTree.CallExpres
   while (pending.length > 0) {
     // Optional keys hold `undefined`, so the end is the length, not the value.
     const value = pending.pop();
-    if (Array.isArray(value)) {
-      pending.push(...(value as unknown[]));
-    } else if (isNode(value)) {
+    if (isNode(value)) {
       if (value.type === AST_NODE_TYPES.CallExpression) {
         calls.push(value);
       }
-      for (const [key, child] of Object.entries(value)) {
-        if (!SKIPPED_KEYS.has(key)) {
-          pending.push(child);
-        }
-      }
+      pushChildren(value, pending);
     }
   }
   return calls.sort(bySourceOrder);
+}
+
+/** Adds the values of the keys of a node that may hold nodes; lists are flattened. */
+function pushChildren(node: TSESTree.Node, pending: unknown[]): void {
+  for (const [key, child] of Object.entries(node)) {
+    if (SKIPPED_KEYS.has(key)) {
+      continue;
+    }
+    // `Array.isArray` narrows to `any[]`; `unknown` is the safe reading. One by
+    // one, because spreading a list of 100k+ elements into `push` overflows the stack.
+    for (const item of Array.isArray(child) ? (child as readonly unknown[]) : [child]) {
+      pending.push(item);
+    }
+  }
 }

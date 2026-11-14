@@ -25,6 +25,14 @@ function serialize(program: unknown): string {
 }
 
 describe("extractFileIndex edge cases", () => {
+  it("does not throw on an array literal with more elements than a call accepts as arguments", () => {
+    const source = `const data = [${"0,".repeat(200_000)}];\nfoo();`;
+
+    const index = indexOf(source);
+
+    expect(index.tests).toEqual([]);
+  });
+
   it("indexes a Cypress chain as one action per call, in order, all with the level of cy.get", () => {
     const index = indexOf(
       cypressTest('cy.get("[data-testid=a]").click().type("x");', 'cy.visit("/home");'),
