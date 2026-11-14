@@ -102,6 +102,7 @@ La siguiente tarea es el issue Pendiente más antiguo del milestone actual: abie
   | `loop:blocked` | Issue | `/dev-loop`; la quita solo la persona, al responder | La tarea necesita una decisión humana |
   | `loop` | PR | `/deliver --loop`, al crear el PR | PR del loop; cuenta para `--max-open-prs` |
 - El PR de la tarea incluye `Closes #<n>`, y el issue se cierra al mergear.
+- Una tarea dividida en varios PRs usa `Part of #<n> (k of m)` en cada PR y solo el último lleva `Closes #<n>`.
 - Solo una persona cierra issues y mergea PRs. El agente nunca cierra, borra ni transfiere issues.
 
 ## Pull requests

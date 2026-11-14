@@ -1,0 +1,50 @@
+{
+  "name": "@atium/suite-index",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Cross-file index of a Playwright or Cypress test suite, for the cross-file rules of Atium.",
+  "type": "module",
+  "sideEffects": false,
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --coverage",
+    "pkg:check": "publint && attw --pack . --profile node16"
+  },
+  "dependencies": {
+    "@atium/eslint-plugin": "workspace:*",
+    "@typescript-eslint/types": "8.70.1",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@types/node": "22.20.4",
+    "@typescript-eslint/typescript-estree": "8.70.1",
+    "@vitest/coverage-v8": "5.0.3",
+    "publint": "0.3.24",
+    "tsup": "8.5.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
