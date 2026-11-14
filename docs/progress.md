@@ -8,6 +8,49 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #57 v1-17-rule-e2e005-test-size
+
+- **Hecho:**
+  - Ejecutada por un `task-runner` de `/task`, en paralelo con #69 y #64, en el worktree `.claude/worktrees/agent-af3cda936c054a45c`. Rama `feat/57-rule-e2e005-test-size`, creada desde `origin/main` (`7a29001`). PR #151 en borrador con `Closes #57`, sin mergear. Plan aprobado por la persona y comentado en #57 (etiqueta `plan:approved`).
+  - `aca78c2` `test(eslint-plugin): specify max-test-size`:
+    - stub de `max-test-size.ts` y `TEST_SIZE_DEFAULTS` (25/150) en `defaults.ts`;
+    - tests `AC-1` en `max-test-size.test.ts` y `AC-2` en `max-test-size.limits.test.ts`, con builders en `packages/eslint-plugin/test/test-size.ts`;
+    - decisiones D1–D4 en 03-linter.md §11.3 y §11.3.1;
+    - rojo verificado: 54 de 56 fallaban por el stub.
+  - `6e53ecd` `feat(eslint-plugin): add max-test-size (E2E005)`:
+    - cuenta con `actionOf` y atribuye cada acción al test más interno con `testContextOf`;
+    - en `CallExpression:exit` de cada test compara acciones y líneas del callback con `>`;
+    - un hallazgo `tooLarge` con `loc` en la cabecera del callback;
+    - regla registrada en `rules/index.ts`, página `docs/rules/e2e005.md` y README actualizado.
+  - `259bcdf`: tests de borde de `test-writer` (`max-test-size.edge.test.ts`). No encontró bugs.
+  - `b5a4ffd`: aclaraciones de la página (`/review`).
+  - `595038f`: las cuatro ambigüedades de `design-auditor`, documentadas en §11.3.1.
+  - **Puertas:**
+    - `plan-reviewer` (opus): REQUIERE PERSONA por D1–D4.
+    - `/verify`: PASS sobre `595038f`.
+    - `code-reviewer`: APROBADO en la segunda pasada.
+    - `design-auditor`: CONFORME.
+    - `delivery-auditor`: RECHAZADO en la ronda 1 solo por el tamaño; APROBADO en la ronda 2, tras la excepción.
+    - Push con `open-pr.mjs`.
+- **En curso:** PR #151 en borrador. Al crearlo, la CI aún no había registrado checks. Falta `gh pr ready 151` cuando los `verify (…)` estén en verde.
+- **Decisiones** (de la persona, en 03-linter.md §11.3 y §11.3.1 como "Decidido en #57"):
+  - Las líneas son las físicas del callback, con blancos y comentarios. Las del título anteriores a la cabecera no cuentan.
+  - Opciones: `maxActions` (entero ≥ 0, por defecto 25) y `maxLines` (entero ≥ 1, por defecto 150).
+  - Un solo hallazgo por test, en la cabecera del callback, para que el `titlePath` del fingerprint incluya el test.
+  - En un test anidado, el más interno se queda sus acciones.
+  - Las funciones locales del callback cuentan.
+  - Un hook o describe dentro de un test suma al test exterior.
+  - Toda llamada `cy` salvo `.should`/`.and` es una acción.
+  - Excepción de tamaño del PR (823 líneas, unas 650 de tests) publicada por la persona en #57. Las cuatro últimas decisiones solo constan en el diseño y en el PR, no en un comentario del issue.
+- **Problemas:**
+  - Hallazgos menores de `duplication-auditor` sin corregir:
+    - el helper de offset a posición de `test/test-size.ts` duplica 4 líneas de `prefer-web-first-assertion.test.ts`;
+    - `pw` frente a `playwrightTest` e `indexOf` sin comprobar -1 en `test/test-size.ts`.
+    No se tocaron porque son tests de especificación o el test de otra regla.
+  - Sin test propio de E2E005: hook dentro de un test, función local en el callback, y `cy.wrap`/`cy.log`/`cy.its`.
+  - Siguen los avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` y 2 clones de `vitest.config.ts`.
+- **Siguiente paso:** con la CI de #151 en verde, `gh pr ready 151`. Después, una persona revisa y mergea.
+
 ### 2026-11-13 — #56 v1-16-rule-e2e009-web-first
 
 - **Hecho:**
@@ -429,26 +472,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
   - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
 - **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.
-
-### 2026-11-06 — #44 v1-04-run-context-robustness
-
-- **Hecho:**
-  - Rama `fix/44-run-context-robustness`, creada desde `origin/main` (`fdef091` más los merges de #133). PR #134 en borrador con `Closes #44`, sin mergear. Plan aprobado por la persona y comentado en el issue (etiqueta `plan:approved`).
-  - `ad220a0` `test(core): specify run context robustness`: tests `AC-1:` en `packages/core/src/ci/detect-run-context.git.test.ts` (archivo nuevo, porque `detect-run-context.test.ts` pasaba de 400 líneas de `max-lines`) y `AC-2:` en `detect-run-context.test.ts`. Fake `RecordingGitClient` en `packages/core/src/ci/fakes.test-support.ts`: registra `start:`/`end:` de cada consulta con un `setImmediate` entre ambos. No se tocó `FakeGitClient` (`@atium/core/testing`). Rojo verificado: AC-1 por consultas solapadas, AC-2 por `MODEL_INVALID`.
-  - `0c474be` `fix(core): query git in series and warn on an oversized head sha`:
-    - `readGit` (`detect-run-context.ts`) consulta en serie: `headCommit`; `currentBranch` solo si la rama no se conoce; `isDirty` solo en run `local`. Ninguna consulta después de un fallo.
-    - `github-event.ts`: `head.sha` usa `TextSchema.min(1)` (tope de 2 KiB, `MODEL_TEXT_CAPS_BYTES.default`). Uno más largo invalida el `pull_request`: aviso existente "unexpected pull request…" y run sin `prNumber` ni `headSha`.
-    - `docs/design/02-data-model.md` §10.1: paso 3 (head commit demasiado largo = `pull_request` inválido), paso 5 (consultas a Git en serie) y caso límite de `MODEL_INVALID` (solo variables de entorno y Git, no el payload de GitHub).
-  - `6b8e407` `test(core): cover git query order and head sha byte size edge cases` (`test-writer`): fallo en la segunda consulta, rama del entorno, sin Git si el entorno da el commit, `head.sha` que cabe en caracteres pero no en bytes escapados para JSON, y el aviso sin el valor.
-  - `29e2951` `docs(core): clarify detectRunContext and pull request reader TSDoc`: correcciones de `/review` (`@returns` de `readGitHubPullRequest`, `@throws` de `detectRunContext`, TSDoc de `RecordingGitClient` y helper compartido `writeEvent(directory, payload)` en `fakes.test-support.ts`; el `writeEvent` local de `detect-run-context.test.ts` delega en él sin tocar las líneas de los tests AC).
-  - Puertas: `plan-reviewer` APROBADO; `/verify` PASS dos veces (la segunda sobre `29e2951`); `/review` sin bloqueantes, segunda pasada de `code-reviewer` APROBADO; `delivery-auditor` APROBADO. Push con `push-branch.mjs`. Resumen de entrega comentado en #44.
-  - Otros de la sesión, ya mergeados: #109 (`.obsidian/` en `.gitignore`), #114 (avisos de zod, vitest y fast-uri), #115 (handoff de #49), #112 (tareas v1-43 y v1-44) y #133 (tareas v1-46 a v1-62, issues #116 a #132, de la auditoría del repositorio del 2026-11-06).
-- **En curso:** PR #134 en borrador: al crearlo, los 7 checks de CI (`verify` en 3 SO × Node 22/24 y `audit`) estaban pendientes. Falta pasarlo a listo (`gh pr ready 134`) cuando estén en verde.
-- **Decisiones:**
-  - `headSha` demasiado largo = aviso y run sin `prNumber` ni `headSha` (decidido por la persona el 2026-10-15, en la tarea; ahora también en 02-data-model.md §10.1).
-  - Los tests de AC-1 van en `detect-run-context.git.test.ts` y el fake en `fakes.test-support.ts`, no en `@atium/core/testing`, para no cambiar API pública. No quedó en ningún documento salvo este handoff y el PR.
-- **Problemas:**
-  - No se reprodujo el bloqueo en Windows: los tests comprueban la causa (consultas solapadas), no el bloqueo.
-  - Avisos preexistentes fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
-  - La rama local `docs/audit-tasks` (PR #133 ya mergeado) sigue en el checkout principal; se puede borrar.
-- **Siguiente paso:** con la CI de #134 en verde, `gh pr ready 134` y que una persona lo revise y mergee. Después, la siguiente tarea Pendiente de V1 es #45 (v1-05 Alinear el diseño con lo implementado en V0); las de auditoría más urgentes son #116 (v1-46, carrera de migración SQLite) y #118 (v1-48, redacción de secretos).
