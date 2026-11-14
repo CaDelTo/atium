@@ -68,3 +68,48 @@ Con `CODEOWNERS`, cada Finding se asigna al equipo dueño del archivo del test.
 | SARIF 2.1.0 | Anotaciones en PRs de GitHub |
 | JUnit | Compatibilidad con CI existente |
 | PR comment | Un solo comentario por PR, identificado con un marcador HTML y actualizado en cada push |
+
+#### Modelo del reporte
+
+Todos los reporters reciben el mismo reporte ([ADR-0027](../adr/0027-modelo-reporte-json.md)). Su esquema Zod es `ReportSchema` (`packages/core/src/model/report.ts`) y su JSON Schema se publica en `packages/core/schemas/report.v1.json`. Es API pública y versionada (07-public-api.md).
+
+```ts
+interface Report {
+  schemaVersion: 1;
+  toolVersion: string;                 // versión de Atium que generó el reporte
+  findings: ReportFinding[];
+  summary: {
+    overall: Count;
+    bySeverity: { error: Count; warning: Count; info: Count };
+    byRule: { ruleId: string; total: number; new: number }[];
+  };
+  rules: RuleDescriptor[];
+  skippedAnalyzers: SkippedAnalyzerEntry[];
+}
+
+type ReportFinding = Finding & { baselineState: "new" | "unchanged" }; // §22.3 + estado
+interface Count { total: number; new: number }                       // enteros ≥ 0
+interface RuleDescriptor {
+  id: string;                          // código, como Finding.ruleId: "E2E001"
+  name: string;                        // nombre legible, obligatorio para toda regla
+  shortDescription: string;            // título de §11.2 ("Hard wait detected"); shortDescription de SARIF
+  docsUrl?: string;                    // http o https
+}
+type SkippedAnalyzerEntry =
+  | { analyzer: string; reason: "missing-capabilities"; missing: Capability[] }
+  | { analyzer: string; reason: "duplicate-id" | "invalid-config" | "timeout" | "failed" | "aborted" };
+```
+
+- Todos los objetos rechazan campos desconocidos; un opcional ausente se omite. Los textos no pueden estar vacíos.
+- `baselineState` usa los valores de `result.baselineState` de SARIF: `"new"` si el fingerprint no está en el baseline (§21.3), `"unchanged"` si está. Sin baseline, todos los Findings son `"new"`.
+- El reporte no lleva fecha: la misma entrada produce los mismos bytes (02-code-design.md, "Salida determinista").
+- Un analizador omitido lleva solo el tipo de motivo (`SkipReason.kind`, §22.2) y, con `missing-capabilities`, las capacidades que faltan (al menos una). El texto del error no entra; `runAnalyzers` lo registra en stderr.
+- `createReport` (`packages/core/src/report/create-report.ts`) es la única función que construye reportes. Recibe la versión, los Findings ya clasificados con `baselineState`, los descriptores y los omitidos de `runAnalyzers`, y garantiza lo que el esquema no comprueba:
+  - `findings` en el orden de `compareFindings` (§22.3);
+  - `summary.overall` y `bySeverity` cuentan todos los Findings (`total`) y los `"new"` (`new`); `bySeverity` tiene siempre las tres severidades, con cero si no hay Findings;
+  - `byRule` tiene una entrada por cada `ruleId` con Findings, ordenadas por `ruleId`;
+  - `rules` ordenadas por `id`; un `id` repetido es un error de programación y lanza;
+  - `skippedAnalyzers` ordenados por `analyzer` y después por `reason` (como texto), y `missing` en el orden de `CAPABILITIES`;
+  - los textos se comparan por unidades de código UTF-16, sin locale, como en `compareFindings`.
+- `rules` puede describir reglas sin Findings (por ejemplo, todas las activas, para `tool.driver.rules` de SARIF); `createReport` no exige un descriptor por cada `ruleId`.
+- El JSON Schema no puede expresar la restricción de `docsUrl` a `http` o `https` (solo `format: "uri"`) ni las garantías de orden y resumen.

@@ -8,6 +8,44 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #64 v1-24-report-model
+
+- **Hecho:**
+  - **Contexto:** la ejecutó un `task-runner` de `/task` en su worktree, en paralelo con #69 y #57.
+  - **Rama y PR:**
+    - Rama `feat/64-report-model`, creada desde `origin/main`.
+    - PR #150 en borrador, con `Closes #64` y sin mergear.
+    - Plan aprobado por la persona, comentado en #64 bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+    - Excepción de tamaño aprobada por la persona en #64 (unas 1580 líneas, la mayoría tests).
+  - **Commits:**
+    - `760854c` `docs(core)`: ADR-0027, la subsección "Modelo del reporte" de §21.5 (13-score-baseline-reports.md) y `Reporter` en §22.4.
+    - `ed5333f` `test(core): specify the report model`: el esquema `model/report.ts`, stubs y 85 tests en rojo.
+    - `289cf5f` `feat(core)`:
+      - `createReport` (`report/create-report.ts`) y la interfaz `Reporter` (`report/reporter.ts`);
+      - `reportJsonSchema` y `schemas/report.v1.json`;
+      - los builders `aFinding` y `aReport`;
+      - `SKIP_REASON_KINDS` en `pipeline/analyzer.ts`;
+      - `compareStrings` exportada dentro de core.
+    - `2ec79d5` y `3af52a9` `test(core)`: casos borde de test-writer (`create-report.edge.test.ts`).
+    - `8622fd1` `fix(core)`: sugerencias de code-reviewer.
+  - **Puertas:**
+    - `plan-reviewer` (opus): REQUIERE PERSONA (D1-D6 y el ADR), resuelto por la persona.
+    - Rojo verificado.
+    - `/verify`: PASS en la ejecución completa final.
+    - `/review`: 0 bloqueantes. `delivery-auditor` dio RECHAZADO solo por tamaño y APROBADO tras la excepción. `code-reviewer` aprobó las dos pasadas.
+- **En curso:** PR #150 en borrador. Falta `gh pr ready 150` cuando la CI esté en verde.
+- **Decisiones:** las tomó la persona y están en ADR-0027 y en §21.5:
+  - Findings planos con `baselineState: "new" | "unchanged"`.
+  - Sin fecha.
+  - `render` asíncrono.
+  - Omitidos sin el texto del error.
+  - `RuleDescriptor.name` legible y obligatorio, y `shortDescription` con el título de §11.2.
+  - Las tomó el agente y están en §21.5: los omitidos se ordenan por `reason` como texto; `missing` no puede estar vacío; un `id` de regla repetido lanza `Error`, porque es un bug del llamador.
+- **Problemas:**
+  - Con la máquina cargada (load average de 12 por los runners en paralelo), los tests de tiempo de `@atium/eslint-plugin` (presupuesto de 2000 ms en `selectors*.test.ts`) fallaron en un `pnpm verify` completo. En aislado y en la ejecución final pasan.
+  - Sugerencias menores sin aplicar: la redacción de la `description` de `report.v1.json` ("…which this schema does not check"); `{ total, new }` repetido en `byRule`; solapes de los edge tests con la especificación.
+- **Siguiente paso:** con la CI de #150 en verde, `gh pr ready 150`. Después, una persona revisa y mergea. Desbloquea v1-25, v1-26 y v1-27 (#65, #66, #67).
+
 ### 2026-11-13 — #57 v1-17-rule-e2e005-test-size
 
 - **Hecho:**
@@ -424,48 +462,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - `@atium/eslint-plugin` es `private` aunque ADR-0023 lo llama "paquete publicado". Es una inconsistencia anterior, sin issue.
   - El checkout principal está ahora en `feat/50-selector-parsing`. La rama local `docs/46-core-api-docs`, ya mergeada, se puede borrar.
 - **Siguiente paso:** con la CI de #139 en verde, ejecutar `gh pr ready 139`; después, una persona revisa y mergea. La siguiente tarea de V1 por antigüedad es #51 (v1-11, regla E2E010 `.only`); hay que comprobar sus dependencias.
-
-### 2026-11-10 — #46 v1-06-core-api-docs
-
-- **Hecho:**
-  - **Rama y PR:**
-    - Rama `docs/46-core-api-docs`, creada desde `origin/main` (`ce8f01c`).
-    - PR #138 en borrador, con `Closes #46` y sin mergear.
-    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
-  - **`6f11883` `docs(core): document public schema members and entry points`:** TSDoc en cada miembro de los esquemas públicos, objetos anidados incluidos:
-    - `findings/finding.ts`, `model/{run,test-result,attempt,error-occurrence,network,bdd}.ts` y `config/schema.ts` (`quarantine`).
-    - `@packageDocumentation` en `src/index.ts` y `test-contracts/storage.contract.ts`.
-  - **`37dbef8` `docs(core): list every export in the README`:**
-    - La lista "Today it provides" de `packages/core/README.md` nombra exactamente las 129 exportaciones de `src/index.ts`.
-    - La sección de testing nombra los tipos de los builders, `LogEntry` y `HEAVY_TEST_TIMEOUT_MS`.
-  - **`5e00178` `build(core): build test-contracts as ESM only`:**
-    - `test-contracts` se construye aparte con `packages/core/tsup.test-contracts.config.ts`, solo ESM y con `outDir: dist/test-contracts`.
-    - `tsup.config.ts` exporta `sharedOptions` y ya no incluye esa entrada.
-    - El script `build` corre las dos configs en serie: `tsup && tsup --config tsup.test-contracts.config.ts`. tsup ejecuta en paralelo las configs de un array y el `clean` de una borraría la salida de la otra.
-  - **`d3d1732` `docs(core): document inline schema members and the ESM-only contracts`:** correcciones de `/review`.
-    - I1 e I2: TSDoc de `llm.enabled` y de `TestCase.location.line/column`, objetos de una línea que el primer escaneo no detectó.
-    - S1: redacción de `quarantine.auto` ajustada a 07-flaky.md §15.7.
-    - S2: reajuste de líneas en el README.
-    - S3: el README dice que `test-contracts` es solo ESM.
-    - S4: comentario del orden del build.
-  - **Puertas:**
-    - `plan-reviewer`: APROBADO.
-    - `test-writer`: sin tests nuevos; un guard de `dist/` o un test que lea el README serían frágiles.
-    - `/verify`: PASS dos veces, la segunda sobre `d3d1732`. `pkg:check`: exit 0.
-    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
-    - `delivery-auditor`: APROBADO.
-    - Push con `push-branch.mjs` y resumen de entrega comentado en #46.
-- **En curso:** PR #138 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 138` cuando estén en verde.
-- **Decisiones:**
-  - Sin TDD y sin tests nuevos, por ser documentación y configuración de build. Quedó en el plan aprobado (comentario de #46) y en el PR.
-  - Dos builds de tsup en serie en lugar de un array de configs o de borrar los `.cjs` tras el build. Quedó en el plan, en el commit `5e00178` y en el comentario de `tsup.test-contracts.config.ts`.
-  - `dist/test-contracts` deja de compartir chunks con `dist/index.js` y lleva su propia copia de los builders y tipos. Se aceptó por inofensivo; está en el PR.
-  - Algunos miembros solo se documentan con lo que garantiza el código, porque el diseño no les da significado: `environment.os/arch/nodeVersion`, `framework.version`, `frameworkConfig.retries/workers`, `workerIndex`, `status` de los pasos BDD y `quarantine.auto`. Está en el PR, no en el diseño.
-  - Los miembros de interfaces que no son esquemas Zod (`Logger`, `Storage`…) quedan fuera de AC-1, porque el criterio habla de "miembros de sus esquemas públicos". No quedó escrito salvo en este handoff.
-- **Problemas:**
-  - `pkg:check` no corre en `pnpm verify` ni en ningún workflow de CI. Una regresión del build de `test-contracts` (volver a emitir CJS) solo la detectaría la revisión.
-  - `docs/engineering/10-tooling.md:54` muestra `pkg:check` sin el `--exclude-entrypoints ./test-contracts` que usa core. Fuera de alcance, sin issue.
-  - El README de core no pasa `prettier --check`: tres bloques de código mal formateados que ya estaban en `main`. El hook de formato no revisa Markdown, así que no bloquea.
-  - Avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
-  - El milestone V0 sigue abierto con 0 issues abiertos; lo cierra una persona.
-- **Siguiente paso:** con la CI de #138 en verde, ejecutar `gh pr ready 138`; después, una persona revisa y mergea. La siguiente tarea Pendiente de V1 por antigüedad es #50 (v1-10, análisis y clasificación de selectores); conviene comprobar sus dependencias. Las de auditoría más urgentes siguen siendo #116 (v1-46) y #118 (v1-48).

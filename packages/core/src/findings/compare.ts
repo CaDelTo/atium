@@ -2,8 +2,14 @@ import type { Finding } from "./finding.js";
 
 type Location = NonNullable<Finding["location"]>;
 
-/** Compares strings by UTF-16 code units, so the order never depends on the locale. */
-function compareStrings(a: string, b: string): number {
+/**
+ * Compares strings by UTF-16 code units, so the order never depends on the locale.
+ *
+ * @param a - First string.
+ * @param b - Second string.
+ * @returns A negative number, zero or a positive number, as `Array.prototype.sort` expects.
+ */
+export function compareStrings(a: string, b: string): number {
   if (a === b) {
     return 0;
   }
