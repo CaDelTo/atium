@@ -8,6 +8,52 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #69 v1-29-suite-index-file (PR 1 de 2)
+
+- **Hecho:**
+  - Rama `feat/69-suite-index-file`, creada desde `origin/main` (`7a29001`). PR #149 en borrador con `Part of #69 (1 of 2)`, sin mergear. Plan aprobado por la persona, comentado en #69 (etiqueta `plan:approved`). La persona aprobó en #69 que el PR pase de 400 líneas (issuecomment-6869497757): son unas 1.100, de ellas unas 520 de tests.
+  - `8d035c6` `test(suite-index): specify file index extraction`:
+    - paquete nuevo `@atium/suite-index` (private), con `FileIndexSchema`, `FILE_INDEX_SCHEMA_VERSION = 1`, el stub de `extractFileIndex(program, source, options)` y `test/source.ts` (`parseSource`, `playwrightSpec`);
+    - tests `AC-n` en `src/extract-file-index.test.ts`;
+    - regla `suite-index-only-core-and-syntax` en `.dependency-cruiser.cjs`;
+    - subsección "Índice por archivo (`FileIndex`)" en `docs/design/03-linter.md` §11.4.
+    - Rojo verificado: los 9 tests fallaban por el stub.
+  - `19161d8` `feat(suite-index): extract tests and locators of a file`: `src/extract-file-index.ts` y `src/calls.ts`, que recorre el AST sin cargar el parser.
+  - `875bc23`: 21 tests de casos límite de `test-writer`, en `extract-file-index.edge.test.ts`.
+  - `04bf308` `fix(suite-index)`: un array literal de más de 100.000 elementos daba `RangeError`, porque se hacía `push(...spread)`. Corregido, con test de regresión.
+  - `26afd55` `refactor(suite-index)`: `nearestQuery` reutiliza `baseQuery`, que ahora exporta `@atium/eslint-plugin/syntax`.
+  - `2b215cf` `docs(docs)`: en 08-git-workflow.md, una tarea dividida en varios PRs usa `Part of #N (k of m)` y solo el último lleva `Closes #N`.
+  - `@atium/eslint-plugin/syntax` exporta además `calleePath`, `baseQuery` e `isGetByMethod`.
+  - Puertas:
+    - `plan-reviewer` (opus): REQUIERE PERSONA; la persona decidió.
+    - `/verify`: PASS sobre `2b215cf`.
+    - `/review`: sin bloqueantes. `delivery-auditor` y la segunda pasada de `code-reviewer`, APROBADO.
+- **En curso:**
+  - PR #149 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 149` cuando estén en verde.
+  - El PR 2 de #69 no está empezado. Va en la rama `feat/69-suite-index-declarations`, creada desde `origin/main` después del merge de #149, con `Closes #69`. Contenido:
+    - helpers (funciones de módulo y miembros de clases o Page Objects);
+    - fixtures (`X.extend({…})`);
+    - imports con alias y exports;
+    - `moduleReads`/`moduleWrites` por test, con `@typescript-eslint/scope-manager` como dependencia directa (confirmada por la persona), añadida a la fila Linter de 17-tech-stack.md;
+    - `fileReads`/`fileWrites` con la lista mínima de `defaults.ts` (`writeFile*`, `appendFile*`, `readFile*`);
+    - notas en `docs/tasks/v1-34-crossfile-e2e008.md` y `v1-35-crossfile-e2e011.md` de que esas tareas modificarán `suite-index`;
+    - los tests AC-1 de helpers exportados e imports con alias.
+- **Decisiones:**
+  - De la persona, en el comentario "Plan aprobado" de #69:
+    - dos PRs;
+    - la lista mínima de archivos para E2E008;
+    - solo `let`/`var` de módulo;
+    - fuera del índice v1: `serial`, fixtures por test, hooks y `require`/`import()`;
+    - `scope-manager` como dependencia directa.
+  - De la persona, en `08-git-workflow.md`: el formato `Part of #N (k of m)`.
+  - Tomada en la implementación, en 03-linter.md §11.4: el argumento de un `getBy*` se guarda tal como está escrito, sin normalizarlo como CSS.
+  - `extractFileIndex` recibe un AST que ya tiene `parent` (TSDoc y §11.4). `typescript-estree` solo está en devDependencies.
+- **Problemas:**
+  - Avisos que ya existían, fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas). jscpd marca el `vitest.config.ts` de suite-index como cuarta copia de la misma configuración de cobertura.
+  - `options`/`indexOf` se repiten en los dos archivos de test de suite-index, porque el archivo AC no se toca después de la especificación.
+  - `calls[]` solo cubre llamadas dentro de los tests; no las de hooks, fixtures, el nivel de módulo ni `new X()`. Lo amplía v1-30 si lo necesita.
+- **Siguiente paso:** con la CI de #149 en verde, `gh pr ready 149`, y que una persona lo revise y lo mergee. Después, empezar el PR 2 de #69 con el plan ya aprobado: en la rama nueva, primero los tests `AC-1` de la segunda parte con `spec-tester`.
+
 ### 2026-11-13 — #56 v1-16-rule-e2e009-web-first
 
 - **Hecho:**
@@ -429,26 +475,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
   - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
 - **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.
-
-### 2026-11-06 — #44 v1-04-run-context-robustness
-
-- **Hecho:**
-  - Rama `fix/44-run-context-robustness`, creada desde `origin/main` (`fdef091` más los merges de #133). PR #134 en borrador con `Closes #44`, sin mergear. Plan aprobado por la persona y comentado en el issue (etiqueta `plan:approved`).
-  - `ad220a0` `test(core): specify run context robustness`: tests `AC-1:` en `packages/core/src/ci/detect-run-context.git.test.ts` (archivo nuevo, porque `detect-run-context.test.ts` pasaba de 400 líneas de `max-lines`) y `AC-2:` en `detect-run-context.test.ts`. Fake `RecordingGitClient` en `packages/core/src/ci/fakes.test-support.ts`: registra `start:`/`end:` de cada consulta con un `setImmediate` entre ambos. No se tocó `FakeGitClient` (`@atium/core/testing`). Rojo verificado: AC-1 por consultas solapadas, AC-2 por `MODEL_INVALID`.
-  - `0c474be` `fix(core): query git in series and warn on an oversized head sha`:
-    - `readGit` (`detect-run-context.ts`) consulta en serie: `headCommit`; `currentBranch` solo si la rama no se conoce; `isDirty` solo en run `local`. Ninguna consulta después de un fallo.
-    - `github-event.ts`: `head.sha` usa `TextSchema.min(1)` (tope de 2 KiB, `MODEL_TEXT_CAPS_BYTES.default`). Uno más largo invalida el `pull_request`: aviso existente "unexpected pull request…" y run sin `prNumber` ni `headSha`.
-    - `docs/design/02-data-model.md` §10.1: paso 3 (head commit demasiado largo = `pull_request` inválido), paso 5 (consultas a Git en serie) y caso límite de `MODEL_INVALID` (solo variables de entorno y Git, no el payload de GitHub).
-  - `6b8e407` `test(core): cover git query order and head sha byte size edge cases` (`test-writer`): fallo en la segunda consulta, rama del entorno, sin Git si el entorno da el commit, `head.sha` que cabe en caracteres pero no en bytes escapados para JSON, y el aviso sin el valor.
-  - `29e2951` `docs(core): clarify detectRunContext and pull request reader TSDoc`: correcciones de `/review` (`@returns` de `readGitHubPullRequest`, `@throws` de `detectRunContext`, TSDoc de `RecordingGitClient` y helper compartido `writeEvent(directory, payload)` en `fakes.test-support.ts`; el `writeEvent` local de `detect-run-context.test.ts` delega en él sin tocar las líneas de los tests AC).
-  - Puertas: `plan-reviewer` APROBADO; `/verify` PASS dos veces (la segunda sobre `29e2951`); `/review` sin bloqueantes, segunda pasada de `code-reviewer` APROBADO; `delivery-auditor` APROBADO. Push con `push-branch.mjs`. Resumen de entrega comentado en #44.
-  - Otros de la sesión, ya mergeados: #109 (`.obsidian/` en `.gitignore`), #114 (avisos de zod, vitest y fast-uri), #115 (handoff de #49), #112 (tareas v1-43 y v1-44) y #133 (tareas v1-46 a v1-62, issues #116 a #132, de la auditoría del repositorio del 2026-11-06).
-- **En curso:** PR #134 en borrador: al crearlo, los 7 checks de CI (`verify` en 3 SO × Node 22/24 y `audit`) estaban pendientes. Falta pasarlo a listo (`gh pr ready 134`) cuando estén en verde.
-- **Decisiones:**
-  - `headSha` demasiado largo = aviso y run sin `prNumber` ni `headSha` (decidido por la persona el 2026-10-15, en la tarea; ahora también en 02-data-model.md §10.1).
-  - Los tests de AC-1 van en `detect-run-context.git.test.ts` y el fake en `fakes.test-support.ts`, no en `@atium/core/testing`, para no cambiar API pública. No quedó en ningún documento salvo este handoff y el PR.
-- **Problemas:**
-  - No se reprodujo el bloqueo en Windows: los tests comprueban la causa (consultas solapadas), no el bloqueo.
-  - Avisos preexistentes fuera de alcance: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
-  - La rama local `docs/audit-tasks` (PR #133 ya mergeado) sigue en el checkout principal; se puede borrar.
-- **Siguiente paso:** con la CI de #134 en verde, `gh pr ready 134` y que una persona lo revise y mergee. Después, la siguiente tarea Pendiente de V1 es #45 (v1-05 Alinear el diseño con lo implementado en V0); las de auditoría más urgentes son #116 (v1-46, carrera de migración SQLite) y #118 (v1-48, redacción de secretos).
