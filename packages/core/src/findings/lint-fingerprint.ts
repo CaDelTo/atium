@@ -1,4 +1,6 @@
+import { TITLE_PATH_SEPARATOR } from "../identity.js";
 import type { FindingFingerprint } from "./finding.js";
+import { fingerprintOf } from "./fingerprint-of.js";
 
 /** The parts that identify a lint finding (03-linter.md §11.5). */
 export interface LintFingerprintParts {
@@ -33,7 +35,7 @@ export interface LintFindingInput extends Omit<LintFingerprintParts, "occurrence
  * @returns The normalized text. It never throws.
  */
 export function normalizeNodeCode(code: string): string {
-  throw new Error(`not implemented: ${code}`);
+  return code.replace(/\s+/gu, "").replaceAll("'", '"');
 }
 
 /**
@@ -45,7 +47,7 @@ export function normalizeNodeCode(code: string): string {
  * @returns 16 lowercase hex characters. It never throws.
  */
 export function lintFingerprint(parts: LintFingerprintParts): FindingFingerprint {
-  throw new Error(`not implemented: ${parts.ruleId}`);
+  return fingerprintOf([...partsWithoutOccurrence(parts), String(parts.occurrence)]);
 }
 
 /**
@@ -57,5 +59,30 @@ export function lintFingerprint(parts: LintFingerprintParts): FindingFingerprint
  * @returns One fingerprint per finding, in input order. It never throws.
  */
 export function lintFingerprints(findings: readonly LintFindingInput[]): FindingFingerprint[] {
-  throw new Error(`not implemented: ${String(findings.length)}`);
+  const byPosition = findings
+    .map((finding, index) => ({ finding, index }))
+    .sort((a, b) => a.finding.line - b.finding.line || a.finding.column - b.finding.column);
+  const seen = new Map<string, number>();
+  const result: FindingFingerprint[] = [];
+  for (const { finding, index } of byPosition) {
+    const parts = partsWithoutOccurrence(finding);
+    // JSON.stringify keeps the key unambiguous, as in fingerprintOf (14-architecture.md §22.3).
+    const key = JSON.stringify(parts);
+    const occurrence = seen.get(key) ?? 0;
+    seen.set(key, occurrence + 1);
+    result[index] = fingerprintOf([...parts, String(occurrence)]);
+  }
+  return result;
+}
+
+/** The hashed parts of a lint finding, without its occurrence index. */
+function partsWithoutOccurrence(
+  parts: Omit<LintFingerprintParts, "occurrence">,
+): [string, string, string, string] {
+  return [
+    parts.ruleId,
+    parts.file,
+    parts.titlePath.join(TITLE_PATH_SEPARATOR),
+    normalizeNodeCode(parts.nodeCode),
+  ];
 }
