@@ -32,6 +32,8 @@ export type {
   FindingSource,
 } from "../findings/finding.js";
 export { fingerprintOf } from "../findings/fingerprint-of.js";
+export { lintFingerprint, lintFingerprints } from "../findings/lint-fingerprint.js";
+export type { LintFindingInput, LintFingerprintParts } from "../findings/lint-fingerprint.js";
 export { computeTestId, TITLE_PATH_SEPARATOR } from "../identity.js";
 export type { TestIdentity } from "../identity.js";
 export { ATTEMPT_STATUSES, AttemptSchema } from "../model/attempt.js";
