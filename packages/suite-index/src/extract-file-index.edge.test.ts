@@ -1,3 +1,4 @@
+import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import { describe, expect, it } from "vitest";
 import { parseSource, playwrightSpec } from "../test/source.js";
 import type { ExtractFileIndexOptions } from "./extract-file-index.js";
@@ -26,9 +27,20 @@ function serialize(program: unknown): string {
 
 describe("extractFileIndex edge cases", () => {
   it("does not throw on an array literal with more elements than a call accepts as arguments", () => {
-    const source = `const data = [${"0,".repeat(200_000)}];\nfoo();`;
+    const source = "const data = [0];\nfoo();";
+    const program = parseSource(source);
+    const [statement] = program.body;
+    const array =
+      statement?.type === AST_NODE_TYPES.VariableDeclaration
+        ? statement.declarations[0].init
+        : undefined;
+    if (array?.type !== AST_NODE_TYPES.ArrayExpression) {
+      throw new Error("Expected an array literal");
+    }
+    // Parsing 200k elements takes seconds on CI; repeating the parsed one gives the same shape.
+    array.elements = new Array<(typeof array.elements)[number]>(200_000).fill(array.elements[0]!);
 
-    const index = indexOf(source);
+    const index = extractFileIndex(program, source, options);
 
     expect(index.tests).toEqual([]);
   });
