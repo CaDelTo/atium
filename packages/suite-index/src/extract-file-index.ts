@@ -1,8 +1,8 @@
 import {
   actionOf,
   assertionOf,
+  baseQuery,
   calleePath,
-  chainOf,
   classifyBlock,
   classifyLocator,
   createNameMatcher,
@@ -53,13 +53,8 @@ function levelOf(query: LocatorQuery, reader: Reader): IndexedTest["actions"][nu
 
 /** The nearest locator query in the chain of a call, the call itself included. */
 function nearestQuery(call: TSESTree.CallExpression): LocatorQuery | undefined {
-  for (const candidate of [call, ...chainOf(call).calls]) {
-    const locator = locatorOf(candidate);
-    if (locator?.kind === "query") {
-      return locator;
-    }
-  }
-  return undefined;
+  const own = locatorOf(call);
+  return own?.kind === "query" ? own : baseQuery(call);
 }
 
 function newTest(block: TestBlock): Mutable<IndexedTest> {
