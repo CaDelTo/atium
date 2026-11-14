@@ -159,6 +159,18 @@ ESLint analiza archivo por archivo. El CLI construye un **índice de la suite** 
 | E2E011 | Código de test sin usar | Fixtures, helpers o miembros de Page Objects exportados sin referencias | — |
 | E2E013 | Tests casi duplicados | Secuencia de acciones normalizada (acción + tipo de selector) comparada con shingles de 3 y similitud de Jaccard | ≥ 0.9 |
 
+**Índice por archivo (`FileIndex`):** `extractFileIndex(ast, source, options)` de `@atium/suite-index` extrae de cada archivo lo que necesitan las reglas cross-file. Es pura: recibe el AST de typescript-eslint con el `parent` de cada nodo (como lo deja ESLint), no lo modifica, no lanza y da el mismo índice para la misma fuente y opciones. Usa los helpers de §11.3.1, así que reconoce por nombres, sin información de tipos. Las opciones son los `settings.atium` del archivo que cambian el índice: `framework`, `assertFunctionNames` e `i18n`; `pageObjectDirs` depende de la ruta y lo aplica quien construye el índice. El esquema Zod `FileIndexSchema` es interno y lleva `schemaVersion`, que cambia con cada cambio de forma porque el índice se cachea. Posiciones con línea y columna desde 1, como `Finding.location`.
+
+- `framework`: el configurado o el que revelan los imports; `null` si no se conoce.
+- `tests`, en orden de fuente:
+  - `titlePath`, `fullTitle`, `isStatic` y el rango de la llamada que lo declara;
+  - `actions`: la secuencia normalizada de E2E013, cada acción con su nombre y el nivel de §14.1 de la consulta de locator más cercana de su cadena, incluida ella misma (`cy.get("a")` es acción y locator). El nivel es `null` si la cadena no tiene consulta, como en `page.goto()` o en una acción sobre una variable (`submit.click()`);
+  - `assertions`, con su tipo, su nombre y su posición;
+  - `calls`: el nombre con puntos (`login`, `loginPage.open`) de las demás llamadas, sin acciones, assertions, locators ni declaraciones, una vez cada uno en orden de primera aparición. Las de un `test.step` cuentan para su test.
+- `locators`: cada consulta del archivo, también fuera de los tests (hooks, helpers, Page Objects), con su método, framework, selector (`null` si el argumento no es literal), nivel de §14.1, posición, texto de la llamada (`code`, para el fingerprint de §11.5) y el `titlePath` del test que la contiene (`null` fuera de los tests). El selector de `locator()`, `$()`, `cy.get()` y `cy.xpath()` se normaliza como en E2E007 (§11.3.1); el argumento de un `getBy*` es un rol, un texto o un test id, no un selector, y queda como está escrito (normalizarlo como CSS pondría en minúsculas `getByText("Welcome")`).
+
+Decidido en #69. Los helpers, los fixtures, los imports, los exports y el estado de módulo de E2E008 se añaden al índice en la segunda entrega de #69.
+
 **Caché:** resultados por archivo indexados por hash de contenido + hash de configuración de reglas, en `.atium/cache/`. Las reglas cross-file se recalculan solo para archivos afectados por un cambio en el índice.
 
 ### 11.5 Fingerprint de un hallazgo de lint
