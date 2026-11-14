@@ -4,6 +4,55 @@ Entradas antiguas de [progress.md](progress.md), de la más reciente a la más a
 
 ## Entradas
 
+### 2026-11-06 — #45 v1-05-design-alignment
+
+- **Hecho:**
+  - **Rama y PR:**
+    - Rama `docs/45-design-alignment`, creada desde `origin/main` (`c165711`).
+    - PR #135 en borrador, con `Closes #45` y sin mergear.
+    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
+  - **`a694d84` `docs(docs): align design with V0 implementation`:**
+    - `17-tech-stack.md`, fila Compresión: los runs `.ndjson.gz` usan `node:zlib`; fflate queda previsto para los datos del reporte HTML.
+    - `02-data-model.md`:
+      - Tabla de CI: en GitLab, `CI_JOB_ID` es el `jobId`, no el intento.
+      - §9.2: `message` 2 KiB y `stack` 8 KiB; tras la garantía final, la línea "nunca supera" 768 KiB.
+      - §10.1: si hay variables de varios proveedores, gana el orden de la tabla.
+      - §10.1: mapeo de env-ci `build` → `runId`, `job` → `jobId` y `pr` → `prNumber`.
+      - §10.1: el payload de GitHub solo se lee con el proveedor `github`.
+    - `15-storage.md` §23.2.1:
+      - Endpoints: cuenta como fallo una clave de `statuses` ≥ 400 aunque su conteo sea 0, y los que tienen fallos se ordenan entre sí por `count`.
+      - Una línea de exactamente 768 KiB no se recorta.
+      - Los tres límites del lector (64 KiB de encabezado, 1 MiB por línea y 256 MiB en total) son inclusivos.
+    - `20-security-privacy.md`: en `aws-key`, una letra mayúscula o un dígito tras `A3T`; la normalización de nombres conserva `\p{L}` y `\p{N}`.
+    - `05-performance.md`: 2 KiB y 8 KiB.
+    - `04-testing.md`: la tabla de cobertura es un mínimo.
+    - `packages/cli/src/defaults.ts`: la cita pasa a `engineering/03-errors-logging.md`.
+  - **`29fb3bf` `docs(docs): clarify compression, aws-key and coverage wording`:** corrige los hallazgos de `/review`.
+    - I1 y I2: zlib no limita bytes, lo hace el lector de líneas; fflate es un uso previsto.
+    - S1: el carácter extra de `aws-key` solo va tras `A3T`.
+    - S2: "`jobId` solo en GitLab" vale para las reglas propias.
+    - S3: 04-testing.md remite a `vitest.config.ts` en lugar de listar paquetes.
+  - **Puertas:**
+    - `plan-reviewer`: REQUIERE PERSONA, por las tres decisiones de abajo.
+    - `/verify`: PASS.
+    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
+    - `delivery-auditor`: APROBADO, con `pnpm verify` en exit 0 sobre `29fb3bf`.
+    - Push con `push-branch.mjs` y resumen de entrega comentado en #45.
+- **En curso:** PR #135 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 135` cuando estén en verde.
+- **Decisiones** (de la persona, 2026-11-06; están en el comentario "Plan aprobado" de #45 y en el PR):
+  - Documentar `node:zlib` en lugar de migrar a fflate.
+  - La tabla de cobertura es un mínimo; no se tocan los `vitest.config.ts`, que exigen 90 %.
+  - Documentar el comportamiento actual de los 8 puntos de la tarea, sin tareas de cambio de código.
+  - ADR-0018 no se edita, aunque diga "2 KB"/"8 KB" y "queda por debajo": remite la unidad a §9.2 y su "supera 768 KiB" hace compatible el `<=`. Quedó escrito en el PR y en el comentario de entrega de #45.
+- **Problemas:** imprecisiones que ya existían, fuera del alcance de #45. Las encontró `design-auditor` y no tienen issue:
+  - La fila de Jenkins de `02-data-model.md` pone `GIT_BRANCH` / `CHANGE_BRANCH`, al revés que la precedencia del código.
+  - "Paso 5" en `15-storage.md:46` es ambiguo junto a una lista de 4 pasos.
+  - El encabezado del run no se mide contra los 64 KiB del lector (`run-file-writer.ts`).
+  - Las claves de `statuses` se interpretan con `Number()` (`cap-run.ts`), así que `"4e2"` cuenta como 400.
+  - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
+  - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
+- **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.
+
 ### 2026-11-06 — #44 v1-04-run-context-robustness
 
 - **Hecho:**

@@ -1,4 +1,5 @@
 import type { AtiumCatalogRuleModule } from "../create-rule.js";
+import { maxTestSize } from "./max-test-size.js";
 import { noFocusedTest } from "./no-focused-test.js";
 import { noFragileCssSelector } from "./no-fragile-css-selector.js";
 import { noHardWait } from "./no-hard-wait.js";
@@ -12,6 +13,7 @@ import { preferWebFirstAssertion } from "./prefer-web-first-assertion.js";
  * catalogue entry in `meta.docs`.
  */
 export const rules: Readonly<Record<string, AtiumCatalogRuleModule>> = Object.freeze({
+  "max-test-size": maxTestSize,
   "no-focused-test": noFocusedTest,
   "no-fragile-css-selector": noFragileCssSelector,
   "no-hard-wait": noHardWait,

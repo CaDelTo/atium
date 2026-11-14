@@ -8,6 +8,49 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
 
 ## Entradas
 
+### 2026-11-13 — #57 v1-17-rule-e2e005-test-size
+
+- **Hecho:**
+  - Ejecutada por un `task-runner` de `/task`, en paralelo con #69 y #64, en el worktree `.claude/worktrees/agent-af3cda936c054a45c`. Rama `feat/57-rule-e2e005-test-size`, creada desde `origin/main` (`7a29001`). PR #151 en borrador con `Closes #57`, sin mergear. Plan aprobado por la persona y comentado en #57 (etiqueta `plan:approved`).
+  - `aca78c2` `test(eslint-plugin): specify max-test-size`:
+    - stub de `max-test-size.ts` y `TEST_SIZE_DEFAULTS` (25/150) en `defaults.ts`;
+    - tests `AC-1` en `max-test-size.test.ts` y `AC-2` en `max-test-size.limits.test.ts`, con builders en `packages/eslint-plugin/test/test-size.ts`;
+    - decisiones D1–D4 en 03-linter.md §11.3 y §11.3.1;
+    - rojo verificado: 54 de 56 fallaban por el stub.
+  - `6e53ecd` `feat(eslint-plugin): add max-test-size (E2E005)`:
+    - cuenta con `actionOf` y atribuye cada acción al test más interno con `testContextOf`;
+    - en `CallExpression:exit` de cada test compara acciones y líneas del callback con `>`;
+    - un hallazgo `tooLarge` con `loc` en la cabecera del callback;
+    - regla registrada en `rules/index.ts`, página `docs/rules/e2e005.md` y README actualizado.
+  - `259bcdf`: tests de borde de `test-writer` (`max-test-size.edge.test.ts`). No encontró bugs.
+  - `b5a4ffd`: aclaraciones de la página (`/review`).
+  - `595038f`: las cuatro ambigüedades de `design-auditor`, documentadas en §11.3.1.
+  - **Puertas:**
+    - `plan-reviewer` (opus): REQUIERE PERSONA por D1–D4.
+    - `/verify`: PASS sobre `595038f`.
+    - `code-reviewer`: APROBADO en la segunda pasada.
+    - `design-auditor`: CONFORME.
+    - `delivery-auditor`: RECHAZADO en la ronda 1 solo por el tamaño; APROBADO en la ronda 2, tras la excepción.
+    - Push con `open-pr.mjs`.
+- **En curso:** PR #151 en borrador. Al crearlo, la CI aún no había registrado checks. Falta `gh pr ready 151` cuando los `verify (…)` estén en verde.
+- **Decisiones** (de la persona, en 03-linter.md §11.3 y §11.3.1 como "Decidido en #57"):
+  - Las líneas son las físicas del callback, con blancos y comentarios. Las del título anteriores a la cabecera no cuentan.
+  - Opciones: `maxActions` (entero ≥ 0, por defecto 25) y `maxLines` (entero ≥ 1, por defecto 150).
+  - Un solo hallazgo por test, en la cabecera del callback, para que el `titlePath` del fingerprint incluya el test.
+  - En un test anidado, el más interno se queda sus acciones.
+  - Las funciones locales del callback cuentan.
+  - Un hook o describe dentro de un test suma al test exterior.
+  - Toda llamada `cy` salvo `.should`/`.and` es una acción.
+  - Excepción de tamaño del PR (823 líneas, unas 650 de tests) publicada por la persona en #57. Las cuatro últimas decisiones solo constan en el diseño y en el PR, no en un comentario del issue.
+- **Problemas:**
+  - Hallazgos menores de `duplication-auditor` sin corregir:
+    - el helper de offset a posición de `test/test-size.ts` duplica 4 líneas de `prefer-web-first-assertion.test.ts`;
+    - `pw` frente a `playwrightTest` e `indexOf` sin comprobar -1 en `test/test-size.ts`.
+    No se tocaron porque son tests de especificación o el test de otra regla.
+  - Sin test propio de E2E005: hook dentro de un test, función local en el callback, y `cy.wrap`/`cy.log`/`cy.its`.
+  - Siguen los avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` y 2 clones de `vitest.config.ts`.
+- **Siguiente paso:** con la CI de #151 en verde, `gh pr ready 151`. Después, una persona revisa y mergea.
+
 ### 2026-11-13 — #69 v1-29-suite-index-file (PR 1 de 2)
 
 - **Hecho:**
@@ -426,52 +469,3 @@ Bitácora entre sesiones de trabajo. La escribe `/handoff` al cerrar cada sesió
   - Avisos preexistentes: `max-lines` en `packages/core/src/storage/run-file.test.ts` (405 líneas) y 2 clones de `vitest.config.ts` en jscpd.
   - El milestone V0 sigue abierto con 0 issues abiertos; lo cierra una persona.
 - **Siguiente paso:** con la CI de #138 en verde, ejecutar `gh pr ready 138`; después, una persona revisa y mergea. La siguiente tarea Pendiente de V1 por antigüedad es #50 (v1-10, análisis y clasificación de selectores); conviene comprobar sus dependencias. Las de auditoría más urgentes siguen siendo #116 (v1-46) y #118 (v1-48).
-
-### 2026-11-06 — #45 v1-05-design-alignment
-
-- **Hecho:**
-  - **Rama y PR:**
-    - Rama `docs/45-design-alignment`, creada desde `origin/main` (`c165711`).
-    - PR #135 en borrador, con `Closes #45` y sin mergear.
-    - Plan aprobado por la persona, comentado en el issue bajo "## Plan aprobado", con la etiqueta `plan:approved`.
-  - **`a694d84` `docs(docs): align design with V0 implementation`:**
-    - `17-tech-stack.md`, fila Compresión: los runs `.ndjson.gz` usan `node:zlib`; fflate queda previsto para los datos del reporte HTML.
-    - `02-data-model.md`:
-      - Tabla de CI: en GitLab, `CI_JOB_ID` es el `jobId`, no el intento.
-      - §9.2: `message` 2 KiB y `stack` 8 KiB; tras la garantía final, la línea "nunca supera" 768 KiB.
-      - §10.1: si hay variables de varios proveedores, gana el orden de la tabla.
-      - §10.1: mapeo de env-ci `build` → `runId`, `job` → `jobId` y `pr` → `prNumber`.
-      - §10.1: el payload de GitHub solo se lee con el proveedor `github`.
-    - `15-storage.md` §23.2.1:
-      - Endpoints: cuenta como fallo una clave de `statuses` ≥ 400 aunque su conteo sea 0, y los que tienen fallos se ordenan entre sí por `count`.
-      - Una línea de exactamente 768 KiB no se recorta.
-      - Los tres límites del lector (64 KiB de encabezado, 1 MiB por línea y 256 MiB en total) son inclusivos.
-    - `20-security-privacy.md`: en `aws-key`, una letra mayúscula o un dígito tras `A3T`; la normalización de nombres conserva `\p{L}` y `\p{N}`.
-    - `05-performance.md`: 2 KiB y 8 KiB.
-    - `04-testing.md`: la tabla de cobertura es un mínimo.
-    - `packages/cli/src/defaults.ts`: la cita pasa a `engineering/03-errors-logging.md`.
-  - **`29fb3bf` `docs(docs): clarify compression, aws-key and coverage wording`:** corrige los hallazgos de `/review`.
-    - I1 y I2: zlib no limita bytes, lo hace el lector de líneas; fflate es un uso previsto.
-    - S1: el carácter extra de `aws-key` solo va tras `A3T`.
-    - S2: "`jobId` solo en GitLab" vale para las reglas propias.
-    - S3: 04-testing.md remite a `vitest.config.ts` en lugar de listar paquetes.
-  - **Puertas:**
-    - `plan-reviewer`: REQUIERE PERSONA, por las tres decisiones de abajo.
-    - `/verify`: PASS.
-    - `/review`: sin bloqueantes; segunda pasada de `code-reviewer` APROBADO.
-    - `delivery-auditor`: APROBADO, con `pnpm verify` en exit 0 sobre `29fb3bf`.
-    - Push con `push-branch.mjs` y resumen de entrega comentado en #45.
-- **En curso:** PR #135 en borrador. Al crearlo, los 7 checks de CI estaban pendientes. Falta `gh pr ready 135` cuando estén en verde.
-- **Decisiones** (de la persona, 2026-11-06; están en el comentario "Plan aprobado" de #45 y en el PR):
-  - Documentar `node:zlib` en lugar de migrar a fflate.
-  - La tabla de cobertura es un mínimo; no se tocan los `vitest.config.ts`, que exigen 90 %.
-  - Documentar el comportamiento actual de los 8 puntos de la tarea, sin tareas de cambio de código.
-  - ADR-0018 no se edita, aunque diga "2 KB"/"8 KB" y "queda por debajo": remite la unidad a §9.2 y su "supera 768 KiB" hace compatible el `<=`. Quedó escrito en el PR y en el comentario de entrega de #45.
-- **Problemas:** imprecisiones que ya existían, fuera del alcance de #45. Las encontró `design-auditor` y no tienen issue:
-  - La fila de Jenkins de `02-data-model.md` pone `GIT_BRANCH` / `CHANGE_BRANCH`, al revés que la precedencia del código.
-  - "Paso 5" en `15-storage.md:46` es ambiguo junto a una lista de 4 pasos.
-  - El encabezado del run no se mide contra los 64 KiB del lector (`run-file-writer.ts`).
-  - Las claves de `statuses` se interpretan con `Number()` (`cap-run.ts`), así que `"4e2"` cuenta como 400.
-  - Las fronteras de `aws-key` usan `[A-Za-z0-9]`, más amplio que base32.
-  - Sigue el aviso de `max-lines` en `run-file.test.ts` (405 líneas).
-- **Siguiente paso:** con la CI de #135 en verde, ejecutar `gh pr ready 135`; después, una persona revisa y mergea. Decidir si las imprecisiones de "Problemas" merecen una tarea.
