@@ -178,12 +178,18 @@ Decidido en #69. Los helpers, los fixtures, los imports, los exports y el estado
 Para que el baseline sobreviva a cambios de líneas, el fingerprint no usa el número de línea:
 
 ```
-sha1(ruleId | file | titlePath del test que lo contiene | código del nodo normalizado | índice de ocurrencia)
+sha1(ruleId | file | titlePath del test, o de los describes, que lo contiene | código del nodo normalizado | índice de ocurrencia)
 ```
 
 El índice de ocurrencia distingue dos hallazgos idénticos dentro del mismo test.
 
 Las partes se combinan con `fingerprintOf` (sección 22.3): se codifican con `JSON.stringify`, no se unen con un `|` literal, y el índice de ocurrencia se pasa como texto (`String(n)`). El `titlePath` se une con `" › "`, como en el `testId` (sección 9.3).
+
+En el código: `lintFingerprint` y `lintFingerprints` (`packages/core/src/findings/lint-fingerprint.ts`), que reciben el `titlePath` y el código del nodo ya extraídos; extraerlos es de `atium lint` ([18-cli-config.md](18-cli-config.md) §26.1). Decidido en #62:
+
+- **Código normalizado** (`normalizeNodeCode`): se quita todo el espacio en blanco (`\s`, incluido `\r\n`) y cada `'` pasa a `"`, para sobrevivir a la reindentación y al formato de Prettier. Los comentarios, los backticks y Unicode quedan como están. Dos literales que solo difieren en espacios o comillas (`".a .b"` y `".a.b"`) normalizan igual; la ocurrencia los separa.
+- **`titlePath` fuera de un test** (hook, Page Object, helper): los títulos de los describes que contienen el nodo, con las reglas de la sección 11.3.1, y la lista vacía a nivel de módulo. Así, un hallazgo nuevo solo renumera las ocurrencias de su describe. Solo afecta al fingerprint: el nodo sigue sin pertenecer a ningún test (sección 11.3.1).
+- **Ocurrencia** (`lintFingerprints`): los hallazgos con las mismas partes se numeran 0, 1, … por posición (línea y columna); en la misma posición, por orden de entrada.
 
 ### 11.6 Salidas
 
